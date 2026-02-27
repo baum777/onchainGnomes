@@ -1,0 +1,6 @@
+name: status
+version: "1.0.0"
+description: Status command response
+content: |
+  GrokBot is running! All systems operational.
+  Use /help for available commands.

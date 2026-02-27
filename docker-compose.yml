@@ -1,0 +1,20 @@
+version: "3.8"
+
+services:
+  xai-bot:
+    build: .
+    environment:
+      - DRY_RUN=${DRY_RUN:-true}
+      - DEBUG=${DEBUG:-false}
+      - X_API_KEY=${X_API_KEY}
+      - X_API_SECRET=${X_API_SECRET}
+      - X_ACCESS_TOKEN=${X_ACCESS_TOKEN}
+      - X_ACCESS_SECRET=${X_ACCESS_SECRET}
+      - XAI_API_KEY=${XAI_API_KEY}
+      - STATE_DB_PATH=/app/state/agent_state.db
+    volumes:
+      - agent-state:/app/state
+    restart: unless-stopped
+
+volumes:
+  agent-state:

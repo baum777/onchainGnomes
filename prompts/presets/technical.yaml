@@ -1,0 +1,7 @@
+name: technical
+version: "1.0.0"
+parent: base
+modifications:
+  tone: "technical, precise"
+  vocabulary: "industry-standard"
+  emoji_usage: false

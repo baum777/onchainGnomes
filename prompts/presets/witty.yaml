@@ -1,0 +1,7 @@
+name: witty
+version: "1.0.0"
+parent: base
+modifications:
+  tone: "witty, playful"
+  vocabulary: "casual with occasional humor"
+  emoji_usage: true

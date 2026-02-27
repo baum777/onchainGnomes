@@ -1,0 +1,7 @@
+name: casual
+version: "1.0.0"
+parent: base
+modifications:
+  tone: "friendly, casual"
+  vocabulary: "everyday language"
+  emoji_usage: true

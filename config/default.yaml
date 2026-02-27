@@ -1,0 +1,15 @@
+# Default configuration
+# Override via environment variables or config/local.yaml
+
+app:
+  name: xai-bot
+  debug: false
+  dry_run: false
+
+scheduler:
+  interval_seconds: 60
+
+xai:
+  model: grok-2
+  max_tokens: 280
+  temperature: 0.7

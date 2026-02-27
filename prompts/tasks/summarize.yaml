@@ -1,0 +1,11 @@
+name: summarize
+version: "1.0.0"
+description: Summarize conversation
+input_schema:
+  - conversation_history
+  - max_length
+output_schema:
+  - summary
+content: |
+  Summarize this conversation in {max_length} characters or less:
+  {conversation_history}
