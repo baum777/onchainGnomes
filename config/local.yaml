@@ -1,0 +1,6 @@
+# Local development overrides
+# Copy to local.yaml and modify as needed
+
+app:
+  debug: true
+  dry_run: true

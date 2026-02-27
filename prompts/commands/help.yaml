@@ -1,0 +1,10 @@
+name: help
+version: "1.0.0"
+description: Help command response
+content: |
+  I'm GrokBot! I can:
+  - Reply to your mentions
+  - Answer questions
+  - Generate content
+
+  Use @mention me with a question. Commands: {available_commands}

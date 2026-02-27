@@ -1,0 +1,12 @@
+name: generate_image
+version: "1.0.0"
+description: Image generation prompt
+input_schema:
+  - user_request
+  - style
+output_schema:
+  - image_prompt
+content: |
+  Create a detailed image generation prompt based on this user request: {user_request}
+  Style preference: {style}
+  Output only the image description, no other text.

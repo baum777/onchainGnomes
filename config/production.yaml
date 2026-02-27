@@ -1,0 +1,8 @@
+# Production configuration overrides
+
+app:
+  debug: false
+  dry_run: false
+
+scheduler:
+  interval_seconds: 60
