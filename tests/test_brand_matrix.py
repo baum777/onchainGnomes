@@ -193,6 +193,16 @@ class TestMatrixClassifier:
         assert result.payload is not None
         assert result.payload.user_prompt == "Test prompt"
 
+    def test_classify_includes_humor_mode(self, classifier, sample_action_plan):
+        """Testet dass humor_mode in Metadata enthalten ist."""
+        result = classifier.classify(sample_action_plan)
+
+        assert result.success is True
+        assert "humor_mode" in result.payload.metadata
+        assert result.payload.metadata["humor_mode"] in (
+            "authority", "scientist", "therapist", "reality", "goblin", "rhyme_override"
+        )
+
     def test_classify_error(self, classifier):
         """Testet Fehlerbehandlung."""
         invalid_plan = ActionPlan(

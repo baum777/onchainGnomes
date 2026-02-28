@@ -1,0 +1,17 @@
+template_key: gorky_ghost
+base_style_prompt: >
+  spectral ghost aesthetic, haunted chart atmosphere,
+  ethereal liquidity spirit, meme ghost encounter style
+overlay_elements:
+  - glitch_frame
+text_zones:
+  title:
+    - "LIQUIDITY GHOST DETECTED"
+    - "CHART GRAVEYARD GHOST"
+    - "EXIT LIQUIDITY WRAITH"
+  subtitle:
+    - "YOUR BAGS ARE HAUNTED FOREVER."
+    - "THIS CHART IS SPIRITUALLY BEARISH."
+    - "WASH VOLUME POLTERGEIST DETECTED."
+    - "YOU SUMMONED VOLATILITY. CONGRATS."
+caption_style: spectral_mockery

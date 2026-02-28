@@ -1,0 +1,27 @@
+template_key: gorky_certificate
+base_style_prompt: >
+  humorous official certificate, cyberpunk neon seals,
+  glitch borders, demonic notary stamp, meme document style
+overlay_elements:
+  - verdict_stamp
+text_zones:
+  title:
+    - "OFFICIAL CERTIFICATION"
+    - "DEGENERACY DEGREE AWARDED"
+    - "REKT ACADEMY DIPLOMA"
+  body:
+    - "THIS USER IS CERTIFIED"
+    - "DEGENERATE STATUS: CONFIRMED"
+    - "OFFICIALLY REKT"
+  rank:
+    - "Liquidity Ghost"
+    - "Market Trauma Survivor"
+    - "Certified Exit Liquidity"
+    - "Wash Trade Detector"
+    - "Dead Coin Reviver"
+    - "Graveyard Wanderer"
+  footer:
+    - "ISSUED BY GORKY ENTITY"
+    - "VALID UNTIL NEXT RUG"
+    - "NO REFUNDS ON DEGENERACY"
+caption_style: mocking_authority

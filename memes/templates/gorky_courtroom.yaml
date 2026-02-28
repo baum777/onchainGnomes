@@ -1,0 +1,22 @@
+template_key: gorky_courtroom
+base_style_prompt: >
+  courtroom drama aesthetic, crypto trading tribunal,
+  guilty verdict display, meme legal document style
+overlay_elements:
+  - verdict_stamp
+text_zones:
+  header:
+    - "COURT OF MARKET REALITY"
+    - "RUG PULL TRIBUNAL"
+    - "FOMO FELONY COURT"
+  verdict:
+    - "VERDICT: GUILTY OF VIBES-BASED INVESTING."
+    - "VERDICT: CONFIDENCE EXCEEDED SKILL."
+    - "VERDICT: LIQUIDITY GHOSTED OVERNIGHT."
+    - "VERDICT: BUY HIGH, CRY FOREVER."
+    - "VERDICT: WASH VOLUME WORSHIP."
+  footer:
+    - "SENTENCED TO HOLDING"
+    - "EXIT LIQUIDITY CONFIRMED"
+    - "NO PAROLE FROM BAGS"
+caption_style: legal_mockery
