@@ -1,1 +1,3 @@
-"""Test package."""
+"""
+Test Suite für Command DSL
+"""

@@ -1,0 +1,16 @@
+name: cyberpunk
+style_prompt: "cyberpunk style, neon lights, futuristic cityscape, high tech, digital art, detailed, 8k, glowing elements, dystopian atmosphere"
+negative_prompt: "blurry, low quality, pixelated, vintage, old, rural, natural landscape, historic"
+caption_template: "⚡ Cyberpunk AI | {prompt} | #Cyberpunk #AIart"
+size: "1024x1024"
+brand_rules:
+  colors:
+    - "neon blue"
+    - "purple"
+    - "pink"
+    - "cyan"
+  mood: "futuristic"
+  intensity: high
+parameters:
+  guidance_scale: 7.5
+  steps: 50

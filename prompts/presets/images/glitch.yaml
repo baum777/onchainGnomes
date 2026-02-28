@@ -1,0 +1,14 @@
+name: glitch
+style_prompt: "glitch art, digital distortion, data bending, corrupted image, cyber aesthetic, RGB split, pixel sorting, noise artifacts, digital decay"
+negative_prompt: "clean, perfect, undistorted, analog, smooth, pristine, organic"
+caption_template: "⚡ Glitch mode | {prompt} | #GlitchArt #DigitalArt"
+size: "1024x1024"
+brand_rules:
+  distortion: "high"
+  aesthetic: "cyber"
+  effects:
+    - "RGB split"
+    - "pixel sort"
+parameters:
+  guidance_scale: 6.5
+  steps: 40

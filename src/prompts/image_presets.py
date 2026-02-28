@@ -1,0 +1,262 @@
+"""
+Image Preset Loader
+
+Lädt und verwaltet Image-Presets aus YAML-Dateien.
+Presets definieren Style, Prompts und Brand-Regeln für Bildgenerierung.
+
+Verzeichnisstruktur:
+prompts/presets/images/
+    ├── cyberpunk.yaml
+    ├── vaporwave.yaml
+    └── abstract.yaml
+"""
+
+import os
+import yaml
+from typing import Dict, Any, Optional, List
+from dataclasses import dataclass, field
+from pathlib import Path
+
+
+@dataclass
+class ImagePreset:
+    """
+    Ein Image Preset mit allen Konfigurationen.
+
+    Attributes:
+        name: Preset-Name (für Referenzierung)
+        style_prompt: Positiver Style-Prompt
+        negative_prompt: Negativer Prompt (was vermieden werden soll)
+        caption_template: Template für Bildunterschriften
+        size: Bildgröße (z.B. "1024x1024")
+        brand_rules: Brand-spezifische Regeln
+        parameters: Zusätzliche Generations-Parameter
+    """
+    name: str
+    style_prompt: str
+    negative_prompt: str = ""
+    caption_template: str = ""
+    size: str = "1024x1024"
+    brand_rules: Dict[str, Any] = field(default_factory=dict)
+    parameters: Dict[str, Any] = field(default_factory=dict)
+
+    def build_full_prompt(self, user_prompt: str) -> str:
+        """
+        Kombiniert User-Prompt mit Style-Prompt.
+
+        Args:
+            user_prompt: Der vom Benutzer angegebene Prompt
+
+        Returns:
+            Kombinierter Prompt für Generierung
+        """
+        if not self.style_prompt:
+            return user_prompt
+
+        if not user_prompt:
+            return self.style_prompt
+
+        return f"{user_prompt}, {self.style_prompt}"
+
+    def build_caption(self, variables: Optional[Dict[str, str]] = None) -> str:
+        """
+        Baut eine Bildunterschrift aus dem Template.
+
+        Args:
+            variables: Variablen für Template-Substitution
+
+        Returns:
+            Finale Bildunterschrift
+        """
+        caption = self.caption_template
+
+        if variables:
+            for key, value in variables.items():
+                caption = caption.replace(f"{{{key}}}", value)
+
+        return caption
+
+
+class ImagePresetLoader:
+    """
+    Lädt und verwaltet Image Presets.
+
+    Lädt alle YAML-Presets aus dem Presets-Verzeichnis
+    und bietet Zugriff über den Preset-Namen.
+
+    Usage:
+        loader = ImagePresetLoader("prompts/presets/images")
+        preset = loader.get("cyberpunk")
+        full_prompt = preset.build_full_prompt("robot trader")
+    """
+
+    DEFAULT_SIZE = "1024x1024"
+
+    def __init__(self, presets_dir: Optional[str] = None):
+        """
+        Initialisiert den Loader.
+
+        Args:
+            presets_dir: Pfad zum Presets-Verzeichnis
+        """
+        if presets_dir is None:
+            # Standard-Verzeichnis relativ zu diesem Modul
+            base_dir = Path(__file__).parent.parent.parent
+            presets_dir = base_dir / "prompts" / "presets" / "images"
+
+        self.presets_dir = Path(presets_dir)
+        self._presets: Dict[str, ImagePreset] = {}
+        self._loaded = False
+
+    def load_all(self) -> Dict[str, ImagePreset]:
+        """
+        Lädt alle Presets aus dem Verzeichnis.
+
+        Returns:
+            Dictionary von Preset-Namen zu ImagePreset
+        """
+        if self._loaded:
+            return self._presets
+
+        if not self.presets_dir.exists():
+            # Verzeichnis existiert nicht, verwende Defaults
+            self._load_defaults()
+            self._loaded = True
+            return self._presets
+
+        for preset_file in self.presets_dir.glob("*.yaml"):
+            try:
+                with open(preset_file, "r", encoding="utf-8") as f:
+                    data = yaml.safe_load(f)
+
+                if data and "name" in data:
+                    preset = ImagePreset(
+                        name=data["name"],
+                        style_prompt=data.get("style_prompt", ""),
+                        negative_prompt=data.get("negative_prompt", ""),
+                        caption_template=data.get("caption_template", ""),
+                        size=data.get("size", self.DEFAULT_SIZE),
+                        brand_rules=data.get("brand_rules", {}),
+                        parameters=data.get("parameters", {}),
+                    )
+                    self._presets[preset.name] = preset
+
+            except Exception as e:
+                # Log error but continue loading other presets
+                print(f"Fehler beim Laden von {preset_file}: {e}")
+
+        self._loaded = True
+        return self._presets
+
+    def _load_defaults(self) -> None:
+        """Lädt Standard-Presets wenn Verzeichnis nicht existiert."""
+        defaults = {
+            "cyberpunk": ImagePreset(
+                name="cyberpunk",
+                style_prompt="cyberpunk style, neon lights, futuristic, high tech, digital art, detailed, 8k",
+                negative_prompt="blurry, low quality, pixelated, vintage, old",
+                caption_template="Generated by AI | {prompt} | #Cyberpunk",
+                size="1024x1024",
+                brand_rules={"colors": ["neon blue", "purple", "pink"]},
+            ),
+            "vaporwave": ImagePreset(
+                name="vaporwave",
+                style_prompt="vaporwave aesthetic, retro 80s, palm trees, sunset, gradient colors, synthwave, digital art",
+                negative_prompt="modern, minimalist, grayscale, monochrome",
+                caption_template="Vapor vibes | {prompt} | #Vaporwave",
+                size="1024x1024",
+                brand_rules={"colors": ["pink", "cyan", "purple"]},
+            ),
+            "abstract": ImagePreset(
+                name="abstract",
+                style_prompt="abstract art, geometric shapes, vibrant colors, modern art, creative composition",
+                negative_prompt="realistic, photorealistic, representational, literal",
+                caption_template="Abstract | {prompt} | #AbstractArt",
+                size="1024x1024",
+                brand_rules={"style": "modern"},
+            ),
+            "photorealistic": ImagePreset(
+                name="photorealistic",
+                style_prompt="photorealistic, high detail, professional photography, 8k, sharp focus, studio lighting",
+                negative_prompt="cartoon, anime, illustration, drawing, painting, sketch",
+                caption_template="AI Photo | {prompt} | #Photorealistic",
+                size="1024x1024",
+                brand_rules={"quality": "high"},
+            ),
+            "glitch": ImagePreset(
+                name="glitch",
+                style_prompt="glitch art, digital distortion, data bending, corrupted image, cyber aesthetic, RGB split",
+                negative_prompt="clean, perfect, undistorted, analog",
+                caption_template="Glitch mode | {prompt} | #GlitchArt",
+                size="1024x1024",
+                brand_rules={"distortion": "high"},
+            ),
+        }
+        self._presets = defaults
+
+    def get(self, name: str) -> Optional[ImagePreset]:
+        """
+        Holt ein Preset nach Namen.
+
+        Args:
+            name: Preset-Name
+
+        Returns:
+            ImagePreset oder None
+        """
+        if not self._loaded:
+            self.load_all()
+        return self._presets.get(name)
+
+    def has_preset(self, name: str) -> bool:
+        """
+        Prüft ob ein Preset existiert.
+
+        Args:
+            name: Preset-Name
+
+        Returns:
+            True wenn Preset existiert
+        """
+        if not self._loaded:
+            self.load_all()
+        return name in self._presets
+
+    def list_presets(self) -> List[str]:
+        """
+        Listet alle verfügbaren Presets.
+
+        Returns:
+            Liste von Preset-Namen
+        """
+        if not self._loaded:
+            self.load_all()
+        return list(self._presets.keys())
+
+    def get_preset_info(self, name: str) -> Optional[Dict[str, Any]]:
+        """
+        Holt öffentliche Info über ein Preset.
+
+        Args:
+            name: Preset-Name
+
+        Returns:
+            Dictionary mit Preset-Info oder None
+        """
+        preset = self.get(name)
+        if not preset:
+            return None
+
+        return {
+            "name": preset.name,
+            "size": preset.size,
+            "has_negative_prompt": bool(preset.negative_prompt),
+            "has_caption_template": bool(preset.caption_template),
+            "brand_rules": list(preset.brand_rules.keys()),
+        }
+
+    def reload(self) -> None:
+        """Erzwingt Neuladen aller Presets."""
+        self._presets = {}
+        self._loaded = False
+        self.load_all()
