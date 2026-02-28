@@ -5,7 +5,7 @@
  * Uses file-based storage for idempotency.
  * Runs in an infinite loop with 30s sleep.
  */
-
+import "dotenv/config";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
