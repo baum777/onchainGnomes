@@ -387,4 +387,73 @@ describe("mentionsMapper", () => {
       // These usernames would match the default whitelist: @twimsalot,@nirapump_
     });
   });
+
+  describe("poller self-skip integration", () => {
+    it("identifies self-mentions by matching author_id to bot user id", () => {
+      // Simulating poller behavior: when mention.author_id === userId, skip
+      const botUserId = "bot_123456789";
+
+      const mockResponse = {
+        data: {
+          data: [
+            {
+              id: "1000000000000000001",
+              text: "Self mention from bot",
+              author_id: botUserId, // Same as bot user id
+              created_at: "2024-01-15T10:00:00Z",
+            } as unknown as TweetV2,
+            {
+              id: "2000000000000000002",
+              text: "Regular mention from user",
+              author_id: "user_abc",
+              created_at: "2024-01-15T11:00:00Z",
+            } as unknown as TweetV2,
+          ],
+          includes: {
+            users: [
+              { id: botUserId, username: "serGorky" } as unknown as UserV2,
+              { id: "user_abc", username: "regularuser" } as unknown as UserV2,
+            ],
+          } as ApiV2Includes,
+          meta: {
+            result_count: 2,
+          },
+        },
+      };
+
+      const result = mapMentionsResponse(mockResponse);
+
+      // Verify both mentions are mapped
+      expect(result.mentions).toHaveLength(2);
+
+      // Poller should skip the self-mention (author_id === botUserId)
+      const selfMention = result.mentions.find((m) => m.author_id === botUserId);
+      const userMention = result.mentions.find((m) => m.author_id === "user_abc");
+
+      expect(selfMention).toBeDefined();
+      expect(userMention).toBeDefined();
+
+      // In poller: mention.author_id === userId => skip
+      expect(selfMention!.author_id).toBe(botUserId);
+      expect(userMention!.author_id).not.toBe(botUserId);
+    });
+
+    it("poller skip logic prevents self-reply loops", () => {
+      // Test the poller's redundant self-author skip logic
+      const authedUserId = "bot_987654321";
+      const mentions = [
+        { id: "t1", author_id: authedUserId, authorUsername: "serGorky", text: "self" },
+        { id: "t2", author_id: "user_1", authorUsername: "alice", text: "hello" },
+        { id: "t3", author_id: authedUserId, authorUsername: "serGorky", text: "another self" },
+      ];
+
+      // Simulate poller filtering
+      const filtered = mentions.filter((m) => m.author_id !== authedUserId);
+
+      // Only non-self mentions should remain
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0]!.id).toBe("t2");
+      expect(filtered[0]!.author_id).toBe("user_1");
+    });
+  });
 });

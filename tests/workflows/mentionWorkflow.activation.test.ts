@@ -83,11 +83,12 @@ describe("mentionWorkflow.activation", () => {
     );
   });
 
-  it("whitelist mode + not whitelisted => skip, no scoring", async () => {
+  it("whitelist mode + not whitelisted + silent deny => skip, no scoring, no post", async () => {
     const whitelistConfig: ActivationConfig = {
       mode: "whitelist",
       whitelistUsernames: ["@twimsalot", "@nirapump_"],
       whitelistUserIds: [],
+      denyReplyMode: "silent",
     };
 
     const wf = new MentionWorkflow(
@@ -130,6 +131,7 @@ describe("mentionWorkflow.activation", () => {
       mode: "whitelist",
       whitelistUsernames: ["@twimsalot", "@nirapump_"],
       whitelistUserIds: [],
+      denyReplyMode: "silent",
     };
 
     const wf = new MentionWorkflow(
@@ -171,6 +173,7 @@ describe("mentionWorkflow.activation", () => {
       mode: "global",
       whitelistUsernames: ["@twimsalot"],
       whitelistUserIds: [],
+      denyReplyMode: "silent",
     };
 
     const wf = new MentionWorkflow(
@@ -243,6 +246,7 @@ describe("mentionWorkflow.activation", () => {
       mode: "global",
       whitelistUsernames: ["@vipuser"],
       whitelistUserIds: ["vip_user_id"],
+      denyReplyMode: "silent",
     };
 
     const wf = new MentionWorkflow(
@@ -287,6 +291,7 @@ describe("mentionWorkflow.activation", () => {
       mode: "global",
       whitelistUsernames: ["@vipuser"],
       whitelistUserIds: [],
+      denyReplyMode: "silent",
     };
 
     const wf = new MentionWorkflow(
@@ -323,5 +328,146 @@ describe("mentionWorkflow.activation", () => {
     // Scoring should have occurred
     const profileAfter = await repo.getUserProfile("regular_user");
     expect(profileAfter?.xp).toBeGreaterThan(0);
+  });
+
+  describe("deny reply mode", () => {
+    it("denied + denyReplyMode=silent => no reply, no scoring", async () => {
+      const silentConfig: ActivationConfig = {
+        mode: "whitelist",
+        whitelistUsernames: ["@viponly"],
+        whitelistUserIds: [],
+        denyReplyMode: "silent",
+      };
+
+      const wf = new MentionWorkflow(
+        { ...baseConfig, botUserId, activationConfig: silentConfig },
+        rewardEngine
+      );
+
+      await repo.saveUserProfile({
+        user_id: "rejected_user",
+        xp: 0,
+        level: 0,
+        reward_pending: false,
+        reply_count_24h: 0,
+        global_image_count_24h: 0,
+      });
+
+      const event = createEvent({
+        user_id: "rejected_user",
+        user_handle: "not_on_list",
+        text: "let me in",
+      });
+      const profile: UserProfile = {
+        user_id: "rejected_user",
+        reward_pending: false,
+        reply_count_24h: 0,
+      };
+
+      const result = await wf.process(event, profile, []);
+
+      // Silent deny: no success, no reply_text
+      expect(result.success).toBe(false);
+      expect(result.skip_reason).toBe("Not whitelisted");
+      expect(result.reply_text).toBe("");
+
+      // No scoring
+      const profileAfter = await repo.getUserProfile("rejected_user");
+      expect(profileAfter?.xp).toBe(0);
+    });
+
+    it("denied + denyReplyMode=tease => posts tease reply, no scoring", async () => {
+      const teaseConfig: ActivationConfig = {
+        mode: "whitelist",
+        whitelistUsernames: ["@viponly"],
+        whitelistUserIds: [],
+        denyReplyMode: "tease",
+      };
+
+      const wf = new MentionWorkflow(
+        { ...baseConfig, botUserId, activationConfig: teaseConfig },
+        rewardEngine
+      );
+
+      await repo.saveUserProfile({
+        user_id: "rejected_user",
+        xp: 0,
+        level: 0,
+        reward_pending: false,
+        reply_count_24h: 0,
+        global_image_count_24h: 0,
+      });
+
+      const event = createEvent({
+        user_id: "rejected_user",
+        user_handle: "not_on_list",
+        text: "let me in",
+      });
+      const profile: UserProfile = {
+        user_id: "rejected_user",
+        reward_pending: false,
+        reply_count_24h: 0,
+      };
+
+      const result = await wf.process(event, profile, []);
+
+      // Tease mode: success (reply posted), but no skip_reason
+      expect(result.success).toBe(true);
+      expect(result.skip_reason).toBeUndefined();
+
+      // Should have a tease reply text (<=120 chars)
+      expect(result.reply_text).toBeTruthy();
+      expect(result.reply_text.length).toBeLessThanOrEqual(120);
+
+      // No internal terms in the reply
+      expect(result.reply_text.toLowerCase()).not.toContain("whitelist");
+      expect(result.reply_text.toLowerCase()).not.toContain("activation");
+      expect(result.reply_text.toLowerCase()).not.toContain("policy");
+
+      // No scoring (denied mention)
+      const profileAfter = await repo.getUserProfile("rejected_user");
+      expect(profileAfter?.xp).toBe(0);
+    });
+
+    it("self-mention + denyReplyMode=tease => still silent (no tease for self)", async () => {
+      const teaseConfig: ActivationConfig = {
+        mode: "whitelist",
+        whitelistUsernames: ["@viponly"],
+        whitelistUserIds: [],
+        denyReplyMode: "tease",
+      };
+
+      const wf = new MentionWorkflow(
+        { ...baseConfig, botUserId, activationConfig: teaseConfig },
+        rewardEngine
+      );
+
+      await repo.saveUserProfile({
+        user_id: botUserId,
+        xp: 0,
+        level: 0,
+        reward_pending: false,
+        reply_count_24h: 0,
+        global_image_count_24h: 0,
+      });
+
+      const event = createEvent({
+        user_id: botUserId,
+        user_handle: "serGorky",
+        text: "self test",
+      });
+      const profile: UserProfile = {
+        user_id: botUserId,
+        reward_pending: false,
+        reply_count_24h: 0,
+      };
+
+      const result = await wf.process(event, profile, []);
+
+      // Self-mention should be silent even in tease mode
+      expect(result.success).toBe(false);
+      expect(result.skip_reason).toBe("Self-mention ignored");
+      expect(result.reply_text).toBe("");
+    });
   });
 });

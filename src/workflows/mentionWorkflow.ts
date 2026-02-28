@@ -35,7 +35,7 @@ import { composeReplyText } from "../brand_matrix/gorkyPromptComposer.js";
 import { buildContext } from "../brand_matrix/contextBuilder.js";
 import { rollDice } from "../utils/rollDice.js";
 import { readActivationConfigFromEnv } from "../config/botActivationConfig.js";
-import type { ActivationConfig } from "../config/botActivationConfig.js";
+import type { ActivationConfig, DenyReplyMode } from "../config/botActivationConfig.js";
 import { evaluateActivation } from "../policy/activationPolicy.js";
 import {
   RewardEngine,
@@ -297,6 +297,28 @@ export function buildRhymeDeescalation(seedKey: string): string {
   return DE_ESCALATION_RHYMES[index] ?? DE_ESCALATION_RHYMES[0]!;
 }
 
+// Gorky-style tease replies for denied mentions (<=120 chars, no internal terms)
+const DENY_TEASES = [
+  "My circuits are calibrated for chaos, not casual conversation. Chart harder.",
+  "Insufficient market trauma detected. Come back after your first rug pull.",
+  "I'm only taking requests from wallets that have felt true pain. Prove yourself.",
+  "Your energy is valid, but my agenda is full. Try again during market carnage.",
+  "I sense potential, but the algorithms demand more volatility. Risk something.",
+  "My trading bot ancestry requires pedigree. Show me your bags. 🎒",
+  "Interesting. Not interesting enough. Bring me a chart that violates physics.",
+  "Access denied. The market gods require a blood sacrifice. Or just better memes.",
+];
+
+/**
+ * Build a tease reply for denied mentions (activation denial)
+ * No mention of "whitelist", "activation", "policy", or internals
+ */
+export function buildDenyTease(seedKey: string): string {
+  const rng = createSeededRNG(seedKey);
+  const index = Math.floor(rng() * DENY_TEASES.length);
+  return DENY_TEASES[index] ?? DENY_TEASES[0]!;
+}
+
 // Rank titles for /badge (NO numbers)
 export const RANK_TITLES = [
   "Certified Exit Liquidity",
@@ -379,6 +401,17 @@ export class MentionWorkflow {
             : activationDecision.reason === "not_whitelisted"
               ? "Not whitelisted"
               : activationDecision.reason;
+
+        // Handle deny reply mode: silent (default) or tease
+        const denyMode: DenyReplyMode = activationConfig.denyReplyMode ?? "silent";
+        if (denyMode === "tease" && activationDecision.reason === "not_whitelisted") {
+          // Post a tease reply for non-whitelisted users (not for self-mentions)
+          const teaseText = buildDenyTease(event.tweet_id);
+          return this.finalizeReply(teaseText, "TEXT", event.tweet_id, {
+            fallback: "My circuits are busy observing market chaos. Try again later.",
+          });
+        }
+
         return {
           success: false,
           mode: "TEXT",

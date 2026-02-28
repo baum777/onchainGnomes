@@ -9,10 +9,14 @@
 
 export type ActivationMode = "global" | "whitelist";
 
+export type DenyReplyMode = "silent" | "tease";
+
 export type ActivationConfig = {
   mode: ActivationMode;
   whitelistUsernames: string[];
   whitelistUserIds: string[];
+  /** How to handle denied mentions: silent skip or tease reply */
+  denyReplyMode: DenyReplyMode;
 };
 
 const DEFAULT_WHITELIST = "@twimsalot,@nirapump_";
@@ -46,6 +50,15 @@ function parseUserIds(value: string): string[] {
 }
 
 /**
+ * Read deny reply mode from environment.
+ * Default: "silent"
+ */
+function parseDenyReplyMode(value: string | undefined): DenyReplyMode {
+  const mode = value?.trim().toLowerCase();
+  return mode === "tease" ? "tease" : "silent";
+}
+
+/**
  * Read activation config from environment.
  * Normalizes: trim, lowercase usernames, ensure @ prefix.
  */
@@ -62,9 +75,12 @@ export function readActivationConfigFromEnv(): ActivationConfig {
     process.env.BOT_WHITELIST_USER_IDS ?? ""
   );
 
+  const denyReplyMode = parseDenyReplyMode(process.env.BOT_DENY_REPLY_MODE);
+
   return {
     mode,
     whitelistUsernames,
     whitelistUserIds,
+    denyReplyMode,
   };
 }

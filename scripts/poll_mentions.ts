@@ -28,6 +28,10 @@ import {
   MENTIONS_FETCH_OPTIONS,
   type Mention,
 } from "../src/poller/mentionsMapper.js";
+import {
+  readActivationConfigFromEnv,
+  type ActivationConfig,
+} from "../src/config/botActivationConfig.js";
 
 // Paths
 const __filename = fileURLToPath(import.meta.url);
@@ -224,6 +228,11 @@ async function main(): Promise<void> {
   console.log(`[CONFIG] DRY_RUN=${DRY_RUN}`);
   console.log(`[CONFIG] POLL_INTERVAL=${POLL_INTERVAL_MS}ms`);
 
+  // Cache activation config once on startup (no repeated env parsing per event)
+  const activationConfig: ActivationConfig = readActivationConfigFromEnv();
+  console.log(`[CONFIG] Activation mode: ${activationConfig.mode}`);
+  console.log(`[CONFIG] Deny reply mode: ${activationConfig.denyReplyMode}`);
+
   const xClient = createXClient(DRY_RUN);
 
   // Create raw TwitterApi client for mentions API
@@ -252,6 +261,7 @@ async function main(): Promise<void> {
     botUserId: userId,
     twitterClient: rawClient,
     xClient,
+    activationConfig, // Pass cached config to workflow
   };
 
   const workflow = new MentionWorkflow(workflowConfig, rewardEngine);
@@ -276,6 +286,15 @@ async function main(): Promise<void> {
       console.log(`[POLL] Found ${mentions.length} new mention(s)`);
 
       for (const mention of mentions) {
+        // Redundant self-author skip: skip if mention.author_id === authedUserId
+        // Policy check remains as second line of defense in workflow
+        if (mention.author_id === userId) {
+          console.log(`[SKIP] Self-mention filtered in poller: ${mention.id}`);
+          markProcessed(state, mention.id);
+          saveState(state);
+          continue;
+        }
+
         try {
           await processMention(workflow, mention, state);
         } catch (error) {
