@@ -1,0 +1,26 @@
+preset_key: horny_roast_card
+
+style_prompt: >
+  glitch demon crypto entity, neon cyberpunk accents,
+  broken candlestick charts, chaotic trading screens,
+  meme composition, high contrast, readable text areas
+
+negative_prompt: >
+  realistic human faces, gore, violence, explicit sexual content, slurs
+
+size: 1024x1024
+
+caption_bank: captions
+caption_rules:
+  - short (2–7 words preferred)
+  - dark humor, sarcastic
+  - no private/internal metrics
+  - no hate speech
+
+brand_rules:
+  - chaotic energy
+  - humor first
+  - meme readable
+  - roast absurdity, not protected classes or private individuals
+  - revive dead charts aesthetic
+  - wash trading ghosts / rug pull demons (metaphorical)

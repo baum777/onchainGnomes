@@ -1,0 +1,17 @@
+preset_key: horny_chart_ghost
+
+style_prompt: >
+  ghost made of candlestick charts, neon glitch,
+  haunting crypto screens, surreal digital decay,
+  graveyard mood, readable text zones
+
+negative_prompt: >
+  gore, violence, explicit sexual content, slurs
+
+size: 1024x1024
+
+caption_bank: captions
+caption_rules:
+  - eerie humor
+  - short
+  - no internal metrics
