@@ -6,6 +6,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "demo:render": "node dist/scripts/render_demo.js",
+    "poll": "tsx scripts/poll_mentions.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
