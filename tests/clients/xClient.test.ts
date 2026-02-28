@@ -60,6 +60,20 @@ describe("XClient", () => {
       expect(result.id).toBe("dry_run_id");
     });
 
+    it("should return dry_run_id for replies with media", async () => {
+      const client = new XClient({
+        appKey: "test",
+        appSecret: "test",
+        accessToken: "test",
+        accessSecret: "test",
+        dryRun: true,
+      });
+
+      const result = await client.replyWithMedia("Caption", "123456", "media_789");
+      expect(result.id).toBe("dry_run_id");
+      expect(result.text).toBe("Caption");
+    });
+
     it("should return dry_run_media_id for media uploads", async () => {
       const client = new XClient({
         appKey: "test",
