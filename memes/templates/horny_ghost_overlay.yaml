@@ -1,0 +1,18 @@
+template_key: horny_ghost
+base_style_prompt: >
+  ghost made of candlestick charts, neon glitch aura,
+  surreal digital spirit, haunting trader souls
+overlay_elements:
+  - horns_overlay
+text_zones:
+  title:
+    - "LIQUIDITY GHOST DETECTED"
+    - "CHART GRAVEYARD GHOST"
+    - "EXIT LIQUIDITY WRAITH"
+  subtitle:
+    - "YOUR BAGS ARE HAUNTED FOREVER."
+    - "THE MARKET POSSESSED YOUR JUDGMENT."
+    - "THIS CHART IS SPIRITUALLY BEARISH."
+    - "WASH VOLUME POLTERGEIST DETECTED."
+    - "YOU SUMMONED VOLATILITY. CONGRATS."
+caption_style: eerie_humor
