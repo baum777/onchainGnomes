@@ -49,6 +49,13 @@ export type StateRepoLike = {
   >;
 };
 
+export type BuildContextOptions = {
+  /** Max tweets to fetch in conversation thread (default 5) */
+  threadLimit?: number;
+  /** Max recent commands from history (default 5) */
+  historyLimit?: number;
+};
+
 const SUMMARY_MAX_CHARS = 1200;
 
 // Tokens that must NEVER appear in summary (internal leakage)
@@ -79,8 +86,11 @@ function sanitizeForSummary(text: string): string {
 export async function buildContext(
   event: MentionEventLike,
   twitterClient: TwitterApi,
-  stateRepo?: StateRepoLike | null
+  stateRepo?: StateRepoLike | null,
+  options?: BuildContextOptions | null
 ): Promise<BuiltContext> {
+  const threadLimit = options?.threadLimit ?? 5;
+  const historyLimit = options?.historyLimit ?? 5;
   const raw: Record<string, unknown> = { event_id: event.tweet_id };
   const author: BuiltContext["author"] = {
     id: event.user_id,
@@ -137,12 +147,12 @@ export async function buildContext(
       `conversation_id:${conversationId}`,
       {
         "tweet.fields": "text,author_id",
-        max_results: 5,
+        max_results: Math.min(threadLimit, 100),
         sort_order: "recency",
       }
     );
     const tweets = searchPaginator.tweets ?? [];
-    for (const t of tweets.slice(0, 5)) {
+    for (const t of tweets.slice(0, threadLimit)) {
       thread.push({
         id: t.id,
         text: t.text ?? "",
@@ -158,7 +168,7 @@ export async function buildContext(
   if (stateRepo?.getRecentCommands) {
     try {
       const cmds = await stateRepo.getRecentCommands(event.user_id);
-      recentUserBotHistory = cmds.slice(0, 5);
+      recentUserBotHistory = cmds.slice(0, historyLimit);
     } catch {
       // Continue
     }

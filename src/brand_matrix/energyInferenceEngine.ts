@@ -17,6 +17,8 @@ export type { EnergyLevel };
 
 export type EnergyInferenceInput = EnergyInput & {
   dice?: Dice | null;
+  /** Optional bump (e.g. whitelist privileges) applied before dice variance */
+  energyBump?: number;
 };
 
 function clampEnergy(n: number): EnergyLevel {
@@ -28,8 +30,10 @@ function clampEnergy(n: number): EnergyLevel {
  * Variance is only applied when user has NOT explicitly set energy.
  */
 export function inferEnergyWithVariance(input: EnergyInferenceInput): EnergyLevel {
-  const base = baseInfer(input);
+  let base = baseInfer(input);
   const explicitEnergy = input.explicitEnergy != null;
+  const bump = input.energyBump ?? 0;
+  base = clampEnergy(base + bump);
 
   // No variance if user explicitly set energy
   if (explicitEnergy || !input.dice) {

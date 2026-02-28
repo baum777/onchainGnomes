@@ -62,4 +62,29 @@ describe("contextBuilder", () => {
     expect(ctx.author.id).toBe("user3");
     expect(ctx.author.username).toBeUndefined();
   });
+
+  it("accepts threadLimit and historyLimit options", async () => {
+    const event = {
+      tweet_id: "opt123",
+      user_id: "user4",
+      text: "Options test",
+    };
+    const stateRepo = {
+      getRecentCommands: vi.fn().mockResolvedValue([
+        { cmd: "ask", args: {}, created_at: "2024-01-01" },
+        { cmd: "badge", args: {}, created_at: "2024-01-02" },
+      ]),
+    };
+
+    const ctx = await buildContext(event, mockTwitterClient, stateRepo, {
+      threadLimit: 15,
+      historyLimit: 10,
+    });
+
+    expect(ctx.mentionText).toBe(event.text);
+    expect(stateRepo.getRecentCommands).toHaveBeenCalled();
+    if (ctx.recentUserBotHistory) {
+      expect(ctx.recentUserBotHistory.length).toBeLessThanOrEqual(10);
+    }
+  });
 });
