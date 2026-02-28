@@ -10,22 +10,22 @@ export type MemeText = {
 };
 
 const DEFAULT_HEADERS: Partial<Record<TemplateKey, string>> = {
-  horny_courtroom: "COURT OF MARKET REALITY",
-  horny_chart_autopsy: "CHART AUTOPSY REPORT",
-  horny_ghost: "LIQUIDITY GHOST DETECTED",
-  horny_certificate: "OFFICIAL CERTIFICATION",
-  horny_trade_screen: "LIVE TRADING FOOTAGE"
+  gorky_courtroom: "COURT OF MARKET REALITY",
+  gorky_chart_autopsy: "CHART AUTOPSY REPORT",
+  gorky_ghost: "LIQUIDITY GHOST DETECTED",
+  gorky_certificate: "OFFICIAL CERTIFICATION",
+  gorky_trade_screen: "LIVE TRADING FOOTAGE"
 };
 
 const DEFAULT_FOOTERS: Partial<Record<TemplateKey, string>> = {
-  horny_courtroom: "SENTENCED TO HOLDING",
-  horny_chart_autopsy: "TIME OF DEATH: LIQUIDITY EVENT",
-  horny_certificate: "ISSUED BY HORNY ENTITY",
-  horny_trade_screen: "EMOTIONAL DAMAGE DETECTED"
+  gorky_courtroom: "SENTENCED TO HOLDING",
+  gorky_chart_autopsy: "TIME OF DEATH: LIQUIDITY EVENT",
+  gorky_certificate: "ISSUED BY GORKY ENTITY",
+  gorky_trade_screen: "EMOTIONAL DAMAGE DETECTED"
 };
 
 const BANK: Record<TemplateKey, Record<string, string[]>> = {
-  horny_courtroom: {
+  gorky_courtroom: {
     verdict: [
       "VERDICT: GUILTY OF VIBES-BASED INVESTING.",
       "VERDICT: CONFIDENCE EXCEEDED SKILL.",
@@ -44,7 +44,7 @@ const BANK: Record<TemplateKey, Record<string, string[]>> = {
       "NO PAROLE FROM BAGS"
     ]
   },
-  horny_chart_autopsy: {
+  gorky_chart_autopsy: {
     title: ["CHART AUTOPSY REPORT", "MEMECOIN MORGUE REPORT", "RUG PULL NECROPSY"],
     cause: [
       "Cause of death: NARRATIVE INFLATION.",
@@ -54,7 +54,7 @@ const BANK: Record<TemplateKey, Record<string, string[]>> = {
     ],
     footer: ["TIME OF DEATH: LIQUIDITY EVENT", "AUTOPSY COMPLETE — R.I.P.", "CAUSE: MARKET SAID NO"]
   },
-  horny_ghost: {
+  gorky_ghost: {
     title: ["LIQUIDITY GHOST DETECTED", "CHART GRAVEYARD GHOST", "EXIT LIQUIDITY WRAITH"],
     subtitle: [
       "YOUR BAGS ARE HAUNTED FOREVER.",
@@ -63,7 +63,7 @@ const BANK: Record<TemplateKey, Record<string, string[]>> = {
       "YOU SUMMONED VOLATILITY. CONGRATS."
     ]
   },
-  horny_certificate: {
+  gorky_certificate: {
     title: ["OFFICIAL CERTIFICATION", "DEGENERACY DEGREE AWARDED", "REKT ACADEMY DIPLOMA"],
     body: ["THIS USER IS CERTIFIED", "DEGENERATE STATUS: CONFIRMED", "OFFICIALLY REKT"],
     rank: [
@@ -73,20 +73,25 @@ const BANK: Record<TemplateKey, Record<string, string[]>> = {
       "WASH TRADE DETECTOR",
       "DEAD COIN REVIVER"
     ],
-    footer: ["ISSUED BY HORNY ENTITY", "VALID UNTIL NEXT RUG", "NO REFUNDS ON DEGENERACY"]
+    footer: ["ISSUED BY GORKY ENTITY", "VALID UNTIL NEXT RUG", "NO REFUNDS ON DEGENERACY"]
   },
-  horny_trade_screen: {
+  gorky_trade_screen: {
     header: ["LIVE TRADING FOOTAGE", "LIQUIDATION LIVE CAM", "REKT SCREEN CAPTURE"],
     body: [
       "YOU REALLY PRESSED BUY AT ATH.",
       "MARKET SAID NO — YOU SAID YES.",
       "VOLUME FAKE — LOSS REAL.",
-      "THIS IS NOT TRADING. IT’S PERFORMANCE ART.",
+      "THIS IS NOT TRADING. IT'S PERFORMANCE ART.",
       "BUY HIGH, CRY FOREVER."
     ],
     footer: ["EMOTIONAL DAMAGE DETECTED", "MARKET WINS AGAIN", "BEAUTIFUL DISASTER"]
   }
 };
+
+// Helper to safely get bank entry
+function getBankEntry(template: TemplateKey, zone: string): string[] | undefined {
+  return BANK[template]?.[zone];
+}
 
 export function buildMemeText(args: {
   userId: string;
@@ -119,35 +124,51 @@ export function buildMemeText(args: {
   if (f) textByZone.footer = f;
 
   // fill per template
-  for (const [zone, arr] of Object.entries(BANK[t] ?? {})) {
+  const bank = BANK[t];
+  for (const [zone, arr] of Object.entries(bank ?? {})) {
     textByZone[zone] = pickOne(arr, rng);
   }
 
-  // ensure mandatory zones
-  if (t === "horny_courtroom") {
-    textByZone.header = textByZone.header || pickOne(BANK.horny_courtroom.header, rng);
-    textByZone.verdict = textByZone.verdict || pickOne(BANK.horny_courtroom.verdict, rng);
-    textByZone.footer = textByZone.footer || pickOne(BANK.horny_courtroom.footer, rng);
+  // ensure mandatory zones with safe fallbacks
+  if (t === "gorky_courtroom") {
+    const headerOpts = getBankEntry(t, "header");
+    const verdictOpts = getBankEntry(t, "verdict");
+    const footerOpts = getBankEntry(t, "footer");
+    if (headerOpts) textByZone.header = textByZone.header || pickOne(headerOpts, rng);
+    if (verdictOpts) textByZone.verdict = textByZone.verdict || pickOne(verdictOpts, rng);
+    if (footerOpts) textByZone.footer = textByZone.footer || pickOne(footerOpts, rng);
   }
-  if (t === "horny_chart_autopsy") {
-    textByZone.title = textByZone.title || pickOne(BANK.horny_chart_autopsy.title, rng);
-    textByZone.cause = textByZone.cause || pickOne(BANK.horny_chart_autopsy.cause, rng);
-    textByZone.footer = textByZone.footer || pickOne(BANK.horny_chart_autopsy.footer, rng);
+  if (t === "gorky_chart_autopsy") {
+    const titleOpts = getBankEntry(t, "title");
+    const causeOpts = getBankEntry(t, "cause");
+    const footerOpts = getBankEntry(t, "footer");
+    if (titleOpts) textByZone.title = textByZone.title || pickOne(titleOpts, rng);
+    if (causeOpts) textByZone.cause = textByZone.cause || pickOne(causeOpts, rng);
+    if (footerOpts) textByZone.footer = textByZone.footer || pickOne(footerOpts, rng);
   }
-  if (t === "horny_ghost") {
-    textByZone.title = textByZone.title || pickOne(BANK.horny_ghost.title, rng);
-    textByZone.subtitle = textByZone.subtitle || pickOne(BANK.horny_ghost.subtitle, rng);
+  if (t === "gorky_ghost") {
+    const titleOpts = getBankEntry(t, "title");
+    const subtitleOpts = getBankEntry(t, "subtitle");
+    if (titleOpts) textByZone.title = textByZone.title || pickOne(titleOpts, rng);
+    if (subtitleOpts) textByZone.subtitle = textByZone.subtitle || pickOne(subtitleOpts, rng);
   }
-  if (t === "horny_certificate") {
-    textByZone.title = textByZone.title || pickOne(BANK.horny_certificate.title, rng);
-    textByZone.body = textByZone.body || pickOne(BANK.horny_certificate.body, rng);
-    textByZone.rank = textByZone.rank || pickOne(BANK.horny_certificate.rank, rng);
-    textByZone.footer = textByZone.footer || pickOne(BANK.horny_certificate.footer, rng);
+  if (t === "gorky_certificate") {
+    const titleOpts = getBankEntry(t, "title");
+    const bodyOpts = getBankEntry(t, "body");
+    const rankOpts = getBankEntry(t, "rank");
+    const footerOpts = getBankEntry(t, "footer");
+    if (titleOpts) textByZone.title = textByZone.title || pickOne(titleOpts, rng);
+    if (bodyOpts) textByZone.body = textByZone.body || pickOne(bodyOpts, rng);
+    if (rankOpts) textByZone.rank = textByZone.rank || pickOne(rankOpts, rng);
+    if (footerOpts) textByZone.footer = textByZone.footer || pickOne(footerOpts, rng);
   }
-  if (t === "horny_trade_screen") {
-    textByZone.header = textByZone.header || pickOne(BANK.horny_trade_screen.header, rng);
-    textByZone.body = textByZone.body || pickOne(BANK.horny_trade_screen.body, rng);
-    textByZone.footer = textByZone.footer || pickOne(BANK.horny_trade_screen.footer, rng);
+  if (t === "gorky_trade_screen") {
+    const headerOpts = getBankEntry(t, "header");
+    const bodyOpts = getBankEntry(t, "body");
+    const footerOpts = getBankEntry(t, "footer");
+    if (headerOpts) textByZone.header = textByZone.header || pickOne(headerOpts, rng);
+    if (bodyOpts) textByZone.body = textByZone.body || pickOne(bodyOpts, rng);
+    if (footerOpts) textByZone.footer = textByZone.footer || pickOne(footerOpts, rng);
   }
 
   return { template: t, rarity: pick.rarity, textByZone };

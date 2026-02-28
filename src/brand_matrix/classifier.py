@@ -120,6 +120,8 @@ class MatrixClassifier:
 
     def _enrich_metadata(self, action_plan: ActionPlan) -> Dict[str, Any]:
         """Anreicherung der Metadaten für das Payload."""
+        import time
+
         metadata = dict(action_plan.metadata)
 
         if action_plan.parsed_command:
@@ -131,7 +133,18 @@ class MatrixClassifier:
         if action_plan.preset_key:
             metadata["preset_key"] = action_plan.preset_key
 
-        import time
         metadata["classified_at"] = int(time.time())
+
+        # GORKY humor mode (internal only, never exposed to user)
+        from .humor_mode_selector import HumorModeSelector
+
+        energy = self._calculate_energy(action_plan)
+        aggression_flag = metadata.get("aggression_flag", False)
+        flavor = action_plan.flavor.value
+        metadata["humor_mode"] = HumorModeSelector.select_mode(
+            energy=energy,
+            aggression_flag=aggression_flag,
+            flavor=flavor,
+        )
 
         return metadata

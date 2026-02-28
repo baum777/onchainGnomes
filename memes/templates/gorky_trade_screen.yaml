@@ -1,0 +1,23 @@
+template_key: gorky_trade_screen
+base_style_prompt: >
+  trading interface aesthetic, portfolio liquidation view,
+  red candle cascade, meme trading screen style
+overlay_elements:
+  - glitch_frame
+  - warning_label
+text_zones:
+  header:
+    - "LIVE TRADING FOOTAGE"
+    - "LIQUIDATION LIVE CAM"
+    - "REKT SCREEN CAPTURE"
+  body:
+    - "YOU REALLY PRESSED BUY AT ATH."
+    - "MARKET SAID NO — YOU SAID YES."
+    - "VOLUME FAKE — LOSS REAL."
+    - "THIS IS NOT TRADING. IT'S PERFORMANCE ART."
+    - "BUY HIGH, CRY FOREVER."
+  footer:
+    - "EMOTIONAL DAMAGE DETECTED"
+    - "MARKET WINS AGAIN"
+    - "BEAUTIFUL DISASTER"
+caption_style: trading_mockery

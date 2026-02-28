@@ -17,7 +17,7 @@ export function rollInt(min: number, max: number, rng: RNG = Math.random): numbe
 
 export function pickOne<T>(arr: T[], rng: RNG = Math.random): T {
   if (!arr.length) throw new Error("pickOne: empty array");
-  return arr[rollInt(0, arr.length - 1, rng)];
+  return arr[rollInt(0, arr.length - 1, rng)]!;
 }
 
 export function weightedPick<T extends string>(
@@ -34,5 +34,5 @@ export function weightedPick<T extends string>(
     t -= w;
     if (t <= 0) return k;
   }
-  return entries[entries.length - 1][0];
+  return entries[entries.length - 1]![0];
 }
