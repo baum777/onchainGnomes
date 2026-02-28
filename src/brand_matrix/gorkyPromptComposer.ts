@@ -1,18 +1,19 @@
 /**
  * Gorky Prompt Composer
  *
- * Produces final system+user prompts for LLM based on:
- * - persona file
- * - composer rules
- * - voice matrix (energy)
- * - humor mode
- * - safe boundary reminders
+ * Produces:
+ * - LLM prompts (system+user) for future AI integration
+ * - Direct reply text (<=280 chars) for tweet-ready output
+ * Never includes internal meta keywords in public output.
  */
 
 import { readFileSync } from "fs";
 import { resolve } from "path";
-import { HumorMode } from "./humorModeSelector.js";
-import { EnergyLevel } from "./energyInference.js";
+import type { HumorMode } from "./humorModeSelector.js";
+import type { EnergyLevel } from "./energyInference.js";
+import type { DatasetBank } from "../loaders/datasetLoader.js";
+import { pickOne } from "../memes/dice.js";
+import { createSeededRNG } from "../loaders/seed.js";
 
 export type PromptComposerInput = {
   userText: string;
@@ -208,4 +209,54 @@ export function isOutputSafe(text: string): { safe: boolean; violations: string[
   });
 
   return { safe: violations.length === 0, violations };
+}
+
+// Rhyme de-escalation lines (mode RHYME_DEESCALATION)
+const RHYME_DEESCALATION_LINES = [
+  "You came in hot, but charts don't lie — take a breath, watch the sky.",
+  "Rage is loud, patience wins — let the market chaos begin.",
+  "Hot words burn, cold charts turn — every lesson, traders learn.",
+  "Anger fades, trends remain — watch the candles, feel the pain.",
+];
+
+const HELPFUL_TIPS = [
+  "Check the chart. Then check again.",
+  "Sometimes the best trade is no trade.",
+  "Volume doesn't lie. Usually.",
+];
+
+export type ComposeReplyInput = {
+  summary: string;
+  userText: string;
+  mode: HumorMode;
+  energy: EnergyLevel;
+  command?: string | null;
+  seedKey: string;
+  datasetBank: DatasetBank;
+};
+
+/**
+ * Compose public reply text (<=280 chars).
+ * Never includes internal meta. For rhyme mode: 2-4 lines + 1 helpful tip.
+ */
+export function composeReplyText(input: ComposeReplyInput): string {
+  const rng = createSeededRNG(input.seedKey);
+  const pick = <T>(arr: T[]) => (arr.length ? pickOne(arr, rng) : null);
+
+  if (input.mode === "rhyme") {
+    const line = pick(RHYME_DEESCALATION_LINES) ?? RHYME_DEESCALATION_LINES[0]!;
+    const tip = pick(HELPFUL_TIPS) ?? HELPFUL_TIPS[0]!;
+    const reply = `${line} ${tip}`;
+    return reply.slice(0, 280);
+  }
+
+  const bank = input.datasetBank;
+  const tone = input.command === "ask" ? "neutral" : "mocking";
+  const candidates = tone === "neutral" && bank.captions?.length
+    ? bank.captions
+    : bank.roastReplies?.length
+      ? bank.roastReplies
+      : bank.captions ?? [];
+  const text = pick(candidates) ?? "Chart observation complete. Results: entertaining.";
+  return text.slice(0, 280);
 }
