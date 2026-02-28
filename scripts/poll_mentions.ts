@@ -194,10 +194,8 @@ async function processMention(
 
     if (result.skip_reason) {
       console.log(`[SKIP] ${mention.id}: ${result.skip_reason}`);
-      if (result.skip_reason === "Event already processed") {
-        markProcessed(state, mention.id);
-        saveState(state);
-      }
+      markProcessed(state, mention.id);
+      saveState(state);
       return;
     }
 

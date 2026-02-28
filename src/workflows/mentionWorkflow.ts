@@ -34,6 +34,9 @@ import { detectAggression as detectAggressionBrand } from "../brand_matrix/aggre
 import { composeReplyText } from "../brand_matrix/gorkyPromptComposer.js";
 import { buildContext } from "../brand_matrix/contextBuilder.js";
 import { rollDice } from "../utils/rollDice.js";
+import { readActivationConfigFromEnv } from "../config/botActivationConfig.js";
+import type { ActivationConfig } from "../config/botActivationConfig.js";
+import { evaluateActivation } from "../policy/activationPolicy.js";
 import {
   RewardEngine,
   QualitySignals,
@@ -97,6 +100,8 @@ export type WorkflowConfig = {
   stateRepo?: { getRecentCommands?(userId: string): Promise<Array<{ cmd: string; args: unknown; created_at: string }>> } | null;
   /** When provided, workflow posts reply; otherwise returns result for caller */
   xClient?: XClient | null;
+  /** Override activation config (default: read from env) */
+  activationConfig?: ActivationConfig | null;
 };
 
 // Simple DSL Parser
@@ -356,24 +361,46 @@ export class MentionWorkflow {
         };
       }
 
-      // 2) Self-mention check (avoid infinite loops)
-      if (this.config.botUserId && event.user_id === this.config.botUserId) {
+      // 2) Activation policy (includes self-mention)
+      const activationConfig =
+        this.config.activationConfig ?? readActivationConfigFromEnv();
+      const botUserId = this.config.botUserId ?? "";
+      const activationDecision = await evaluateActivation({
+        config: activationConfig,
+        botUserId,
+        authorId: event.user_id,
+        authorUsername: event.user_handle,
+      });
+
+      if (!activationDecision.allowed) {
+        const reason =
+          activationDecision.reason === "self_mention"
+            ? "Self-mention ignored"
+            : activationDecision.reason === "not_whitelisted"
+              ? "Not whitelisted"
+              : activationDecision.reason;
         return {
           success: false,
           mode: "TEXT",
           reply_text: "",
-          skip_reason: "Self-mention ignored",
+          skip_reason: reason,
         };
       }
 
-      // 3) Build context (best-effort)
+      // 3) Build context (best-effort; whitelist privileges for deeper context)
+      const isWhitelistedPrivileged = activationDecision.isWhitelisted === true;
+      const contextOpts = isWhitelistedPrivileged
+        ? { threadLimit: 15, historyLimit: 10 }
+        : undefined;
+
       let contextSummary = event.text;
       if (this.config.twitterClient) {
         try {
           const built = await buildContext(
             event as import("../brand_matrix/contextBuilder.js").MentionEventLike,
             this.config.twitterClient,
-            this.config.stateRepo ?? undefined
+            this.config.stateRepo ?? undefined,
+            contextOpts
           );
           contextSummary = built.summary;
         } catch {
@@ -406,7 +433,8 @@ export class MentionWorkflow {
       // 8) rollDice (deterministic per event)
       const dice = rollDice(event.tweet_id);
 
-      // 9) Energy inference (with dice variance)
+      // 9) Energy inference (+1 whitelist bump, then dice variance)
+      const energyBump = isWhitelistedPrivileged ? 1 : 0;
       const energy = inferEnergyWithVariance({
         explicitEnergy: parsed.explicitEnergy,
         command: parsed.command,
@@ -414,6 +442,7 @@ export class MentionWorkflow {
         rewardContext: { isRewardReply: false },
         text: event.text,
         dice,
+        energyBump,
       });
 
       // 10) Humor mode (with dice)
