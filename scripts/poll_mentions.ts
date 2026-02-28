@@ -1,7 +1,7 @@
 /**
- * Minimal Mention Poller
+ * serGorky Mention Poller
  *
- * Fetches mentions, generates replies, posts via XClient.
+ * Fetches mentions, processes via MentionWorkflow (global activation).
  * Uses file-based storage for idempotency.
  * Runs in an infinite loop with 30s sleep.
  */
@@ -10,7 +10,19 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { TwitterApi } from "twitter-api-v2";
-import { createXClient, XClient } from "../src/clients/xClient.js";
+import { createXClient } from "../src/clients/xClient.js";
+import {
+  MentionWorkflow,
+  type MentionEvent,
+  type ProcessedEvent,
+  type UserProfile,
+  type WorkflowConfig,
+} from "../src/workflows/mentionWorkflow.js";
+import {
+  RewardEngine,
+  type RewardStateRepo,
+  type RewardUserProfile,
+} from "../src/reward_engine/index.js";
 
 // Paths
 const __filename = fileURLToPath(import.meta.url);
@@ -67,11 +79,6 @@ function markProcessed(state: ProcessedMentionsState, tweetId: string): void {
   }
 }
 
-// Generate placeholder reply
-function generateReply(_mention: Mention): string {
-  return "gorky observed your message. chaos acknowledged.";
-}
-
 // Sleep utility
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -89,9 +96,13 @@ async function fetchMentions(
   userId: string,
   sinceId: string | null
 ): Promise<{ mentions: Mention[]; maxId: string | null }> {
-  const params: { max_results: number; since_id?: string; "tweet.fields"?: string } = {
+  const params: {
+    max_results: number;
+    since_id?: string;
+    "tweet.fields"?: string;
+  } = {
     max_results: 10,
-    "tweet.fields": "author_id",
+    "tweet.fields": "author_id,conversation_id,created_at,referenced_tweets",
   };
 
   if (sinceId) {
@@ -104,7 +115,7 @@ async function fetchMentions(
   let maxId: string | null = sinceId;
   const mentions: Mention[] = tweets.map((t) => ({
     id: t.id,
-    text: t.text,
+    text: t.text ?? "",
     author_id: t.author_id || "",
   }));
 
@@ -118,9 +129,37 @@ async function fetchMentions(
   return { mentions, maxId };
 }
 
-// Process single mention
+// In-memory reward state (poll does not persist XP across restarts)
+function createPollRewardRepo(): RewardStateRepo {
+  const profiles = new Map<string, RewardUserProfile>();
+  const processedEvents = new Set<string>();
+  let globalImageCount = 0;
+
+  return {
+    async getUserProfile(userId: string) {
+      return profiles.get(userId) ?? null;
+    },
+    async saveUserProfile(profile: RewardUserProfile) {
+      profiles.set(profile.user_id, { ...profile });
+    },
+    async isEventProcessed(eventId: string) {
+      return processedEvents.has(eventId);
+    },
+    async markEventProcessed(eventId: string) {
+      processedEvents.add(eventId);
+    },
+    async getGlobalImageCount24h() {
+      return globalImageCount;
+    },
+    async incrementGlobalImageCount() {
+      globalImageCount++;
+    },
+  };
+}
+
+// Process single mention via MentionWorkflow
 async function processMention(
-  xClient: XClient,
+  workflow: MentionWorkflow,
   mention: Mention,
   state: ProcessedMentionsState
 ): Promise<void> {
@@ -131,28 +170,58 @@ async function processMention(
 
   console.log(`[NEW] Mention ${mention.id}: "${mention.text.substring(0, 50)}..."`);
 
-  const replyText = generateReply(mention);
+  const event: MentionEvent = {
+    tweet_id: mention.id,
+    user_id: mention.author_id,
+    user_handle: mention.author_id, // API may not include username in minimal payload
+    text: mention.text,
+    created_at: new Date().toISOString(),
+  };
 
-  if (DRY_RUN) {
-    console.log(`[DRY_RUN] Would reply to ${mention.id}: "${replyText}"`);
-  } else {
-    try {
-      const result = await xClient.reply(replyText, mention.id);
-      console.log(`[POSTED] Reply ${result.id}: "${result.text}"`);
-    } catch (error) {
-      console.error(`[ERROR] Failed to reply to ${mention.id}:`, error);
-      throw error; // Let caller handle
+  const profile: UserProfile = {
+    user_id: mention.author_id,
+    reward_pending: false,
+    reply_count_24h: 0,
+  };
+
+  const processedEvents: ProcessedEvent[] = state.processed.map((id) => ({
+    event_id: id,
+    processed_at: new Date().toISOString(),
+  }));
+
+  try {
+    const result = await workflow.process(event, profile, processedEvents);
+
+    if (result.skip_reason) {
+      console.log(`[SKIP] ${mention.id}: ${result.skip_reason}`);
+      markProcessed(state, mention.id);
+      saveState(state);
+      return;
     }
-  }
 
-  markProcessed(state, mention.id);
-  saveState(state);
-  console.log(`[SAVED] Marked ${mention.id} as processed`);
+    if (!result.success) {
+      console.error(`[ERROR] ${mention.id}: ${result.error ?? "Unknown"}`);
+      return;
+    }
+
+    if (DRY_RUN) {
+      console.log(`[DRY_RUN] Would reply to ${mention.id}: "${result.reply_text.substring(0, 80)}..."`);
+    } else {
+      console.log(`[POSTED] Reply to ${mention.id}: "${result.reply_text.substring(0, 80)}..."`);
+    }
+
+    markProcessed(state, mention.id);
+    saveState(state);
+    console.log(`[SAVED] Marked ${mention.id} as processed`);
+  } catch (error) {
+    console.error(`[ERROR] Processing mention ${mention.id}:`, error);
+    throw error;
+  }
 }
 
 // Main loop
 async function main(): Promise<void> {
-  console.log("[START] Mention Poller");
+  console.log("[START] serGorky Mention Poller");
   console.log(`[CONFIG] DRY_RUN=${DRY_RUN}`);
   console.log(`[CONFIG] POLL_INTERVAL=${POLL_INTERVAL_MS}ms`);
 
@@ -168,6 +237,25 @@ async function main(): Promise<void> {
 
   const userId = await getUserId(rawClient);
   console.log(`[AUTH] Authenticated as user: ${userId}`);
+
+  const rewardRepo = createPollRewardRepo();
+  const rewardEngine = new RewardEngine(rewardRepo, {
+    cooldownHours: 24,
+    globalImageCap24h: 100,
+  });
+
+  const workflowConfig: WorkflowConfig = {
+    presetsDir: "./memes/presets",
+    templatesDir: "./memes/templates",
+    datasetsRoot: "./data/datasets",
+    cooldownMinutes: 60,
+    dryRun: DRY_RUN,
+    botUserId: userId,
+    twitterClient: rawClient,
+    xClient,
+  };
+
+  const workflow = new MentionWorkflow(workflowConfig, rewardEngine);
 
   const state = loadState();
   console.log(`[STATE] Loaded ${state.processed.length} processed mentions`);
@@ -190,7 +278,7 @@ async function main(): Promise<void> {
 
       for (const mention of mentions) {
         try {
-          await processMention(xClient, mention, state);
+          await processMention(workflow, mention, state);
         } catch (error) {
           console.error(`[ERROR] Processing mention ${mention.id}:`, error);
           // Continue to next mention

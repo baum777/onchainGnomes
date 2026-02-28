@@ -1,26 +1,42 @@
 /**
  * Mention Workflow
  *
- * HARD-ANCHOR implementation:
- * 1. Idempotency gate FIRST
- * 2. Parse + normalize command
- * 3. Safety check / rewrite
- * 4. Scoring ALWAYS runs (unless blocked)
- * 5. Reward evaluation after scoring
- * 6. Reward consume with eligibility checks
- * 7. Branch: IMAGE or TEXT reply
- * 8. Public boundary enforcement
- * 9. Post + persist
+ * Global activation: every mention triggers processing (no whitelist).
+ * 1. Idempotency gate
+ * 2. Self-mention check (bot replying to self => skip)
+ * 3. Build context (best-effort)
+ * 4. Parse command DSL
+ * 5. Aggression detect
+ * 6. Safety rewrite
+ * 7. Scoring + reward evaluate
+ * 8. rollDice, energy inference, humor mode
+ * 9. Reward consume (IMAGE or TEXT)
+ * 10. assertPublicTextSafe
+ * 11. Post (when xClient provided)
+ * 12. Persist
  */
 
+import type { TwitterApi } from "twitter-api-v2";
+import type { XClient } from "../clients/xClient.js";
 import { MemeResolver } from "../loaders/resolver.js";
 import { DatasetBank, loadDatasetBank } from "../loaders/datasetLoader.js";
 import { pickCaption } from "../loaders/captionPicker.js";
 import { pickTemplateTexts } from "../memes/templateTextPicker.js";
 import { assertPublicSafe } from "../boundary/publicGuard.js";
+import { assertPublicTextSafe } from "../boundary/publicTextGuard.js";
 import { createSeededRNG } from "../loaders/seed.js";
 import { selectHumorMode } from "../brand_matrix/humorModeSelector.js";
-import { inferEnergy, EnergyLevel } from "../brand_matrix/energyInference.js";
+import {
+  inferEnergyWithVariance,
+  type EnergyLevel,
+} from "../brand_matrix/energyInferenceEngine.js";
+import { detectAggression as detectAggressionBrand } from "../brand_matrix/aggressionDetector.js";
+import { composeReplyText } from "../brand_matrix/gorkyPromptComposer.js";
+import { buildContext } from "../brand_matrix/contextBuilder.js";
+import { rollDice } from "../utils/rollDice.js";
+import { readActivationConfigFromEnv } from "../config/botActivationConfig.js";
+import type { ActivationConfig } from "../config/botActivationConfig.js";
+import { evaluateActivation } from "../policy/activationPolicy.js";
 import {
   RewardEngine,
   QualitySignals,
@@ -76,6 +92,16 @@ export type WorkflowConfig = {
   datasetsRoot: string;
   cooldownMinutes: number;
   dryRun: boolean;
+  /** Skip when mention author is the bot (avoid self-reply loops) */
+  botUserId?: string | null;
+  /** For context building (author, parent, thread) */
+  twitterClient?: TwitterApi | null;
+  /** For recent command history */
+  stateRepo?: { getRecentCommands?(userId: string): Promise<Array<{ cmd: string; args: unknown; created_at: string }>> } | null;
+  /** When provided, workflow posts reply; otherwise returns result for caller */
+  xClient?: XClient | null;
+  /** Override activation config (default: read from env) */
+  activationConfig?: ActivationConfig | null;
 };
 
 // Simple DSL Parser
@@ -142,7 +168,7 @@ export function ensureNotProcessed(
   return { kind: "ok" };
 }
 
-// Aggression detection
+// Aggression detection (delegates to brand_matrix for consistency)
 export type AggressionResult = {
   isAggressive: boolean;
   score: number;
@@ -150,34 +176,12 @@ export type AggressionResult = {
 };
 
 export function detectAggression(text: string): AggressionResult {
-  const lower = text.toLowerCase();
-  const flags: string[] = [];
-
-  const aggressiveWords = ["kill", "die", "hate", "attack", "destroy", "rage", "stupid", "idiot"];
-  for (const word of aggressiveWords) {
-    if (lower.includes(word)) {
-      flags.push(`aggressive:${word}`);
-    }
-  }
-
-  // ALL CAPS check
-  const capsRatio = text.replace(/[^a-zA-Z]/g, "").length > 0
-    ? text.replace(/[^A-Z]/g, "").length / text.replace(/[^a-zA-Z]/g, "").length
-    : 0;
-  if (capsRatio > 0.7 && text.length > 10) {
-    flags.push("aggressive:all_caps");
-  }
-
-  // Excessive punctuation
-  const exclamationCount = (text.match(/!/g) || []).length;
-  if (exclamationCount >= 3) {
-    flags.push("aggressive:exclamation");
-  }
-
-  const score = flags.length;
-  const isAggressive = score >= 1;
-
-  return { isAggressive, score, flags };
+  const r = detectAggressionBrand(text);
+  return {
+    isAggressive: r.isAggressive,
+    score: r.signals.length,
+    flags: r.signals,
+  };
 }
 
 // Safety check with rewrite support
@@ -206,8 +210,8 @@ export function safetyRewrite(text: string, command?: string | null): SafetyAsse
     }
   }
 
-  const aggression = detectAggression(text);
-  flags.push(...aggression.flags);
+  const aggression = detectAggressionBrand(text);
+  flags.push(...aggression.signals);
 
   const is_unsafe = flags.some((f) => f.startsWith("unsafe:"));
   const is_aggressive = aggression.isAggressive;
@@ -221,7 +225,7 @@ export function safetyRewrite(text: string, command?: string | null): SafetyAsse
   }
 
   return {
-    is_aggressive,
+    is_aggressive: is_aggressive,
     is_unsafe,
     blocked: is_unsafe || flags.includes("risky"),
     reason: is_unsafe ? "unsafe content detected" : is_aggressive ? "aggressive tone detected" : undefined,
@@ -345,114 +349,181 @@ export class MentionWorkflow {
     profile: UserProfile,
     processedEvents: ProcessedEvent[]
   ): Promise<MentionResult> {
-    // A) Idempotency gate FIRST
-    const idempotencyCheck = ensureNotProcessed(event, processedEvents);
-    if (idempotencyCheck.kind === "skip") {
+    try {
+      // 1) Idempotency gate
+      const idempotencyCheck = ensureNotProcessed(event, processedEvents);
+      if (idempotencyCheck.kind === "skip") {
+        return {
+          success: false,
+          mode: "TEXT",
+          reply_text: "",
+          skip_reason: idempotencyCheck.reason,
+        };
+      }
+
+      // 2) Activation policy (includes self-mention)
+      const activationConfig =
+        this.config.activationConfig ?? readActivationConfigFromEnv();
+      const botUserId = this.config.botUserId ?? "";
+      const activationDecision = await evaluateActivation({
+        config: activationConfig,
+        botUserId,
+        authorId: event.user_id,
+        authorUsername: event.user_handle,
+      });
+
+      if (!activationDecision.allowed) {
+        const reason =
+          activationDecision.reason === "self_mention"
+            ? "Self-mention ignored"
+            : activationDecision.reason === "not_whitelisted"
+              ? "Not whitelisted"
+              : activationDecision.reason;
+        return {
+          success: false,
+          mode: "TEXT",
+          reply_text: "",
+          skip_reason: reason,
+        };
+      }
+
+      // 3) Build context (best-effort; whitelist privileges for deeper context)
+      const isWhitelistedPrivileged = activationDecision.isWhitelisted === true;
+      const contextOpts = isWhitelistedPrivileged
+        ? { threadLimit: 15, historyLimit: 10 }
+        : undefined;
+
+      let contextSummary = event.text;
+      if (this.config.twitterClient) {
+        try {
+          const built = await buildContext(
+            event as import("../brand_matrix/contextBuilder.js").MentionEventLike,
+            this.config.twitterClient,
+            this.config.stateRepo ?? undefined,
+            contextOpts
+          );
+          contextSummary = built.summary;
+        } catch {
+          // Continue with minimal context
+        }
+      }
+
+      // 4) Parse command
+      const parsed = parseMention(event.text);
+
+      // 5) Aggression detect
+      const aggressionResult = detectAggressionBrand(event.text);
+
+      // 6) Safety rewrite
+      const safety = safetyRewrite(event.text, parsed.command);
+
+      // Blocked: playful refusal (no scoring)
+      if (safety.blocked) {
+        const refusal = buildPublicRefusal(safety, event.tweet_id);
+        return this.finalizeReply(refusal, "TEXT", event.tweet_id, {
+          fallback: "My circuits detect spicy energy. Let's keep it chart-shaped, friend.",
+        });
+      }
+
+      // 7) Scoring + reward evaluation
+      const qualitySignals = buildQualitySignals(event, parsed);
+      await this.rewardEngine.accrueXp(event.user_id, "mention", qualitySignals);
+      await this.rewardEngine.evaluateRewards(event.user_id);
+
+      // 8) rollDice (deterministic per event)
+      const dice = rollDice(event.tweet_id);
+
+      // 9) Energy inference (+1 whitelist bump, then dice variance)
+      const energyBump = isWhitelistedPrivileged ? 1 : 0;
+      const energy = inferEnergyWithVariance({
+        explicitEnergy: parsed.explicitEnergy,
+        command: parsed.command,
+        aggression: { isAggressive: aggressionResult.isAggressive, score: aggressionResult.signals.length },
+        rewardContext: { isRewardReply: false },
+        text: event.text,
+        dice,
+        energyBump,
+      });
+
+      // 10) Humor mode (with dice)
+      const humorMode = selectHumorMode({
+        energy,
+        aggression: { isAggressive: aggressionResult.isAggressive },
+        command: parsed.command,
+        isRewardReply: false,
+        dice,
+      });
+
+      // Aggressive but not blocked => rhyme override
+      if (safety.is_aggressive) {
+        const rhyme = buildRhymeDeescalation(event.tweet_id);
+        return this.finalizeReply(rhyme, "TEXT", event.tweet_id, {
+          fallback: "Deep breath. Check the charts.",
+        });
+      }
+
+      // 11) Reward consume
+      const rewardContext: RewardEventContext = {
+        eventId: event.tweet_id,
+        command: parsed.command,
+        safety,
+      };
+      const reward = await this.rewardEngine.consumeRewardIfEligible(
+        event.user_id,
+        rewardContext
+      );
+
+      if (reward?.type === "ROAST_IMAGE") {
+        return await this.handleImageBranch(event, parsed, reward, energy, humorMode);
+      }
+
+      // TEXT mode via gorkyPromptComposer
+      return await this.handleTextBranch(event, parsed, safety, energy, humorMode, contextSummary);
+    } catch (err) {
       return {
         success: false,
         mode: "TEXT",
         reply_text: "",
-        skip_reason: idempotencyCheck.reason,
+        error: err instanceof Error ? err.message : "Unknown error",
       };
     }
+  }
 
-    // B) Parse + normalize command
-    const parsed = parseMention(event.text);
-
-    // C) Safety check / rewrite
-    const safety = safetyRewrite(event.text, parsed.command);
-
-    // If blocked by safety, produce playful refusal
-    // NOTE: Blocked events do NOT score (no XP for violating content)
-    if (safety.blocked) {
-      const refusal = buildPublicRefusal(safety, event.tweet_id);
-
-      // Public boundary enforcement
-      try {
-        assertPublicSafe(refusal, { route: "/safety" });
-      } catch (guardError) {
-        // Fallback to ultra-safe refusal - MUST contain "chart-shaped" per tests
-        const fallback = "My circuits detect spicy energy. Let's keep it chart-shaped, friend.";
-        return {
-          success: true,
-          mode: "TEXT",
-          reply_text: fallback,
-        };
-      }
-
-      return {
-        success: true,
-        mode: "TEXT",
-        reply_text: refusal,
-      };
+  private finalizeReply(
+    text: string,
+    mode: ReplyMode,
+    replyToId: string,
+    opts?: { fallback?: string; mediaBuffer?: Buffer }
+  ): MentionResult {
+    try {
+      assertPublicTextSafe(text, { route: "mentionWorkflow" });
+    } catch {
+      text = opts?.fallback ?? "Chart observation complete.";
     }
-
-    // D) Scoring MUST RUN (for all non-blocked mentions including aggressive)
-    const qualitySignals = buildQualitySignals(event, parsed);
-    await this.rewardEngine.accrueXp(event.user_id, "mention", qualitySignals);
-
-    // E) Reward evaluation
-    await this.rewardEngine.evaluateRewards(event.user_id);
-
-    // Aggressive but not blocked - rhyme mode (scoring already done above)
-    if (safety.is_aggressive) {
-      const rhyme = buildRhymeDeescalation(event.tweet_id);
-
-      // Public boundary enforcement
-      try {
-        assertPublicSafe(rhyme, { route: "/safety" });
-      } catch {
-        // Fallback
-        const fallback = "Deep breath. Check the charts.";
-        return {
-          success: true,
-          mode: "TEXT",
-          reply_text: fallback,
-        };
-      }
-
-      return {
-        success: true,
-        mode: "TEXT",
-        reply_text: rhyme,
-      };
-    }
-
-    // F) Energy + humor mode (for future LLM integration)
-    const energy = inferEnergy({
-      explicitEnergy: parsed.explicitEnergy,
-      command: parsed.command,
-      aggression: { isAggressive: safety.is_aggressive, score: safety.flags.length },
-      rewardContext: { isRewardReply: false },
-      text: event.text,
-    });
-
-    const humorMode = selectHumorMode({
-      energy,
-      aggression: { isAggressive: safety.is_aggressive },
-      command: parsed.command,
-      isRewardReply: false,
-    });
-
-    // G) Reward consume - this is the GATE
-    const rewardContext: RewardEventContext = {
-      eventId: event.tweet_id,
-      command: parsed.command,
-      safety,
+    const result: MentionResult = {
+      success: true,
+      mode,
+      reply_text: text,
+      media_buffer: opts?.mediaBuffer,
     };
-
-    const reward = await this.rewardEngine.consumeRewardIfEligible(
-      event.user_id,
-      rewardContext
-    );
-
-    // H) Branch based on reward
-    if (reward?.type === "ROAST_IMAGE") {
-      return this.handleImageBranch(event, parsed, reward, energy, humorMode);
+    if (this.config.xClient && !this.config.dryRun) {
+      this.postReply(result, replyToId).catch(() => {});
     }
+    return result;
+  }
 
-    // I) TEXT mode (default)
-    return this.handleTextBranch(event, parsed, safety, energy, humorMode);
+  private async postReply(result: MentionResult, replyToId: string): Promise<void> {
+    if (!this.config.xClient) return;
+    try {
+      if (result.media_buffer) {
+        const mediaId = await this.config.xClient.uploadMedia(result.media_buffer, "image/png");
+        await this.config.xClient.replyWithMedia(result.reply_text.slice(0, 140), replyToId, mediaId);
+      } else {
+        await this.config.xClient.reply(result.reply_text, replyToId);
+      }
+    } catch (e) {
+      console.error("[mentionWorkflow] Post failed:", e);
+    }
   }
 
   private async handleImageBranch(
@@ -473,7 +544,14 @@ export class MentionWorkflow {
 
     if (!resolved) {
       // Fallback to text mode
-      return this.handleTextBranch(event, parsed, { is_aggressive: false, is_unsafe: false, blocked: false, flags: [] }, energy, humorMode);
+      return this.handleTextBranch(
+        event,
+        parsed,
+        { is_aggressive: false, is_unsafe: false, blocked: false, flags: [] },
+        energy,
+        humorMode,
+        event.text
+      );
     }
 
     // Generate caption text
@@ -482,30 +560,15 @@ export class MentionWorkflow {
       tone: "mocking",
     });
 
-    // Public boundary enforcement on caption
-    try {
-      assertPublicSafe(caption, { route: "/img" });
-    } catch {
-      // Fallback caption
-      const fallbackCaption = "Market observation in progress.";
-      return {
-        success: true,
-        mode: "IMAGE",
-        reply_text: fallbackCaption,
-      };
-    }
-
     // Pick template texts
     pickTemplateTexts(resolved.template, event.tweet_id);
 
     // Note: Actual image rendering would happen here via renderMemeSharp
-    // For now, we return the configuration for the renderer
-    return {
-      success: true,
-      mode: "IMAGE",
-      reply_text: caption,
-      // In production, media_buffer would be populated by rendering
-    };
+    // For now, media_buffer stays undefined; when populated, post as reply with media
+    return this.finalizeReply(caption, "IMAGE", event.tweet_id, {
+      fallback: "Market observation in progress.",
+      mediaBuffer: undefined,
+    });
   }
 
   private async handleTextBranch(
@@ -513,89 +576,39 @@ export class MentionWorkflow {
     parsed: ParsedMention,
     safety: SafetyAssessment,
     energy: EnergyLevel,
-    humorMode: string
+    humorMode: string,
+    contextSummary: string
   ): Promise<MentionResult> {
     // /badge me command
     if (parsed.command === "badge") {
       const badgeText = generateBadgeText(`${event.tweet_id}:${event.user_id}`);
-
-      // Public boundary enforcement - /badge must never contain numbers
-      try {
-        assertPublicSafe(badgeText, { route: "/badge" });
-      } catch {
-        // Fallback badge without any numbers
-        const fallbackBadge = "Certified Market Survivor\n\nYour bags tell a story. It's a tragedy.";
-        return {
-          success: true,
-          mode: "TEXT",
-          reply_text: fallbackBadge,
-        };
-      }
-
-      return {
-        success: true,
-        mode: "TEXT",
-        reply_text: badgeText,
-      };
+      return this.finalizeReply(badgeText, "TEXT", event.tweet_id, {
+        fallback: "Certified Market Survivor\n\nYour bags tell a story. It's a tragedy.",
+      });
     }
 
     // /help command
     if (parsed.command === "help") {
       const helpText = "Commands: /ask, /img, /remix, /badge me. I'm here to observe market chaos.";
-
-      try {
-        assertPublicSafe(helpText, { route: "/help" });
-      } catch {
-        const fallbackHelp = "Available commands: ask, img, remix, badge.";
-        return {
-          success: true,
-          mode: "TEXT",
-          reply_text: fallbackHelp,
-        };
-      }
-
-      return {
-        success: true,
-        mode: "TEXT",
-        reply_text: helpText,
-      };
-    }
-
-    // Default text reply (roast)
-    let text: string;
-
-    if (parsed.command === "ask") {
-      // For /ask, use a more helpful but still playful tone
-      text = pickCaption(this.datasets, event.tweet_id, {
-        userHandle: event.user_handle,
-        tone: "neutral",
-      });
-    } else {
-      // Roast mode
-      text = pickCaption(this.datasets, event.tweet_id, {
-        userHandle: event.user_handle,
-        tone: "mocking",
+      return this.finalizeReply(helpText, "TEXT", event.tweet_id, {
+        fallback: "Available commands: ask, img, remix, badge.",
       });
     }
 
-    // Public boundary enforcement
-    try {
-      assertPublicSafe(text, { route: "/reply" });
-    } catch {
-      // Fallback safe text
-      const fallbackText = "Chart observation complete. Results: inconclusive but entertaining.";
-      return {
-        success: true,
-        mode: "TEXT",
-        reply_text: fallbackText,
-      };
-    }
+    // Default: compose via gorkyPromptComposer
+    const text = composeReplyText({
+      summary: contextSummary,
+      userText: event.text,
+      mode: humorMode as import("../brand_matrix/humorModeSelector.js").HumorMode,
+      energy,
+      command: parsed.command,
+      seedKey: event.tweet_id,
+      datasetBank: this.datasets,
+    });
 
-    return {
-      success: true,
-      mode: "TEXT",
-      reply_text: text,
-    };
+    return this.finalizeReply(text, "TEXT", event.tweet_id, {
+      fallback: "Chart observation complete. Results: inconclusive but entertaining.",
+    });
   }
 }
 

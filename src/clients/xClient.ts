@@ -170,6 +170,39 @@ export class XClient {
   }
 
   /**
+   * Reply to a tweet with media attachment
+   */
+  async replyWithMedia(
+    text: string,
+    replyToTweetId: string,
+    mediaId: string
+  ): Promise<{ id: string; text: string }> {
+    assertPublicTextSafe(text, { route: "XClient.replyWithMedia" });
+
+    if (this.dryRun) {
+      console.log(`[DRY_RUN] Would reply with media to ${replyToTweetId}:`, text.substring(0, 50) + "...");
+      return { id: "dry_run_id", text };
+    }
+
+    try {
+      const result = await withRetry(
+        () =>
+          this.client.v2.reply(text, replyToTweetId, {
+            media: { media_ids: [mediaId] },
+          }),
+        {},
+        isXApiRetryable
+      );
+      return {
+        id: result.data.id,
+        text: result.data.text ?? "",
+      };
+    } catch (error) {
+      throw new XClientError(`Failed to reply with media to ${replyToTweetId}: ${error}`, error);
+    }
+  }
+
+  /**
    * Post tweet with media attachment
    */
   async tweetWithMedia(text: string, mediaId: string): Promise<{ id: string; text: string }> {

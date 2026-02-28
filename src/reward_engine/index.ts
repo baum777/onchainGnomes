@@ -5,7 +5,6 @@
 export {
   RewardEngine,
   createRewardEngine,
-  DEFAULT_CONFIG,
 } from "./rewardEngine.js";
 
 export type {
