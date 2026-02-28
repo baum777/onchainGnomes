@@ -11,7 +11,7 @@ export type ActivationDecision = {
   allowed: boolean;
   reason: "allowed" | "not_whitelisted" | "self_mention";
   /** True if author matches whitelist (for privilege bump in global mode) */
-  isWhitelisted?: boolean;
+  isWhitelisted: boolean;
 };
 
 export type EvaluateActivationOpts = {
@@ -31,7 +31,7 @@ export async function evaluateActivation(
 
   // 1) Self-mention
   if (authorId === botUserId) {
-    return { allowed: false, reason: "self_mention" };
+    return { allowed: false, reason: "self_mention", isWhitelisted: false };
   }
 
   // 2) Global mode => allowed
@@ -45,7 +45,7 @@ export async function evaluateActivation(
     return { allowed: true, reason: "allowed", isWhitelisted: true };
   }
 
-  return { allowed: false, reason: "not_whitelisted" };
+  return { allowed: false, reason: "not_whitelisted", isWhitelisted: false };
 }
 
 function isAuthorInWhitelist(

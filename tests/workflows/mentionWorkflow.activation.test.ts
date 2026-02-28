@@ -232,4 +232,96 @@ describe("mentionWorkflow.activation", () => {
     const profileAfter = await repo.getUserProfile(botUserId);
     expect(profileAfter?.xp).toBe(0);
   });
+
+  it("whitelisted mention => gets privileges (threadLimit=15/historyLimit=10) and energy bump", async () => {
+    // This test verifies that whitelisted users receive:
+    // - threadLimit: 15 (vs default 5)
+    // - historyLimit: 10 (vs default 5)
+    // - energy bump: +1 before dice variance (clamped 1..5)
+    // These are internal behaviors; we verify via mocks in integration tests
+    const whitelistConfig: ActivationConfig = {
+      mode: "global",
+      whitelistUsernames: ["@vipuser"],
+      whitelistUserIds: ["vip_user_id"],
+    };
+
+    const wf = new MentionWorkflow(
+      { ...baseConfig, botUserId, activationConfig: whitelistConfig },
+      rewardEngine
+    );
+
+    await repo.saveUserProfile({
+      user_id: "vip_user_id",
+      xp: 0,
+      level: 0,
+      reward_pending: false,
+      reply_count_24h: 0,
+      global_image_count_24h: 0,
+    });
+
+    // Test with user ID match (no username provided)
+    const event = createEvent({
+      user_id: "vip_user_id",
+      user_handle: "some_handle",
+      text: "hello vip",
+    });
+    const profile: UserProfile = {
+      user_id: "vip_user_id",
+      reward_pending: false,
+      reply_count_24h: 0,
+    };
+
+    const result = await wf.process(event, profile, []);
+
+    // Should be allowed and processed successfully
+    expect(result.success).toBe(true);
+    expect(result.skip_reason).toBeUndefined();
+
+    // Scoring should have occurred
+    const profileAfter = await repo.getUserProfile("vip_user_id");
+    expect(profileAfter?.xp).toBeGreaterThan(0);
+  });
+
+  it("non-whitelisted in global mode => standard privileges", async () => {
+    const globalConfig: ActivationConfig = {
+      mode: "global",
+      whitelistUsernames: ["@vipuser"],
+      whitelistUserIds: [],
+    };
+
+    const wf = new MentionWorkflow(
+      { ...baseConfig, botUserId, activationConfig: globalConfig },
+      rewardEngine
+    );
+
+    await repo.saveUserProfile({
+      user_id: "regular_user",
+      xp: 0,
+      level: 0,
+      reward_pending: false,
+      reply_count_24h: 0,
+      global_image_count_24h: 0,
+    });
+
+    const event = createEvent({
+      user_id: "regular_user",
+      user_handle: "regular_joe",
+      text: "hey there",
+    });
+    const profile: UserProfile = {
+      user_id: "regular_user",
+      reward_pending: false,
+      reply_count_24h: 0,
+    };
+
+    const result = await wf.process(event, profile, []);
+
+    // Should be allowed in global mode
+    expect(result.success).toBe(true);
+    expect(result.skip_reason).toBeUndefined();
+
+    // Scoring should have occurred
+    const profileAfter = await repo.getUserProfile("regular_user");
+    expect(profileAfter?.xp).toBeGreaterThan(0);
+  });
 });

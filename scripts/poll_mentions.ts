@@ -23,6 +23,11 @@ import {
   type RewardStateRepo,
   type RewardUserProfile,
 } from "../src/reward_engine/index.js";
+import {
+  mapMentionsResponse,
+  MENTIONS_FETCH_OPTIONS,
+  type Mention,
+} from "../src/poller/mentionsMapper.js";
 
 // Paths
 const __filename = fileURLToPath(import.meta.url);
@@ -36,12 +41,6 @@ const DRY_RUN = process.env.DRY_RUN === "true";
 interface ProcessedMentionsState {
   last_since_id: string | null;
   processed: string[];
-}
-
-interface Mention {
-  id: string;
-  text: string;
-  author_id: string;
 }
 
 // Load or create state
@@ -90,7 +89,7 @@ async function getUserId(client: TwitterApi): Promise<string> {
   return user.data.id;
 }
 
-// Fetch mentions using since_id
+// Fetch mentions using since_id with proper expansions for author username resolution
 async function fetchMentions(
   client: TwitterApi,
   userId: string,
@@ -99,34 +98,27 @@ async function fetchMentions(
   const params: {
     max_results: number;
     since_id?: string;
-    "tweet.fields"?: string;
+    expansions: string[];
+    "tweet.fields": string[];
+    "user.fields": string[];
   } = {
-    max_results: 10,
-    "tweet.fields": "author_id,conversation_id,created_at,referenced_tweets",
+    max_results: MENTIONS_FETCH_OPTIONS.max_results,
+    expansions: [...MENTIONS_FETCH_OPTIONS.expansions],
+    "tweet.fields": [...MENTIONS_FETCH_OPTIONS["tweet.fields"]],
+    "user.fields": [...MENTIONS_FETCH_OPTIONS["user.fields"]],
   };
 
   if (sinceId) {
     params.since_id = sinceId;
   }
 
-  const timeline = await client.v2.userMentionTimeline(userId, params);
-  const tweets = timeline.tweets || [];
+  // Use the raw fetch to get full response with includes
+  const response = await client.v2.get(`users/${userId}/mentions`, params);
 
-  let maxId: string | null = sinceId;
-  const mentions: Mention[] = tweets.map((t) => ({
-    id: t.id,
-    text: t.text ?? "",
-    author_id: t.author_id || "",
-  }));
+  // Map response to mentions with resolved usernames
+  const result = mapMentionsResponse(response);
 
-  // Track the newest ID for next iteration
-  for (const m of mentions) {
-    if (!maxId || BigInt(m.id) > BigInt(maxId)) {
-      maxId = m.id;
-    }
-  }
-
-  return { mentions, maxId };
+  return { mentions: result.mentions, maxId: result.maxId };
 }
 
 // In-memory reward state (poll does not persist XP across restarts)
@@ -168,14 +160,21 @@ async function processMention(
     return;
   }
 
-  console.log(`[NEW] Mention ${mention.id}: "${mention.text.substring(0, 50)}..."`);
+  // Safe text preview
+  const preview = (mention.text ?? "").slice(0, 50);
+  console.log(`[NEW] Mention ${mention.id} from @${mention.authorUsername ?? "unknown"}: "${preview}..."`);
+
+  // Format user_handle with @ prefix if username exists
+  const userHandle = mention.authorUsername
+    ? `@${mention.authorUsername.toLowerCase()}`
+    : mention.author_id;
 
   const event: MentionEvent = {
     tweet_id: mention.id,
     user_id: mention.author_id,
-    user_handle: mention.author_id, // API may not include username in minimal payload
+    user_handle: userHandle,
     text: mention.text,
-    created_at: new Date().toISOString(),
+    created_at: mention.created_at ?? new Date().toISOString(),
   };
 
   const profile: UserProfile = {
