@@ -1,0 +1,14 @@
+name: abstract
+style_prompt: "abstract art, geometric shapes, vibrant colors, modern art, creative composition, flowing forms, contemporary, artistic"
+negative_prompt: "realistic, photorealistic, representational, literal, photographic, figurative"
+caption_template: "🎨 Abstract | {prompt} | #AbstractArt #Generative"
+size: "1024x1024"
+brand_rules:
+  colors:
+    - "vibrant"
+    - "contrasting"
+  style: "modern"
+  movement: "flowing"
+parameters:
+  guidance_scale: 8.0
+  steps: 50

@@ -1,0 +1,12 @@
+name: photorealistic
+style_prompt: "photorealistic, high detail, professional photography, 8k resolution, sharp focus, studio lighting, cinematic, hyperrealistic"
+negative_prompt: "cartoon, anime, illustration, drawing, painting, sketch, 3d render, digital art, low quality"
+caption_template: "📸 AI Photo | {prompt} | #Photorealistic #AIphoto"
+size: "1024x1024"
+brand_rules:
+  quality: "high"
+  lighting: "professional"
+  focus: "sharp"
+parameters:
+  guidance_scale: 7.5
+  steps: 60

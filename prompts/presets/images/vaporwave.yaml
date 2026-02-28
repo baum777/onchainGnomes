@@ -1,0 +1,16 @@
+name: vaporwave
+style_prompt: "vaporwave aesthetic, retro 80s, palm trees, pink sunset, gradient colors, synthwave, digital art, geometric patterns, nostalgic"
+negative_prompt: "modern, minimalist, grayscale, monochrome, realistic, photorealistic"
+caption_template: "🌴 Vapor vibes | {prompt} | #Vaporwave #Retrowave"
+size: "1024x1024"
+brand_rules:
+  colors:
+    - "hot pink"
+    - "cyan"
+    - "purple"
+    - "orange"
+  mood: "nostalgic"
+  era: "80s"
+parameters:
+  guidance_scale: 7.0
+  steps: 45
