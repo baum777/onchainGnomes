@@ -17,6 +17,7 @@ describe("activationPolicy", () => {
       mode: "global",
       whitelistUsernames: ["@twimsalot", "@nirapump_"],
       whitelistUserIds: [],
+      denyReplyMode: "silent",
     };
 
     const decision = await evaluateActivation({
@@ -35,6 +36,7 @@ describe("activationPolicy", () => {
       mode: "whitelist",
       whitelistUsernames: ["@twimsalot", "@nirapump_"],
       whitelistUserIds: [],
+      denyReplyMode: "silent",
     };
 
     const decision = await evaluateActivation({
@@ -54,6 +56,7 @@ describe("activationPolicy", () => {
       mode: "whitelist",
       whitelistUsernames: ["@twimsalot", "@nirapump_"],
       whitelistUserIds: [],
+      denyReplyMode: "silent",
     };
 
     const decision = await evaluateActivation({
@@ -72,6 +75,7 @@ describe("activationPolicy", () => {
       mode: "global",
       whitelistUsernames: [],
       whitelistUserIds: [],
+      denyReplyMode: "silent",
     };
 
     const decision = await evaluateActivation({
@@ -90,6 +94,7 @@ describe("activationPolicy", () => {
       mode: "whitelist",
       whitelistUsernames: ["@twimsalot"],
       whitelistUserIds: ["uid_nirapump"],
+      denyReplyMode: "silent",
     };
 
     const decision = await evaluateActivation({
@@ -108,6 +113,7 @@ describe("activationPolicy", () => {
       mode: "whitelist",
       whitelistUsernames: ["@twimsalot"],
       whitelistUserIds: [],
+      denyReplyMode: "silent",
     };
 
     const decision = await evaluateActivation({

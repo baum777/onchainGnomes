@@ -42,6 +42,12 @@ const DATA_FILE = path.resolve(__dirname, "../data/processed_mentions.json");
 const POLL_INTERVAL_MS = 30_000;
 const DRY_RUN = process.env.DRY_RUN === "true";
 
+const MENTIONS_SOURCE = (process.env.MENTIONS_SOURCE ?? "mentions").toLowerCase() as
+  | "mentions"
+  | "search";
+
+const BOT_USERNAME = (process.env.BOT_USERNAME ?? "serGorky").replace(/^@/, "");
+
 interface ProcessedMentionsState {
   last_since_id: string | null;
   processed: string[];
@@ -93,38 +99,74 @@ async function getUserId(client: TwitterApi): Promise<string> {
   return user.data.id;
 }
 
-// Fetch mentions using since_id with proper expansions for author username resolution
-async function fetchMentions(
+/** Adapt timeline/search response to shape expected by mapMentionsResponse (data/includes/meta) */
+function adaptForMentionsMapper(response: { tweets?: unknown[]; includes?: unknown; meta?: unknown }) {
+  return {
+    data: response.tweets ?? [],
+    includes: response.includes,
+    meta: response.meta,
+  };
+}
+
+async function fetchMentionsViaMentionsEndpoint(
   client: TwitterApi,
   userId: string,
   sinceId: string | null
 ): Promise<{ mentions: Mention[]; maxId: string | null }> {
-  const params: {
-    max_results: number;
-    since_id?: string;
-    expansions: string[];
-    "tweet.fields": string[];
-    "user.fields": string[];
-  } = {
+  const params: Record<string, unknown> = {
     max_results: MENTIONS_FETCH_OPTIONS.max_results,
     expansions: [...MENTIONS_FETCH_OPTIONS.expansions],
     "tweet.fields": [...MENTIONS_FETCH_OPTIONS["tweet.fields"]],
     "user.fields": [...MENTIONS_FETCH_OPTIONS["user.fields"]],
   };
+  if (sinceId) params.since_id = sinceId;
 
-  if (sinceId) {
-    params.since_id = sinceId;
-  }
-
-  // Use the raw fetch to get full response with includes
-  const response = await client.v2.get(`users/${userId}/mentions`, params);
-
-  // Map response to mentions with resolved usernames
-  const result = mapMentionsResponse(response);
-
+  const response = await client.v2.userMentionTimeline(userId, params);
+  const result = mapMentionsResponse(adaptForMentionsMapper(response));
   return { mentions: result.mentions, maxId: result.maxId };
 }
 
+async function fetchMentionsViaSearch(
+  client: TwitterApi,
+  username: string,
+  sinceId: string | null
+): Promise<{ mentions: Mention[]; maxId: string | null }> {
+  const params: Record<string, unknown> = {
+    max_results: MENTIONS_FETCH_OPTIONS.max_results,
+    expansions: [...MENTIONS_FETCH_OPTIONS.expansions],
+    "tweet.fields": [...MENTIONS_FETCH_OPTIONS["tweet.fields"]],
+    "user.fields": [...MENTIONS_FETCH_OPTIONS["user.fields"]],
+  };
+  if (sinceId) params.since_id = sinceId;
+
+  const query = `@${username}`;
+  const response = await client.v2.search(query, params);
+  const result = mapMentionsResponse(adaptForMentionsMapper(response));
+  return { mentions: result.mentions, maxId: result.maxId };
+}
+
+async function fetchMentions(
+  client: TwitterApi,
+  userId: string,
+  sinceId: string | null
+): Promise<{ mentions: Mention[]; maxId: string | null }> {
+  if (MENTIONS_SOURCE === "search") {
+    return fetchMentionsViaSearch(client, BOT_USERNAME, sinceId);
+  }
+
+  try {
+    return await fetchMentionsViaMentionsEndpoint(client, userId, sinceId);
+  } catch (err: unknown) {
+    const e = err as { code?: number };
+    if (e?.code === 401) {
+      console.error(
+        `[WARN] Mentions endpoint returned 401; falling back to recent search for @${BOT_USERNAME}`
+      );
+      return fetchMentionsViaSearch(client, BOT_USERNAME, sinceId);
+    }
+    throw err;
+  }
+}
 // In-memory reward state (poll does not persist XP across restarts)
 function createPollRewardRepo(): RewardStateRepo {
   const profiles = new Map<string, RewardUserProfile>();
@@ -180,7 +222,6 @@ async function processMention(
     text: mention.text,
     created_at: mention.created_at ?? new Date().toISOString(),
   };
-
   const profile: UserProfile = {
     user_id: mention.author_id,
     reward_pending: false,
@@ -227,6 +268,10 @@ async function main(): Promise<void> {
   console.log("[START] serGorky Mention Poller");
   console.log(`[CONFIG] DRY_RUN=${DRY_RUN}`);
   console.log(`[CONFIG] POLL_INTERVAL=${POLL_INTERVAL_MS}ms`);
+  console.log(`[CONFIG] Mentions source: ${MENTIONS_SOURCE}`);
+  if (MENTIONS_SOURCE === "search") {
+    console.log(`[CONFIG] BOT_USERNAME=@${BOT_USERNAME}`);
+  }
 
   // Cache activation config once on startup (no repeated env parsing per event)
   const activationConfig: ActivationConfig = readActivationConfigFromEnv();
@@ -316,9 +361,15 @@ async function main(): Promise<void> {
         saveState(state);
         console.log("[STATE] Pruned processed list to 500 entries");
       }
-    } catch (error) {
-      console.error("[ERROR] Poll iteration failed:", error);
-      // Continue loop - don't crash
+    } catch (err: any) {
+      console.error("[ERROR] Poll iteration failed:", err?.data ?? err);
+
+      if (err?.code === 401) {
+        console.error(
+          "[AUTH] 401 Unauthorized while polling. Likely endpoint access/tier issue."
+        );
+        process.exit(1);
+      }
     }
 
     console.log(`[SLEEP] ${POLL_INTERVAL_MS}ms...`);
