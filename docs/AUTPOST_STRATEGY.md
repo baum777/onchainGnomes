@@ -1,4 +1,4 @@
-# Autopost Strategy (HORNY)
+# Autopost Strategy (GORKY)
 
 ## Goal
 High-frequency, low-effort, high-shareability commentary that:

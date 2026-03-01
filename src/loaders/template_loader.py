@@ -63,7 +63,7 @@ class TemplateLoader:
         Load a template by key. Results are cached.
 
         Args:
-            template_key: The template identifier (e.g., 'horny_courtroom')
+            template_key: The template identifier (e.g., 'gorky_courtroom')
 
         Returns:
             Parsed MemeTemplate object
