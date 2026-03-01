@@ -13,7 +13,7 @@ export type RarityConfig = {
   caps?: Partial<Record<Exclude<Rarity, "COMBO">, number>>;
 };
 
-// Backward compatibility aliases for HORNY -> GORKY migration
+// Backward compatibility aliases (legacy → current)
 export const TEMPLATE_KEY_ALIASES: Record<string, TemplateKey> = {
   horny_courtroom: "gorky_courtroom",
   horny_chart_autopsy: "gorky_chart_autopsy",

@@ -106,7 +106,7 @@ class MemeRenderer:
         Render a meme using the TypeScript renderer.
 
         Args:
-            template_key: Template identifier (e.g., 'horny_courtroom')
+            template_key: Template identifier (e.g., 'gorky_courtroom')
             text_by_zone: Mapping of zone names to text values
             base_image: Path to base image (relative to assets_dir, or absolute)
             overlay_names: List of overlay PNG filenames

@@ -18,7 +18,7 @@ export type LoadedPreset = ImagePreset & {
 };
 
 const PRESET_ALIASES: Record<string, string> = {
-  // Backward compatibility aliases (HORNY → GORKY)
+  // Backward compatibility aliases (legacy → current)
   horny_roast_card: "gorky_roast_card",
   horny_cyberpunk: "gorky_cyberpunk",
   horny_chart_ghost: "gorky_chart_ghost",

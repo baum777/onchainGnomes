@@ -63,7 +63,7 @@ class PresetLoader:
         Load a preset by key. Results are cached.
 
         Args:
-            preset_key: The preset identifier (e.g., 'horny_roast_card')
+            preset_key: The preset identifier (e.g., 'gorky_roast_card')
 
         Returns:
             Parsed ImagePreset object
