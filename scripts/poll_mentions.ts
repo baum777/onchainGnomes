@@ -23,6 +23,15 @@ import {
   type RewardStateRepo,
   type RewardUserProfile,
 } from "../src/reward_engine/index.js";
+import {
+  mapMentionsResponse,
+  MENTIONS_FETCH_OPTIONS,
+  type Mention,
+} from "../src/poller/mentionsMapper.js";
+import {
+  readActivationConfigFromEnv,
+  type ActivationConfig,
+} from "../src/config/botActivationConfig.js";
 
 // Paths
 const __filename = fileURLToPath(import.meta.url);
@@ -42,12 +51,6 @@ const BOT_USERNAME = (process.env.BOT_USERNAME ?? "serGorky").replace(/^@/, "");
 interface ProcessedMentionsState {
   last_since_id: string | null;
   processed: string[];
-}
-
-interface Mention {
-  id: string;
-  text: string;
-  author_id: string;
 }
 
 // Load or create state
@@ -96,30 +99,13 @@ async function getUserId(client: TwitterApi): Promise<string> {
   return user.data.id;
 }
 
-const MENTIONS_FETCH_OPTIONS = {
-  max_results: 10,
-  expansions: ["author_id"],
-  "tweet.fields": ["author_id", "conversation_id", "created_at", "referenced_tweets"],
-  "user.fields": ["username"],
-};
-
-function mapMentionsResponse(response: { tweets?: Array<{ id: string; text?: string; author_id?: string }> }): {
-  mentions: Mention[];
-  maxId: string | null;
-} {
-  const tweets = response.tweets ?? [];
-  const mentions: Mention[] = tweets.map((t) => ({
-    id: t.id,
-    text: t.text ?? "",
-    author_id: t.author_id ?? "",
-  }));
-  let maxId: string | null = null;
-  for (const m of mentions) {
-    if (!maxId || BigInt(m.id) > BigInt(maxId)) {
-      maxId = m.id;
-    }
-  }
-  return { mentions, maxId };
+/** Adapt timeline/search response to shape expected by mapMentionsResponse (data/includes/meta) */
+function adaptForMentionsMapper(response: { tweets?: unknown[]; includes?: unknown; meta?: unknown }) {
+  return {
+    data: response.tweets ?? [],
+    includes: response.includes,
+    meta: response.meta,
+  };
 }
 
 async function fetchMentionsViaMentionsEndpoint(
@@ -127,18 +113,16 @@ async function fetchMentionsViaMentionsEndpoint(
   userId: string,
   sinceId: string | null
 ): Promise<{ mentions: Mention[]; maxId: string | null }> {
-  const params: any = {
+  const params: Record<string, unknown> = {
     max_results: MENTIONS_FETCH_OPTIONS.max_results,
     expansions: [...MENTIONS_FETCH_OPTIONS.expansions],
     "tweet.fields": [...MENTIONS_FETCH_OPTIONS["tweet.fields"]],
     "user.fields": [...MENTIONS_FETCH_OPTIONS["user.fields"]],
   };
-
   if (sinceId) params.since_id = sinceId;
 
   const response = await client.v2.userMentionTimeline(userId, params);
-  const result = mapMentionsResponse(response);
-
+  const result = mapMentionsResponse(adaptForMentionsMapper(response));
   return { mentions: result.mentions, maxId: result.maxId };
 }
 
@@ -147,20 +131,17 @@ async function fetchMentionsViaSearch(
   username: string,
   sinceId: string | null
 ): Promise<{ mentions: Mention[]; maxId: string | null }> {
-  const params: any = {
+  const params: Record<string, unknown> = {
     max_results: MENTIONS_FETCH_OPTIONS.max_results,
     expansions: [...MENTIONS_FETCH_OPTIONS.expansions],
     "tweet.fields": [...MENTIONS_FETCH_OPTIONS["tweet.fields"]],
     "user.fields": [...MENTIONS_FETCH_OPTIONS["user.fields"]],
   };
-
   if (sinceId) params.since_id = sinceId;
 
   const query = `@${username}`;
   const response = await client.v2.search(query, params);
-
-  const result = mapMentionsResponse(response);
-
+  const result = mapMentionsResponse(adaptForMentionsMapper(response));
   return { mentions: result.mentions, maxId: result.maxId };
 }
 
@@ -175,8 +156,9 @@ async function fetchMentions(
 
   try {
     return await fetchMentionsViaMentionsEndpoint(client, userId, sinceId);
-  } catch (err: any) {
-    if (err?.code === 401) {
+  } catch (err: unknown) {
+    const e = err as { code?: number };
+    if (e?.code === 401) {
       console.error(
         `[WARN] Mentions endpoint returned 401; falling back to recent search for @${BOT_USERNAME}`
       );
@@ -185,7 +167,6 @@ async function fetchMentions(
     throw err;
   }
 }
-
 // In-memory reward state (poll does not persist XP across restarts)
 function createPollRewardRepo(): RewardStateRepo {
   const profiles = new Map<string, RewardUserProfile>();
@@ -225,16 +206,22 @@ async function processMention(
     return;
   }
 
-  console.log(`[NEW] Mention ${mention.id}: "${mention.text.substring(0, 50)}..."`);
+  // Safe text preview
+  const preview = (mention.text ?? "").slice(0, 50);
+  console.log(`[NEW] Mention ${mention.id} from @${mention.authorUsername ?? "unknown"}: "${preview}..."`);
+
+  // Format user_handle with @ prefix if username exists
+  const userHandle = mention.authorUsername
+    ? `@${mention.authorUsername.toLowerCase()}`
+    : mention.author_id;
 
   const event: MentionEvent = {
     tweet_id: mention.id,
     user_id: mention.author_id,
-    user_handle: mention.author_id, // API may not include username in minimal payload
+    user_handle: userHandle,
     text: mention.text,
-    created_at: new Date().toISOString(),
+    created_at: mention.created_at ?? new Date().toISOString(),
   };
-
   const profile: UserProfile = {
     user_id: mention.author_id,
     reward_pending: false,
@@ -286,6 +273,11 @@ async function main(): Promise<void> {
     console.log(`[CONFIG] BOT_USERNAME=@${BOT_USERNAME}`);
   }
 
+  // Cache activation config once on startup (no repeated env parsing per event)
+  const activationConfig: ActivationConfig = readActivationConfigFromEnv();
+  console.log(`[CONFIG] Activation mode: ${activationConfig.mode}`);
+  console.log(`[CONFIG] Deny reply mode: ${activationConfig.denyReplyMode}`);
+
   const xClient = createXClient(DRY_RUN);
 
   // Create raw TwitterApi client for mentions API
@@ -314,6 +306,7 @@ async function main(): Promise<void> {
     botUserId: userId,
     twitterClient: rawClient,
     xClient,
+    activationConfig, // Pass cached config to workflow
   };
 
   const workflow = new MentionWorkflow(workflowConfig, rewardEngine);
@@ -338,6 +331,15 @@ async function main(): Promise<void> {
       console.log(`[POLL] Found ${mentions.length} new mention(s)`);
 
       for (const mention of mentions) {
+        // Redundant self-author skip: skip if mention.author_id === authedUserId
+        // Policy check remains as second line of defense in workflow
+        if (mention.author_id === userId) {
+          console.log(`[SKIP] Self-mention filtered in poller: ${mention.id}`);
+          markProcessed(state, mention.id);
+          saveState(state);
+          continue;
+        }
+
         try {
           await processMention(workflow, mention, state);
         } catch (error) {
