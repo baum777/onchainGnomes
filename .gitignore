@@ -156,3 +156,8 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Audit script output (generated at runtime)
+docs/audit/run_state.json
+docs/audit/terminal_ui_run_summary.md
+docs/audit/screenshots/
