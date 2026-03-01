@@ -18,6 +18,20 @@
 
 import type { TwitterApi } from "twitter-api-v2";
 import type { XClient } from "../clients/xClient.js";
+import type { XReadClient } from "../clients/xReadClient.js";
+import type { LLMClient } from "../clients/llmClient.js";
+import { buildContextBundle } from "../context/router.js";
+import { analyzeAdaptiveSignals } from "../context/adaptiveSignals.js";
+import { preLLMGuards, postLLMGuards } from "../context/guards.js";
+import { loadGorkyPrompts, render } from "../context/prompts/loadPrompts.js";
+import type { MentionInput, ReplyControls, TimelineBrief } from "../context/types.js";
+import { getSemanticConfig, type SemanticMode } from "../context/semantic/types.js";
+import { createHashEmbedder } from "../context/semantic/embedder.hash.js";
+import { createXAIEmbedder } from "../context/semantic/embedder.xai.js";
+import { buildSemanticTimelineBrief } from "../context/semantic/semanticTimelineScout.js";
+import { InMemorySemanticIndex } from "../context/semantic/semanticIndex.js";
+import { InMemorySemanticMemoryStore } from "../context/semantic/semanticMemory.js";
+import type { Embedder } from "../context/semantic/embedder.js";
 import { MemeResolver } from "../loaders/resolver.js";
 import { DatasetBank, loadDatasetBank } from "../loaders/datasetLoader.js";
 import { pickCaption } from "../loaders/captionPicker.js";
@@ -102,6 +116,12 @@ export type WorkflowConfig = {
   xClient?: XClient | null;
   /** Override activation config (default: read from env) */
   activationConfig?: ActivationConfig | null;
+  /** Read-only X client for thread/timeline fetch */
+  xReadClient?: XReadClient | null;
+  /** Use enhanced context (ContextBundle with thread + timeline) */
+  useEnhancedContext?: boolean;
+  /** LLM client for Gorky persona JSON replies (when useEnhancedContext) */
+  llmClient?: LLMClient | null;
 };
 
 // Simple DSL Parser
@@ -420,14 +440,176 @@ export class MentionWorkflow {
         };
       }
 
-      // 3) Build context (best-effort; whitelist privileges for deeper context)
+      // 3) Build context (enhanced or legacy)
       const isWhitelistedPrivileged = activationDecision.isWhitelisted === true;
-      const contextOpts = isWhitelistedPrivileged
-        ? { threadLimit: 15, historyLimit: 10 }
-        : undefined;
-
       let contextSummary = event.text;
-      if (this.config.twitterClient) {
+
+      if (
+        this.config.useEnhancedContext &&
+        this.config.xReadClient
+      ) {
+        const mentionInput: MentionInput = {
+          tweet_id: event.tweet_id,
+          text: event.text,
+          author_id: event.user_id,
+          author_username: event.user_handle,
+          created_at: event.created_at,
+        };
+
+        const controls: ReplyControls = {
+          max_thread_depth: Number(process.env.CONTEXT_MAX_THREAD_DEPTH ?? 3),
+          roast_level: "medium",
+          deny_reply_mode: (activationConfig.denyReplyMode ?? "silent") as ReplyControls["deny_reply_mode"],
+          activation_mode: (activationConfig.mode === "whitelist" ? "whitelist" : "global") as "global" | "whitelist" | "optin",
+          enable_timeline_scout: process.env.CONTEXT_ENABLE_TIMELINE_SCOUT === "true",
+          max_timeline_queries: Number(process.env.CONTEXT_TIMELINE_MAX_QUERIES ?? 2),
+        };
+
+        const mode = (process.env.CONTEXT_ENGINE_MODE ?? "hybrid") as "legacy" | "v2" | "hybrid";
+
+        try {
+          const bundle = await buildContextBundle(
+            {
+              mode,
+              xread: this.config.xReadClient,
+              twitterClient: this.config.twitterClient ?? undefined,
+              stateRepo: this.config.stateRepo ?? undefined,
+            },
+            mentionInput,
+            controls
+          );
+
+          const adaptive = analyzeAdaptiveSignals({
+            mentionText: bundle.mention.text ?? "",
+            threadText: bundle.thread.chain.map((t) => t.text ?? "").join("\n"),
+            timelineText: bundle.timeline?.bullets?.join(" "),
+          });
+          bundle.adaptiveSignals = adaptive;
+          controls.roast_level = adaptive.roast_level;
+
+          // Phase 3: Semantic Intelligence (shadow/assist/full)
+          const semanticCfg = getSemanticConfig();
+          if (semanticCfg.enabled && bundle.timeline) {
+            try {
+              const seedText = `${bundle.mention.text}\n${bundle.thread.summary}\n${bundle.thread.claims.join("\n")}`;
+              const embedder = this.createEmbedder();
+              const index = new InMemorySemanticIndex({
+                ttlDays: semanticCfg.indexTtlDays,
+                maxDocs: semanticCfg.indexMaxDocs,
+              });
+              const semanticBrief = await buildSemanticTimelineBrief({
+                mode: semanticCfg.mode,
+                embedder,
+                index,
+                seedText,
+                candidates: (bundle.timeline as unknown as { _corpus?: string[] })._corpus ?? [],
+                topK: semanticCfg.topK,
+                clusterSim: semanticCfg.clusterSim,
+              });
+              bundle.timeline.semantic = semanticBrief;
+              bundle.trace.semantic = {
+                avg_top5_sim: semanticBrief.avg_top5_sim,
+                top_topic: semanticBrief.top_topic,
+                mode: semanticBrief.mode,
+              };
+              bundle.trace.warnings.push(
+                `[SEMANTIC] mode=${semanticBrief.mode} avg_top5_sim=${(semanticBrief.avg_top5_sim ?? 0).toFixed(3)} top_topic=${semanticBrief.top_topic ?? "n/a"}`
+              );
+
+              // Confidence gate: only use semantic results if similarity is healthy
+              const confidenceThreshold = 0.55;
+              const hasConfidence = (semanticBrief.avg_top5_sim ?? 0) >= confidenceThreshold;
+
+              // In assist mode: append semantic bullets (if confidence healthy)
+              if (semanticCfg.mode === "assist" && semanticBrief.top_results?.length && hasConfidence) {
+                const semanticBullets = semanticBrief.top_results
+                  .slice(0, 2)
+                  .map((r) => `[similar] ${r.snippet.slice(0, 120)}...`);
+                bundle.timeline.bullets.push(...semanticBullets);
+              }
+
+              // In full mode: replace with semantic bullets only if confidence healthy
+              if (semanticCfg.mode === "full" && hasConfidence && semanticBrief.clusters?.length) {
+                const diverse: string[] = [];
+                for (const c of semanticBrief.clusters.slice(0, 3)) {
+                  const match = semanticBrief.top_results?.find((r) =>
+                    semanticBrief.clusters?.some((cl) => cl.label === c.label && cl.size > 0)
+                  );
+                  if (match) diverse.push(match.snippet.slice(0, 140));
+                }
+                if (diverse.length) {
+                  bundle.timeline.bullets = diverse.slice(0, 5);
+                }
+              }
+              // If confidence low in full mode, keep original heuristic bullets (fallback)
+            } catch (err) {
+              bundle.trace.warnings.push(`[SEMANTIC] error: ${err instanceof Error ? err.message : "unknown"}`);
+            }
+          }
+
+          const guard = preLLMGuards(bundle);
+          if (!guard.ok) {
+            return {
+              success: false,
+              mode: "TEXT",
+              reply_text: "",
+              skip_reason: guard.reason,
+            };
+          }
+
+          if (this.config.llmClient && !this.config.dryRun) {
+            try {
+              const prompts = await loadGorkyPrompts();
+              const userContent = render(prompts.userTemplate, {
+                mention_text: bundle.mention.text ?? "",
+                thread_summary: bundle.thread.summary,
+                entities: bundle.thread.entities.join(", "),
+                claims: bundle.thread.claims.join("\n- "),
+                timeline: bundle.timeline?.bullets?.join(" | ") ?? "—",
+                constraints: bundle.thread.constraints.join("\n"),
+              });
+              const llmResult = await this.config.llmClient.generateJSON<{
+                reply_text: string;
+                style_label: string;
+                internal_tags?: string[];
+                meme_card_prompt?: string;
+              }>({
+                system: prompts.system,
+                developer: prompts.developer,
+                user: userContent,
+              });
+              const postGuard = postLLMGuards(llmResult.reply_text);
+              if (!postGuard.ok) {
+                return {
+                  success: false,
+                  mode: "TEXT",
+                  reply_text: "",
+                  skip_reason: postGuard.reason,
+                };
+              }
+              return this.finalizeReply(
+                llmResult.reply_text.slice(0, 280),
+                "TEXT",
+                event.tweet_id,
+                {}
+              );
+            } catch (err) {
+              console.warn("[mentionWorkflow] LLM generate failed:", err);
+            }
+          }
+
+          contextSummary = bundle.thread.summary;
+          if (bundle.timeline?.bullets?.length) {
+            contextSummary +=
+              "\n\nTimeline: " + bundle.timeline.bullets.slice(0, 3).join(" | ");
+          }
+        } catch (err) {
+          console.warn("[mentionWorkflow] Enhanced context failed:", err);
+        }
+      } else if (this.config.twitterClient) {
+        const contextOpts = isWhitelistedPrivileged
+          ? { threadLimit: 15, historyLimit: 10 }
+          : undefined;
         try {
           const built = await buildContext(
             event as import("../brand_matrix/contextBuilder.js").MentionEventLike,
@@ -602,6 +784,17 @@ export class MentionWorkflow {
       fallback: "Market observation in progress.",
       mediaBuffer: undefined,
     });
+  }
+
+  private createEmbedder(): Embedder {
+    if (process.env.XAI_EMBEDDINGS_MODEL) {
+      try {
+        return createXAIEmbedder();
+      } catch {
+        // Fall back to hash embedder
+      }
+    }
+    return createHashEmbedder();
   }
 
   private async handleTextBranch(

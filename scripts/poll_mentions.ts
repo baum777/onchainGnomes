@@ -5,12 +5,14 @@
  * Uses file-based storage for idempotency.
  * Runs in an infinite loop with 30s sleep.
  */
-
+import "dotenv/config";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { TwitterApi } from "twitter-api-v2";
 import { createXClient } from "../src/clients/xClient.js";
+import { createXReadClient } from "../src/clients/xReadClient.js";
+import { createXAILLMClient } from "../src/clients/llmClient.xai.js";
 import {
   MentionWorkflow,
   type MentionEvent,
@@ -288,6 +290,8 @@ async function main(): Promise<void> {
     accessSecret: process.env.X_ACCESS_SECRET || "",
   });
 
+  const xReadClient = createXReadClient(rawClient);
+
   const userId = await getUserId(rawClient);
   console.log(`[AUTH] Authenticated as user: ${userId}`);
 
@@ -306,7 +310,10 @@ async function main(): Promise<void> {
     botUserId: userId,
     twitterClient: rawClient,
     xClient,
-    activationConfig, // Pass cached config to workflow
+    xReadClient,
+    llmClient: process.env.XAI_API_KEY ? createXAILLMClient() : undefined,
+    useEnhancedContext: process.env.USE_ENHANCED_CONTEXT === "true",
+    activationConfig,
   };
 
   const workflow = new MentionWorkflow(workflowConfig, rewardEngine);
