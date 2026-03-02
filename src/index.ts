@@ -1,0 +1,17 @@
+/**
+ * xAi Bot / serGorky — Canonical Entrypoint
+ *
+ * Production entrypoint for the mention poller worker.
+ * Loads env, validates config, and runs the worker loop.
+ */
+import "dotenv/config";
+import { validateEnv } from "./config/envSchema.js";
+import { runWorkerLoop } from "./worker/pollMentions.js";
+
+if (process.env.SKIP_ENV_VALIDATION !== "true") {
+  validateEnv();
+}
+runWorkerLoop().catch((e) => {
+  console.error("[FATAL] Worker crashed:", e);
+  process.exit(1);
+});

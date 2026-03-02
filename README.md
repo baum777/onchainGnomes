@@ -1,144 +1,134 @@
-# xAi Bot App
+# xAi Bot (serGorky)
 
-Autonomous X (Twitter) AI Agent Backend - A Grok-like agent that handles mentions, replies, and commands.
+Autonomous X (Twitter) AI Agent — TypeScript/Node worker that polls mentions, processes via MentionWorkflow, and replies with AI-generated (or meme) responses.
 
-## Features
+**Runtime**: TypeScript/Node 20+ only. Python code has been moved to `legacy/python/`.
 
-- **Mention Handling** - AI-generated replies to @mentions
-- **Command Parsing** - /help, /status, /preset
-- **Prompt System** - External YAML prompts, versioned and editable
-- **State Management** - SQLite persistence, deduplication, cooldowns
-- **Dry Run Mode** - Test without posting
-- **Observability** - Structured logging, Prometheus metrics
-
-## Quick Start
+## Local Development
 
 ```bash
-# Setup
-python -m venv venv
-venv\Scripts\activate  # Windows
-pip install -r requirements.txt
+# Install
+pnpm install
 
-# Configure (copy and edit)
-copy .env.example .env
+# Configure
+cp .env.example .env
+# Edit .env with X API credentials, xAI key, etc.
 
-# Initialize database
-python scripts/init_db.py
+# Build
+pnpm build
 
-# Test (dry run)
-python scripts/dry_run.py
+# Run (production mode)
+pnpm start
 
-# Run
-python -m src.main
+# Run (development with watch)
+pnpm dev
+
+# Dry run (no posting)
+DRY_RUN=true pnpm start
 ```
+
+## Render Deployment
+
+1. Fork or connect this repo to [Render](https://render.com)
+2. Use the **Blueprint** (`render.yaml`) for one-click deploy
+3. Add secrets in Render Dashboard:
+   - `XAI_API_KEY`
+   - `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_SECRET`
+   - `REPLICATE_API_KEY` (if using image generation)
+
+### Blueprint Services
+
+- **xai-bot-worker** — Background Worker (24/7 mention poller)
+- **xai-bot-health** — Optional Web Service for `/health` and `/metrics`
+
+### Manual Deploy (without Blueprint)
+
+Create a **Background Worker** service:
+
+- **Build Command**: `pnpm install --frozen-lockfile && pnpm build`
+- **Start Command**: `pnpm start`
+- Set env vars from the table below.
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| X_API_KEY | Yes | X API consumer key |
+| X_API_SECRET | Yes | X API consumer secret |
+| X_ACCESS_TOKEN | Yes | X OAuth access token |
+| X_ACCESS_SECRET | Yes | X OAuth access secret |
+| XAI_API_KEY | No | xAI API key (bot runs without LLM if empty) |
+| XAI_MODEL_PRIMARY | No | Primary model (default: grok-3) |
+| XAI_MODEL_FALLBACKS | No | CSV fallbacks, e.g. grok-3-mini |
+| XAI_BASE_URL | No | xAI API base (default: https://api.x.ai/v1) |
+| POLL_INTERVAL_MS | No | Poll interval in ms (default: 30000) |
+| LOG_LEVEL | No | DEBUG, INFO, WARN, ERROR |
+| DRY_RUN | No | true = no posting |
+| BOT_USERNAME | No | Bot handle (default: serGorky) |
+| BOT_ACTIVATION_MODE | No | global, whitelist, optin |
+| REPLICATE_API_KEY | No | For image generation |
+| USE_ENHANCED_CONTEXT | No | Enable context engine |
+
+## Runbook
+
+### xAI 403 (Model Permission)
+
+When the primary model (e.g. grok-4) returns 403:
+
+- The bot **does not crash**; it marks the model unavailable for 15 min and tries fallbacks (`XAI_MODEL_FALLBACKS`)
+- If all models fail, it returns a canned reply and continues polling
+- **Fix**: Set `XAI_MODEL_PRIMARY` to a model your key supports (e.g. `grok-3`)
+
+### Rate Limits (429)
+
+- The worker uses exponential backoff (5s → 10s → 20s … up to 5 min)
+- Consecutive failures increase backoff; success resets it
+- Check X API tier and xAI quota
+
+### 401 Unauthorized
+
+- **Fail-fast**: The worker exits on 401 (invalid or revoked credentials)
+- Verify X OAuth tokens and app permissions in the X Developer Portal
+
+### What the Bot Does
+
+1. Polls X for @mentions every `POLL_INTERVAL_MS`
+2. Filters self-mentions and already-processed tweets
+3. Runs each through MentionWorkflow: context, command parse, safety, reward, reply
+4. Posts reply (or meme) or skips with log reason
+5. Persists state to `data/processed_mentions.json`
 
 ## Project Structure
 
 ```
-src/
-  config/       - Settings, constants
-  core/         - Orchestrator, Scheduler, EventRouter
-  agents/       - Prompt loader, Context builder, Action classifier
-  workflows/    - Engine, steps, handlers
-  clients/      - X API, xAI, Media
-  state/        - StateManager, Deduplicator
-  commands/     - Parser, Registry
-prompts/        - YAML prompts (system, tasks, presets, commands)
-docs/           - Architecture, ADRs, Runbooks
-```
-
-## Configuration
-
-| Variable | Description |
-|----------|-------------|
-| X_API_KEY | X API consumer key |
-| X_API_SECRET | X API consumer secret |
-| X_ACCESS_TOKEN | X OAuth access token |
-| X_ACCESS_SECRET | X OAuth access secret |
-| XAI_API_KEY | xAI (Grok) API key |
-| DRY_RUN | Set true to simulate without posting |
-| DEBUG | Enable debug logging |
-
-## Development
-
-```bash
-pip install -r requirements-dev.txt
-pytest tests/ -v
-python scripts/dry_run.py --event tests/fixtures/sample_events.json
+src/            # TypeScript source (production)
+  index.ts      # Entrypoint
+  worker/       # Poll loop
+  clients/      # X, xAI, Replicate
+  workflows/    # MentionWorkflow
+  config/       # Env validation
+legacy/python/  # Former Python implementation (not used)
+render.yaml     # Render Blueprint
+Dockerfile.node # Node.js Docker build
 ```
 
 ## Docker
 
 ```bash
-docker build -t xai-bot .
+docker build -f Dockerfile.node -t xai-bot .
 docker run --env-file .env xai-bot
 ```
 
-## Context-Aware Reply Engine (Gorky Persona)
+## Scripts
 
-### Gorky Persona
-
-Sarcastic, witty, crypto-native commentator. Roasts content, never identity. De-escalates aggression with playful humor. No doxxing, hate, or financial advice. Replies ≤280 chars. Internal tags/scores never exposed publicly.
-
-### Context Engine v2 (thread + timeline)
-
-Thread context walks reply chains; optional timeline scout samples recent tweets by keywords. Migration modes: **legacy** (brand_matrix builder), **v2** (new builder), **hybrid** (merge).
-
-### Phase 2 Adaptive Intelligence
-
-Signals: sentiment, toxicity, urgency, novelty, confidence. Roast-level routing: high toxicity → deescalate; joke/provocation → spicy; question/request → mild. De-escalation uses playful humor or short rhyme.
-
-### Phase 3 Semantic Intelligence
-
-Optional semantic layer atop Context Engine v2 (disabled by default). When enabled, defaults to **shadow** mode (logs only, no behavior change). Other modes: **assist** (appends semantic bullets if confidence healthy), **full** (semantic-driven selection with fallback to heuristic if confidence <0.55). Uses in-memory index (no external DB), deterministic hash embeddings with optional xAI embeddings upgrade. See `docs/PHASE3_SEMANTIC_INTELLIGENCE.md`.
-
-The bot uses an advanced context engine for intelligent replies:
-
-### Features
-
-- **Thread Context Analysis** - Walks reply chains to understand conversation history
-- **Keyword Extraction** - Identifies tickers, hashtags, and topical keywords
-- **Timeline Sampling** - Optional brief from recent relevant tweets
-- **Guardrails** - Pre-LLM safety checks for PII and policy violations
-- **JSON Contract** - Structured LLM output (reply_text, style_label, tags)
-
-### Data Flow
-
-```
-Mention -> ThreadContext -> (TimelineScout) -> Guard -> LLM -> Reply
-```
-
-### Safety & Governance
-
-- Rate-limit protection on timeline queries
-- Configurable thread depth limits
-- PII detection and blocking
-- postLLMGuards: reply length ≤280, no identity slurs
-- Fail-fast on 401 errors
-- No identity-based attacks
-- Mentions source toggle: `MENTIONS_SOURCE` (`mentions` or `search`)
-
-### Configuration
-
-| Variable | Description |
-|----------|-------------|
-| MENTIONS_SOURCE | Fetch mode: `mentions` or `search` |
-| BOT_USERNAME | Bot handle (e.g. serGorky) |
-| CONTEXT_ENGINE_MODE | `legacy` \| `v2` \| `hybrid` (default: hybrid) |
-| USE_ENHANCED_CONTEXT | Enable new context engine (default: false) |
-| CONTEXT_MAX_THREAD_DEPTH | Max parent tweets to fetch (default: 3) |
-| CONTEXT_ENABLE_TIMELINE_SCOUT | Enable timeline sampling (default: false) |
-| CONTEXT_TIMELINE_MAX_QUERIES | Max search queries per mention (default: 2) |
-| CONTEXT_TIMELINE_TWEETS_PER_QUERY | Tweets sampled per query (default: 25) |
-| CONTEXT_TIMELINE_WINDOW_MINUTES | Time window for timeline scout (default: 360) |
-| SEMANTIC_ENABLED | Enable Phase 3 Semantic Intelligence (default: false) |
-| SEMANTIC_MODE | `shadow` \| `assist` \| `full` (default: shadow) |
-| SEMANTIC_TOPK | Top-K results to consider (default: 20) |
-| SEMANTIC_CLUSTER_SIM | Similarity threshold for clustering (default: 0.82) |
-| SEMANTIC_INDEX_TTL_DAYS | Index document TTL (default: 7) |
-| SEMANTIC_MEMORY_TTL_DAYS | User memory TTL (default: 14) |
-| XAI_EMBEDDINGS_MODEL | Enable xAI embeddings instead of hash fallback |
+| Script | Description |
+|--------|-------------|
+| `pnpm start` | Run worker (node dist/index.js) |
+| `pnpm dev` | Run with tsx watch |
+| `pnpm build` | Compile TypeScript |
+| `pnpm typecheck` | TypeScript check |
+| `pnpm test` | Run Vitest tests |
 
 ## Documentation
 
-See `docs/` for architecture, workflows, operations, and ADRs.
+See `docs/` for architecture, Phase 2/3 context engine, and operations.

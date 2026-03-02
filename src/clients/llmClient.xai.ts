@@ -1,11 +1,23 @@
 /**
  * xAI (Grok) LLM adapter — Calls xAI API via fetch
- * Includes automatic model fallback for permission/rate-limit errors
+ * Model allowlist, TTL-based fallback on 403, soft-degrade when all models fail
  */
 
 import type { LLMClient } from "./llmClient.js";
 
-const XAI_API = "https://api.x.ai/v1";
+type LLMInput = {
+  system?: string;
+  developer?: string;
+  user: string;
+};
+
+const XAI_API = process.env.XAI_BASE_URL ?? "https://api.x.ai/v1";
+const MODEL_UNAVAILABLE_TTL_MS = 15 * 60 * 1000; // 15 min
+const CANNED_REPLY =
+  "Chart observation in progress. My circuits are recalibrating — try again in a moment.";
+
+/** Models that returned 403; skip until TTL expires */
+const unavailableUntil = new Map<string, number>();
 
 function extractJSON<T>(text: string): T {
   const trimmed = text.trim();
@@ -16,41 +28,58 @@ function extractJSON<T>(text: string): T {
   return JSON.parse(trimmed.slice(start, end + 1)) as T;
 }
 
-function isPermissionError(err: any): boolean {
-  return err?.message?.includes("permission") || err?.status === 403 || err?.statusCode === 403;
+function isPermissionError(err: unknown): boolean {
+  const e = err as { message?: string; status?: number; statusCode?: number };
+  return (
+    !!e?.message?.includes("permission") ||
+    e?.status === 403 ||
+    e?.statusCode === 403
+  );
 }
 
-function isRetryableError(err: any): boolean {
-  return err?.status === 429 || err?.status >= 500 || err?.statusCode === 429 || err?.statusCode >= 500;
+function isRetryableError(err: unknown): boolean {
+  const e = err as { status?: number; statusCode?: number };
+  const s = e?.status ?? e?.statusCode ?? 0;
+  return s === 429 || s >= 500;
+}
+
+function markUnavailable(model: string): void {
+  unavailableUntil.set(model, Date.now() + MODEL_UNAVAILABLE_TTL_MS);
+}
+
+function isAvailable(model: string): boolean {
+  const until = unavailableUntil.get(model);
+  if (!until) return true;
+  if (Date.now() >= until) {
+    unavailableUntil.delete(model);
+    return true;
+  }
+  return false;
 }
 
 function getModelPriority(): string[] {
-  const userModel = process.env.XAI_MODEL;
-  const forceGrok4 = process.env.XAI_FORCE === "true";
+  const primary = process.env.XAI_MODEL_PRIMARY ?? process.env.XAI_MODEL ?? "";
+  const fallbacksRaw = process.env.XAI_MODEL_FALLBACKS ?? "";
+  const fallbacks = fallbacksRaw
+    ? fallbacksRaw.split(",").map((s) => s.trim()).filter(Boolean)
+    : ["grok-3", "grok-3-mini"];
 
   const priority: string[] = [];
-
-  if (userModel && userModel !== "grok-4") {
-    priority.push(userModel);
-  } else if (userModel === "grok-4" && forceGrok4) {
-    priority.push("grok-4");
+  if (primary && !priority.includes(primary)) priority.push(primary);
+  for (const m of fallbacks) {
+    if (m && !priority.includes(m)) priority.push(m);
   }
-
-  if (!priority.includes("grok-3")) {
-    priority.push("grok-3");
+  if (priority.length === 0) {
+    priority.push("grok-3", "grok-3-mini");
   }
-  if (!priority.includes("grok-3-mini")) {
-    priority.push("grok-3-mini");
-  }
-
   return priority;
 }
 
 async function tryGenerateJSON<T>(
   apiKey: string,
   model: string,
-  input: { system?: string; developer?: string; user: string }
-): Promise<{ success: boolean; result?: T; error?: any }> {
+  input: LLMInput
+): Promise<{ success: boolean; result?: T; error?: unknown }> {
   try {
     const system = [input.system, input.developer].filter(Boolean).join("\n\n");
     const resp = await fetch(`${XAI_API}/chat/completions`, {
@@ -99,9 +128,10 @@ export function createXAILLMClient(opts?: {
   const overrideModel = opts?.model;
 
   return {
-    async generateJSON<T>(input) {
-      const models = overrideModel ? [overrideModel] : getModelPriority();
-      let lastError: any;
+    async generateJSON<T>(input: LLMInput): Promise<T> {
+      const allModels = overrideModel ? [overrideModel] : getModelPriority();
+      const models = allModels.filter(isAvailable);
+      let lastError: unknown;
 
       for (const model of models) {
         const attempt = await tryGenerateJSON<T>(apiKey, model, input);
@@ -112,17 +142,33 @@ export function createXAILLMClient(opts?: {
 
         lastError = attempt.error;
 
-        if (isPermissionError(lastError) || isRetryableError(lastError)) {
-          console.warn(`[xAI] Model ${model} failed (${lastError.status || "unknown"}), trying fallback...`);
+        if (isPermissionError(lastError)) {
+          markUnavailable(model);
+          console.warn(
+            `[xAI] Model ${model} 403/permission; marked unavailable for ${MODEL_UNAVAILABLE_TTL_MS / 60000}min, trying fallback...`
+          );
+          continue;
+        }
+        if (isRetryableError(lastError)) {
+          console.warn(
+            `[xAI] Model ${model} failed (rate limit/server), trying fallback...`
+          );
           continue;
         }
 
-        throw new Error(lastError?.message || `Unknown error with model ${model}`);
+        throw new Error(
+          (lastError as Error)?.message ?? `Unknown error with model ${model}`
+        );
       }
 
-      throw new Error(
-        lastError?.message || `All models failed. Tried: ${models.join(", ")}`
+      // All models failed — soft-degrade: return safe canned reply
+      console.warn(
+        `[xAI] All models failed. Last: ${(lastError as Error)?.message ?? "unknown"}. Returning canned reply.`
       );
+      return {
+        reply_text: CANNED_REPLY,
+        style_label: "degraded",
+      } as T;
     },
   };
 }
