@@ -89,6 +89,9 @@ htmlcov/
 .mypy_cache/
 .ruff_cache/
 
+# Temp/unpacked bundles (do not commit)
+_tmp/
+
 # parcel-bundler cache (https://parceljs.org/)
 .cache
 .parcel-cache

@@ -1,0 +1,59 @@
+# Render Blueprint — xAi Bot / serGorky
+# Background Worker + optional Health Web Service
+
+services:
+  # Background Worker: 24/7 mention poller
+  - type: worker
+    name: xai-bot-worker
+    runtime: node
+    region: frankfurt
+    plan: starter
+    buildCommand: pnpm install --frozen-lockfile && pnpm build
+    startCommand: pnpm start
+    envVars:
+      - key: XAI_API_KEY
+        sync: false
+      - key: XAI_BASE_URL
+        value: https://api.x.ai/v1
+      - key: XAI_MODEL_PRIMARY
+        value: grok-3
+      - key: XAI_MODEL_FALLBACKS
+        value: grok-3-mini
+      - key: POLL_INTERVAL_MS
+        value: "30000"
+      - key: LOG_LEVEL
+        value: INFO
+      - key: X_API_KEY
+        sync: false
+      - key: X_API_SECRET
+        sync: false
+      - key: X_ACCESS_TOKEN
+        sync: false
+      - key: X_ACCESS_SECRET
+        sync: false
+      - key: BOT_USERNAME
+        value: serGorky
+      - key: BOT_ACTIVATION_MODE
+        value: global
+      - key: BOT_DENY_REPLY_MODE
+        value: silent
+      - key: DRY_RUN
+        value: "false"
+      - key: REPLICATE_API_KEY
+        sync: false
+      - key: USE_ENHANCED_CONTEXT
+        value: "true"
+
+  # Optional: Health/Metrics Web Service
+  - type: web
+    name: xai-bot-health
+    runtime: node
+    region: frankfurt
+    plan: free
+    buildCommand: pnpm install --frozen-lockfile && pnpm build
+    startCommand: node dist/server.js
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: LOG_LEVEL
+        value: INFO
