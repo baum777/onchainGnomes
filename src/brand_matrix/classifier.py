@@ -8,6 +8,7 @@ Architektur:
 ActionPlan → MatrixClassifier → MatrixPayload → Brand Matrix API
 """
 
+import time
 from typing import Optional, Dict, Any
 from dataclasses import dataclass
 
@@ -120,8 +121,6 @@ class MatrixClassifier:
 
     def _enrich_metadata(self, action_plan: ActionPlan) -> Dict[str, Any]:
         """Anreicherung der Metadaten für das Payload."""
-        import time
-
         metadata = dict(action_plan.metadata)
 
         if action_plan.parsed_command:
