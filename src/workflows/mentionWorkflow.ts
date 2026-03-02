@@ -57,6 +57,9 @@ import {
   RewardEventContext,
   Reward,
 } from "../reward_engine/index.js";
+import { ImageGeneratorService } from "../services/imageGenerator.js";
+import { extractIntent } from "../prompts/intentExtraction.js";
+import { composeDynamicPrompt } from "../prompts/dynamicPromptComposer.js";
 
 // Types
 export type MentionEvent = {
@@ -122,6 +125,8 @@ export type WorkflowConfig = {
   useEnhancedContext?: boolean;
   /** LLM client for Gorky persona JSON replies (when useEnhancedContext) */
   llmClient?: LLMClient | null;
+  /** Image generator service for ROAST_IMAGE rewards */
+  imageGenerator?: ImageGeneratorService | null;
 };
 
 // Simple DSL Parser
@@ -384,6 +389,14 @@ export class MentionWorkflow {
     this.rewardEngine = rewardEngine;
     this.resolver = new MemeResolver(config.presetsDir, config.templatesDir);
     this.datasets = loadDatasetBank(config.datasetsRoot);
+  }
+
+  /**
+   * Set image generator (dependency injection for image generation).
+   * Call this after construction if image generation is needed.
+   */
+  setImageGenerator(imageGenerator: ImageGeneratorService): void {
+    this.config.imageGenerator = imageGenerator;
   }
 
   async process(
@@ -775,15 +788,71 @@ export class MentionWorkflow {
       tone: "mocking",
     });
 
-    // Pick template texts
+    // Pick template texts (kept for compatibility, though not used for Replicate)
     pickTemplateTexts(resolved.template, event.tweet_id);
 
-    // Note: Actual image rendering would happen here via renderMemeSharp
-    // For now, media_buffer stays undefined; when populated, post as reply with media
-    return this.finalizeReply(caption, "IMAGE", event.tweet_id, {
-      fallback: "Market observation in progress.",
-      mediaBuffer: undefined,
+    // Extract intent for dynamic prompt
+    const { intent, keywords } = extractIntent(event.text);
+
+    // Compose dynamic prompt based on context
+    const preset = resolved.preset;
+    const modelSlug = process.env.REPLICATE_IMAGE_MODEL ?? "black-forest-labs/flux-schnell";
+    const { prompt, negative_prompt } = composeDynamicPrompt({
+      userIntent: intent,
+      keywords,
+      humorMode,
+      energy,
+      aggression: false, // Aggression is handled by rhyme de-escalation earlier
+      stylePrompt: preset?.style_prompt,
+      negativePrompt: preset?.negative_prompt,
+      userLevel: (reward.metadata?.level as number | undefined) ?? 0,
+      aspect: "1:1",
+      model: modelSlug,
     });
+
+    // Generate seed from tweet_id for reproducibility
+    const seed = this.tweetIdToSeed(event.tweet_id);
+
+    // Try to generate image via Replicate
+    let mediaBuffer: Buffer | undefined;
+    if (this.config.imageGenerator) {
+      try {
+        mediaBuffer = await this.config.imageGenerator.generate({
+          prompt,
+          negative_prompt,
+          width: 1024,
+          height: 1024,
+          seed,
+        });
+      } catch (e) {
+        console.warn("[mentionWorkflow] Image generation failed, falling back to TEXT:", e);
+        // Fallback: no penalty, just don't include mediaBuffer
+        mediaBuffer = undefined;
+      }
+    }
+
+    // Return IMAGE if buffer exists, otherwise TEXT (graceful fallback)
+    const mode: ReplyMode = mediaBuffer ? "IMAGE" : "TEXT";
+    return this.finalizeReply(caption, mode, event.tweet_id, {
+      fallback: "Market observation in progress.",
+      mediaBuffer,
+    });
+  }
+
+  /**
+   * Convert tweet_id to a numeric seed for reproducible generation.
+   * Returns 1..2147483647 (avoids 0 which some models reject).
+   */
+  private tweetIdToSeed(tweetId: string): number {
+    let hash = 0;
+    for (let i = 0; i < tweetId.length; i++) {
+      hash = ((hash << 5) - hash) + tweetId.charCodeAt(i);
+      hash |= 0; // force int32
+    }
+
+    // map to 1..2147483647 (avoid 0)
+    const seed = (hash >>> 0) % 2147483647; // unsigned
+    return seed === 0 ? 1 : seed;
   }
 
   private createEmbedder(): Embedder {
