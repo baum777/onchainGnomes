@@ -2,8 +2,10 @@
  * Humor Mode Selector
  *
  * Deterministically selects humor mode based on energy, aggression, and context.
+ * Uses rollDice (event_id seeded) when provided for reproducible variation.
  */
 
+import type { Dice } from "../utils/rollDice.js";
 import { EnergyLevel } from "./energyInference.js";
 
 export type HumorMode = "authority" | "scientist" | "therapist" | "reality" | "goblin" | "rhyme";
@@ -13,6 +15,7 @@ export type HumorModeInput = {
   aggression: { isAggressive: boolean };
   command?: string | null;
   isRewardReply?: boolean;
+  dice?: Dice | null;
 };
 
 // Simple deterministic hash function (FNV-1a inspired)
@@ -40,20 +43,27 @@ function createSeedFromInput(input: HumorModeInput): number {
   return hashString(seedStr);
 }
 
+function getRng(input: HumorModeInput): () => number {
+  if (input.dice) {
+    return () => input.dice!.float();
+  }
+  return mulberry32(createSeedFromInput(input));
+}
+
 export function selectHumorMode(input: HumorModeInput): HumorMode {
-  // Aggression always triggers rhyme mode
+  // Aggression always triggers rhyme mode (RHYME_DEESCALATION)
   if (input.aggression.isAggressive) {
     return "rhyme";
   }
 
   const { energy } = input;
+  const rng = getRng(input);
 
   // Energy-based selection with deterministic variation
   switch (energy) {
     case 1:
     case 2: {
       // 50/50 split between therapist and authority
-      const rng = mulberry32(createSeedFromInput(input));
       return rng() < 0.5 ? "therapist" : "authority";
     }
 
@@ -66,14 +76,15 @@ export function selectHumorMode(input: HumorModeInput): HumorMode {
     }
 
     case 4: {
-      // Default scientist, sometimes goblin (30% chance, deterministic)
-      const rng = mulberry32(createSeedFromInput(input));
-      return rng() < 0.3 ? "goblin" : "scientist";
+      // Default scientist, sometimes goblin (15%) or reality (15%)
+      const x = rng();
+      if (x < 0.15) return "goblin";
+      if (x < 0.3) return "reality";
+      return "scientist";
     }
 
     case 5: {
       // Default goblin, sometimes authority (20% chance, deterministic)
-      const rng = mulberry32(createSeedFromInput(input));
       return rng() < 0.2 ? "authority" : "goblin";
     }
 

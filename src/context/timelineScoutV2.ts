@@ -1,0 +1,117 @@
+/**
+ * Timeline Scout v2 — Sample recent tweets by keywords
+ */
+
+import type { XReadClient } from "../clients/xReadClient.js";
+import type { TimelineBrief } from "./types.js";
+import { pickTopQueryKeywords } from "./ranker.js";
+
+export interface TimelineScoutV2Deps {
+  xread: XReadClient;
+  cache?: import("./cache.js").SimpleCache;
+}
+
+export interface TimelineScoutV2Options {
+  windowMinutes: number;
+  maxQueries: number;
+  maxTweetsPerQuery: number;
+}
+
+export async function buildTimelineBriefV2(
+  deps: TimelineScoutV2Deps,
+  keywords: string[],
+  opts: TimelineScoutV2Options,
+  seedText?: string
+): Promise<TimelineBrief> {
+  const queryKeywords = pickTopQueryKeywords(keywords, 6);
+  const selected = queryKeywords.slice(
+    0,
+    Math.max(1, opts.maxQueries * 2)
+  );
+  const queries: string[] = [];
+  for (let i = 0; i < opts.maxQueries; i++) {
+    const chunk = selected.slice(i * 2, i * 2 + 2).filter(Boolean);
+    if (!chunk.length) break;
+    queries.push(
+      chunk.map((k) => (k.startsWith("$") ? k : `"${k}"`)).join(" OR ")
+    );
+  }
+
+  let sampled = 0;
+  const corpus: string[] = [];
+  for (const q of queries) {
+    const query = `(${q}) -is:retweet lang:en`;
+    const resp = (await deps.xread.searchRecent(query, {
+      max_results: Math.min(100, opts.maxTweetsPerQuery),
+      "tweet.fields": ["created_at", "author_id"],
+      expansions: ["author_id"],
+      "user.fields": ["username"],
+    })) as { data?: Array<{ text?: string }> };
+    const tweets = resp?.data ?? [];
+    sampled += tweets.length;
+    for (const t of tweets) corpus.push(String(t.text ?? ""));
+  }
+
+  const bullets = summarizeCorpus(corpus, 5);
+  const hotPhrases = extractHotPhrases(corpus, 5);
+  const counterpoints = extractCounterpoints(corpus, 2);
+  const brief: TimelineBrief = {
+    query_keywords: queryKeywords,
+    window_minutes: opts.windowMinutes,
+    bullets,
+    hot_phrases: hotPhrases,
+    counterpoints,
+    sources_sampled: sampled,
+  };
+
+  // Attach seedText for semantic processing downstream
+  (brief as unknown as { _seedText?: string })._seedText = seedText ?? `${bullets.join("\n")}\n${hotPhrases.join("\n")}`;
+
+  return brief;
+}
+
+function summarizeCorpus(corpus: string[], max: number): string[] {
+  const freq = new Map<string, number>();
+  for (const t of corpus) {
+    const line = t.replace(/\s+/g, " ").trim();
+    if (line.length >= 40) freq.set(line, (freq.get(line) ?? 0) + 1);
+  }
+  return [...freq.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, max)
+    .map(([l]) => l.slice(0, 140));
+}
+
+function extractHotPhrases(corpus: string[], max: number): string[] {
+  const joined = corpus.join("\n").toLowerCase();
+  const cand = [
+    "liquidity",
+    "unlock",
+    "airdrop",
+    "rug",
+    "staking",
+    "volume",
+    "cto",
+    "alpha",
+    "fud",
+  ];
+  return cand
+    .map((p) => ({
+      p,
+      n: (joined.match(new RegExp(`\\b${p}\\b`, "g")) ?? []).length,
+    }))
+    .filter((x) => x.n > 0)
+    .sort((a, b) => b.n - a.n)
+    .slice(0, max)
+    .map((x) => x.p);
+}
+
+function extractCounterpoints(corpus: string[], max: number): string[] {
+  const out: string[] = [];
+  for (const t of corpus) {
+    if (/but|however|actually|counter/i.test(t))
+      out.push(t.replace(/\s+/g, " ").trim().slice(0, 140));
+    if (out.length >= max) break;
+  }
+  return out;
+}

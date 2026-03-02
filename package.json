@@ -8,7 +8,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "demo:render": "node dist/scripts/render_demo.js",
-    "poll": "tsx scripts/poll_mentions.ts",
+    "poll": "tsx -r dotenv/config scripts/poll_mentions.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
@@ -16,6 +16,7 @@
   "dependencies": {
     "dotenv": "^17.3.1",
     "js-yaml": "^4.1.0",
+    "replicate": "^1.0.0",
     "sharp": "^0.33.5",
     "twitter-api-v2": "^1.15.0"
   },
