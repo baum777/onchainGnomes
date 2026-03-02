@@ -1,0 +1,16 @@
+preset_key: horny_cyberpunk
+
+style_prompt: >
+  cyberpunk crypto trading city, neon signs, glitch UI,
+  sarcastic meme mood, clean negative space for text
+
+negative_prompt: >
+  gore, violence, explicit sexual content, slurs
+
+size: 1024x1024
+
+caption_bank: captions
+caption_rules:
+  - short
+  - witty
+  - no internal metrics

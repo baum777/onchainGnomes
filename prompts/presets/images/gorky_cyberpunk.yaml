@@ -1,0 +1,25 @@
+preset_key: gorky_cyberpunk
+
+style_prompt: >
+  cyberpunk demon entity, neon circuit patterns,
+  holographic trading terminals, glitch artifacts,
+  dystopian market aesthetic, high tech low life,
+  meme composition, vibrant neon colors
+
+negative_prompt: >
+  realistic human faces, gore, violence, explicit content, slurs
+
+size: 1024x1024
+
+caption_bank: captions
+caption_rules:
+  - short (2–7 words preferred)
+  - cyberpunk flavored humor
+  - market chaos references
+  - no private/internal metrics
+
+brand_rules:
+  - neon aesthetic
+  - glitch elements
+  - technology + trading themes
+  - chaotic but readable

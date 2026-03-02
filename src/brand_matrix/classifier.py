@@ -8,6 +8,7 @@ Architektur:
 ActionPlan → MatrixClassifier → MatrixPayload → Brand Matrix API
 """
 
+import time
 from typing import Optional, Dict, Any
 from dataclasses import dataclass
 
@@ -131,7 +132,18 @@ class MatrixClassifier:
         if action_plan.preset_key:
             metadata["preset_key"] = action_plan.preset_key
 
-        import time
         metadata["classified_at"] = int(time.time())
+
+        # GORKY humor mode (internal only, never exposed to user)
+        from .humor_mode_selector import HumorModeSelector
+
+        energy = self._calculate_energy(action_plan)
+        aggression_flag = metadata.get("aggression_flag", False)
+        flavor = action_plan.flavor.value
+        metadata["humor_mode"] = HumorModeSelector.select_mode(
+            energy=energy,
+            aggression_flag=aggression_flag,
+            flavor=flavor,
+        )
 
         return metadata

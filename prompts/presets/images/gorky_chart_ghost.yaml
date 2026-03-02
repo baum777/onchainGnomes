@@ -1,0 +1,25 @@
+preset_key: gorky_chart_ghost
+
+style_prompt: >
+  spectral ghost entity, haunted candlestick charts,
+  ethereal market spirit, transparent liquidity flows,
+  ghostly trading interface, supernatural market crash,
+  meme composition, spectral lighting
+
+negative_prompt: >
+  realistic human faces, gore, violence, explicit content, slurs
+
+size: 1024x1024
+
+caption_bank: captions
+caption_rules:
+  - ghost/death metaphors
+  - liquidity hauntings
+  - market trauma humor
+  - no private/internal metrics
+
+brand_rules:
+  - spectral aesthetic
+  - haunting but humorous
+  - liquidity ghost motifs
+  - chart graveyard themes
