@@ -5,6 +5,7 @@ OBJECTIVE:
 Build a resilient, reduced token universe from:
 - DexScreener (Solana)
 - DexPaprika (Solana)
+- Moralis (Solana)
 
 Then execute:
 - Cross-source normalization
