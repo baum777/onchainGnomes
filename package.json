@@ -11,6 +11,7 @@
     "demo:render": "tsx scripts/render_demo.ts",
     "poll": "tsx -r dotenv/config src/index.ts",
     "test": "vitest run",
+    "test:stress": "vitest run tests/stress/personaStress.test.ts",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit"
