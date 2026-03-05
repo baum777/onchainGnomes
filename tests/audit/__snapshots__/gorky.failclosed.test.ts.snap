@@ -1,0 +1,83 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Token Audit Engine — Fail-Closed Output > produces degraded mode for valid contract without onchain verification > degraded-valid-contract-unverified 1`] = `
+{
+  "data_quality": {
+    "ca_valid": true,
+    "dex_pairs_found": false,
+    "missing": [
+      "onchain_verification",
+      "rpc_proof",
+    ],
+    "mode": "degraded",
+    "onchain_verified": false,
+  },
+  "flags": [
+    "UNVERIFIED_ONCHAIN",
+  ],
+  "metrics": {
+    "dev_wallet_percent": null,
+    "liquidity_usd": null,
+    "top10_holder_percent": null,
+    "volume24h_usd": null,
+  },
+  "risk_score": {
+    "bot_activity_risk": null,
+    "dev_control_risk": null,
+    "final_risk": 50,
+    "holder_concentration_risk": null,
+    "liquidity_risk": null,
+    "narrative_manipulation_risk": null,
+    "reason": "degraded_mode: limited onchain data available",
+  },
+  "run_id": "MASKED_RUN_ID",
+  "timestamp": "MASKED_TIMESTAMP",
+  "token": {
+    "contract_address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "ticker": "GORKY",
+  },
+  "verdict": "SPECULATIVE",
+}
+`;
+
+exports[`Token Audit Engine — Fail-Closed Output > produces fail-closed result for invalid contract (snapshot) > fail-closed-invalid-contract 1`] = `
+{
+  "data_quality": {
+    "ca_valid": false,
+    "dex_pairs_found": false,
+    "missing": [
+      "valid_contract_address",
+      "solana_address_length_invalid: 20 chars (expected 32-44)",
+    ],
+    "mode": "fail_closed",
+    "onchain_verified": false,
+  },
+  "flags": [
+    "FAIL_CLOSED_MODE",
+    "INVALID_CONTRACT_ADDRESS",
+    "solana_address_length_invalid: 20 chars (expected 32-44)",
+  ],
+  "metrics": {
+    "dev_wallet_percent": null,
+    "liquidity_usd": null,
+    "top10_holder_percent": null,
+    "volume24h_usd": null,
+  },
+  "risk_score": {
+    "bot_activity_risk": null,
+    "dev_control_risk": null,
+    "final_risk": 100,
+    "holder_concentration_risk": null,
+    "liquidity_risk": null,
+    "narrative_manipulation_risk": null,
+    "reason": "fail_closed: solana_address_length_invalid: 20 chars (expected 32-44)",
+  },
+  "run_id": "MASKED_RUN_ID",
+  "timestamp": "MASKED_TIMESTAMP",
+  "token": {
+    "contract_address": "pl1234ace56hold789er",
+    "ticker": "GORKY",
+  },
+  "verdict": "UNVERIFIED_HIGH_RISK",
+}
+`;
