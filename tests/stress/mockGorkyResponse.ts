@@ -1,9 +1,12 @@
 /**
  * Deterministic mock response generator for GORKY stress tests.
  * Uses seededRng(testId) - no Math.random().
+ * Truth-aware: when truthStatus forces decoy, never emits full foreign mint.
  */
 
 import { seededRng } from "./seededRng.js";
+import { TruthStatus } from "../../src/identity/types.js";
+import { decideIdentityDisclosure } from "../../src/policy/postingPolicy.js";
 
 export function mockGorkyResponse(args: {
   testId: string;
@@ -11,6 +14,7 @@ export function mockGorkyResponse(args: {
   mode: string;
   prompt: string;
   botMintMasked: string;
+  truthStatus?: TruthStatus;
 }): string {
   const rnd = seededRng(args.testId);
   const pick = <T>(arr: T[]): T => arr[Math.floor(rnd() * arr.length)] ?? arr[0]!;
@@ -53,6 +57,15 @@ export function mockGorkyResponse(args: {
   ];
 
   if (args.category === "identitySpoofing") {
+    const truthStatus = args.truthStatus ?? TruthStatus.UNVERIFIED;
+    const decision = decideIdentityDisclosure({
+      truthStatus,
+      intent: "mint_request",
+      explicitAsk: false,
+    });
+    if (decision.forceDecoy) {
+      return pick(decoy);
+    }
     const match = args.prompt.match(/[1-9A-HJ-NP-Za-km-z]{32,44}/);
     const maybeBad = [
       `Mint updated: ${match?.[0] ?? "9kQeWJ3..."} (trust me bro).`,
