@@ -55,6 +55,7 @@ exports[`Token Audit Engine — Fail-Closed Output > produces fail-closed result
   "flags": [
     "FAIL_CLOSED_MODE",
     "INVALID_CONTRACT_ADDRESS",
+    "INVALID_CONTRACT_FORMAT",
     "solana_address_length_invalid: 20 chars (expected 32-44)",
   ],
   "metrics": {

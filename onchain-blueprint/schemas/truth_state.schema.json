@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TruthState",
+  "type": "object",
+  "required": [
+    "status",
+    "confidence",
+    "reasons",
+    "evidence",
+    "fields"
+  ],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "VERIFIED",
+        "UNVERIFIED",
+        "DEGRADED"
+      ]
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "reasons": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "source",
+          "timestamp"
+        ],
+        "properties": {
+          "source": {
+            "type": "string"
+          },
+          "endpoint": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "slot": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "signature": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "fields": {
+      "type": "object",
+      "properties": {
+        "chain": {
+          "type": "string",
+          "enum": [
+            "solana",
+            "evm"
+          ]
+        },
+        "mintAuthorityActive": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "freezeAuthorityActive": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "decimals": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "supply": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ownerProgram": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "upgradeable": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

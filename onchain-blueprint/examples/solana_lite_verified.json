@@ -1,0 +1,37 @@
+{
+  "truth_state": {
+    "status": "VERIFIED",
+    "confidence": 0.9,
+    "reasons": [],
+    "evidence": [
+      {
+        "source": "solana_rpc",
+        "timestamp": "2026-03-05T00:00:00Z",
+        "endpoint": "https://rpc.example",
+        "slot": 123456789,
+        "signature": null,
+        "notes": "Mint account parsed"
+      }
+    ],
+    "fields": {
+      "chain": "solana",
+      "mintAuthorityActive": false,
+      "freezeAuthorityActive": false,
+      "decimals": 6,
+      "supply": "1000000000000",
+      "ownerProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "upgradeable": false
+    }
+  },
+  "token_security": {
+    "flags": [
+      "MINT_AUTH_RENOUNCED",
+      "FREEZE_AUTH_RENOUNCED"
+    ],
+    "notes": "Lite verify ok."
+  },
+  "latency_ms": 180,
+  "sources_used": [
+    "solana_rpc"
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "truth_state": {
+    "status": "UNVERIFIED",
+    "confidence": 0.0,
+    "reasons": [
+      "INVALID_CONTRACT_FORMAT"
+    ],
+    "evidence": [
+      {
+        "source": "address_gate",
+        "timestamp": "2026-03-05T00:00:00Z",
+        "endpoint": null,
+        "slot": null,
+        "signature": null,
+        "notes": "Non-base58 CA rejected"
+      }
+    ],
+    "fields": {
+      "chain": "solana",
+      "mintAuthorityActive": null,
+      "freezeAuthorityActive": null,
+      "decimals": null,
+      "supply": null,
+      "ownerProgram": null,
+      "upgradeable": null
+    }
+  },
+  "token_security": {
+    "flags": [
+      "INVALID_CONTRACT_FORMAT",
+      "UNVERIFIED_ONCHAIN"
+    ],
+    "notes": "Fail-closed: cannot verify onchain state."
+  },
+  "latency_ms": 3,
+  "sources_used": [
+    "address_gate"
+  ]
+}

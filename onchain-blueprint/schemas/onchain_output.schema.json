@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OnchainPipelineOutput",
+  "type": "object",
+  "required": [
+    "truth_state",
+    "token_security",
+    "latency_ms",
+    "sources_used"
+  ],
+  "properties": {
+    "truth_state": {
+      "$ref": "truth_state.schema.json"
+    },
+    "token_metadata": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "token_security": {
+      "type": "object",
+      "required": [
+        "flags"
+      ],
+      "properties": {
+        "flags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "holder_distribution": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "lp_state": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "latency_ms": {
+      "type": "number"
+    },
+    "sources_used": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": false
+}
