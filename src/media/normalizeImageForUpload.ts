@@ -38,7 +38,7 @@ export async function normalizeImageForUpload(
 
   try {
     // 1) Resize to maxDim (contain, no upscaling)
-    let img = sharp(input).resize(maxDim, maxDim, { fit: "inside", withoutEnlargement: true });
+    const img = sharp(input).resize(maxDim, maxDim, { fit: "inside", withoutEnlargement: true });
 
     // 2) Try lossless-ish first for PNG, then fallback to JPEG if still too big
     if (mimeType === "image/png") {

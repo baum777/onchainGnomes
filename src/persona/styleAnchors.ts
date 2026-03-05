@@ -320,13 +320,14 @@ export function applyStyleTransformation(
       }
       break;
 
-    case "referee":
+    case "referee": {
       // Short and direct
       const sentences = transformed.split(/[.!?]/);
       if (sentences.length > 2) {
         transformed = sentences.slice(0, 2).join(". ") + ".";
       }
       break;
+    }
   }
 
   return transformed;

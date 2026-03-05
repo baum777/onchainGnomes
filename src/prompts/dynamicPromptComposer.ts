@@ -62,7 +62,8 @@ export function composePromptWithSafety(
   input: PromptSchemaInput,
   safetyFlags: string[]
 ): BuiltPrompt {
-  // Build the schema first
+  // Build the schema first (dynamic import to avoid circular deps)
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { buildPromptSchema } = require("./buildPromptFromSchema.js");
   const schema = buildPromptSchema(input);
 
@@ -70,6 +71,7 @@ export function composePromptWithSafety(
   schema.negative.safety = safetyFlags;
 
   // Build final prompt
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { buildPromptFromSchema } = require("./buildPromptFromSchema.js");
   return buildPromptFromSchema(schema);
 }

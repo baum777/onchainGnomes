@@ -21,7 +21,7 @@ export type ReplyLogFields = {
   mode?: string;
   truth_level?: string;
   selected_candidate_id?: string;
-  action?: "refuse" | "post" | "log_only";
+  action?: "refuse" | "post" | "log_only" | "skip";
   stage?: string;
   duration_ms?: number;
   [key: string]: unknown;

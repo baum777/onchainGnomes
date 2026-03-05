@@ -2,7 +2,7 @@ export type RNG = () => number; // returns [0,1)
 
 export const cryptoRng: RNG = () => {
   // Node 20+: crypto randomness
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { randomBytes } = require("crypto");
   const buf: Buffer = randomBytes(4);
   const n = buf.readUInt32BE(0);
