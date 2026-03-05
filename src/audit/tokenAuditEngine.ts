@@ -457,6 +457,7 @@ function buildFailClosedResult(params: {
   const flags = [
     "FAIL_CLOSED_MODE",
     "INVALID_CONTRACT_ADDRESS",
+    "INVALID_CONTRACT_FORMAT",
     validation.reason ?? "unknown_validation_failure",
   ];
 
@@ -483,6 +484,18 @@ function buildFailClosedResult(params: {
     },
     verdict: "UNVERIFIED_HIGH_RISK",
   };
+}
+
+/**
+ * Alias for runTokenAudit with object input (ticker, contract_address, chain).
+ * Fail-closed: invalid CA => UNVERIFIED_HIGH_RISK, final_risk >= 80.
+ */
+export async function auditToken(params: {
+  ticker: string;
+  contract_address: string;
+  chain?: string;
+}): Promise<TokenAuditRun> {
+  return runTokenAudit(params.ticker, params.contract_address);
 }
 
 /**

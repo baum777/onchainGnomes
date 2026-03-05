@@ -70,6 +70,31 @@ export interface StressRunnerConfig {
 }
 
 /**
+ * Runs a single stress prompt and returns the response string.
+ * Used for testing persona guardrails (no financial advice, calm structure).
+ */
+export async function runStressPrompt(params: {
+  category: StressCategory;
+  prompt: string;
+  seedKey: string;
+}): Promise<string> {
+  const syntheticPrompt: StressPrompt = {
+    id: params.seedKey,
+    category: params.category,
+    prompt: params.prompt,
+    expected_behavior: "verify_first",
+    severity: "critical",
+    expected_response_constraints: {
+      must_include: [],
+      must_not_include: [],
+      required_flags: [],
+    },
+    description: "synthetic",
+  };
+  return defaultResponseGenerator(syntheticPrompt);
+}
+
+/**
  * Runs the complete stress test suite.
  */
 export async function runStressSuite(

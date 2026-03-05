@@ -11,8 +11,11 @@
     "demo:render": "tsx scripts/render_demo.ts",
     "poll": "tsx -r dotenv/config src/index.ts",
     "test": "vitest run",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:stress": "vitest run tests/stress/personaStress.test.ts",
     "test:watch": "vitest",
+    "test:critical": "vitest run tests/critical",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit"
   },
@@ -29,6 +32,7 @@
     "@types/node": "^22.10.2",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3",
+    "@vitest/coverage-v8": "^2.1.8",
     "vitest": "^2.1.8"
   },
   "engines": {

@@ -15,6 +15,7 @@ export interface ValidationResult {
   chain: ChainType;
   normalized: string | null;
   reason?: string;
+  flags?: string[];
 }
 
 /** Base58 alphabet without ambiguous characters (0, O, I, l) */
@@ -29,37 +30,35 @@ const AMBIGUOUS_BASE58_CHARS = /[0OIl]/;
 /**
  * Validates a contract address.
  * Fail-closed: any ambiguity or format error = invalid.
+ * Supports (address) or (chain, address) for API compatibility.
  */
-export function validateContractAddress(address: string | null | undefined): ValidationResult {
+export function validateContractAddress(
+  addressOrChain: string | null | undefined,
+  address?: string
+): ValidationResult {
+  const addr = address !== undefined ? address : addressOrChain;
+  const invalid = (chain: ChainType, reason: string): ValidationResult => ({
+    valid: false,
+    chain,
+    normalized: null,
+    reason,
+    flags: ["INVALID_CONTRACT_FORMAT"],
+  });
+
   // Handle null or undefined
-  if (address === null || address === undefined) {
-    return {
-      valid: false,
-      chain: "unknown",
-      normalized: null,
-      reason: "address_null_or_undefined",
-    };
+  if (addr === null || addr === undefined) {
+    return invalid("unknown", "address_null_or_undefined");
   }
 
   // Must be a string
-  if (typeof address !== "string") {
-    return {
-      valid: false,
-      chain: "unknown",
-      normalized: null,
-      reason: "address_not_string",
-    };
+  if (typeof addr !== "string") {
+    return invalid("unknown", "address_not_string");
   }
 
-  const trimmed = address.trim();
+  const trimmed = addr.trim();
 
   if (trimmed.length === 0) {
-    return {
-      valid: false,
-      chain: "unknown",
-      normalized: null,
-      reason: "address_empty",
-    };
+    return invalid("unknown", "address_empty");
   }
 
   // Check for EVM format first (starts with 0x)
@@ -72,34 +71,27 @@ export function validateContractAddress(address: string | null | undefined): Val
 }
 
 function validateSolanaAddress(address: string): ValidationResult {
+  const invalid = (reason: string): ValidationResult => ({
+    valid: false,
+    chain: "solana",
+    normalized: null,
+    reason,
+    flags: ["INVALID_CONTRACT_FORMAT"],
+  });
+
   // Check length constraints
   if (address.length < 32 || address.length > 44) {
-    return {
-      valid: false,
-      chain: "solana",
-      normalized: null,
-      reason: `solana_address_length_invalid: ${address.length} chars (expected 32-44)`,
-    };
+    return invalid(`solana_address_length_invalid: ${address.length} chars (expected 32-44)`);
   }
 
   // Check for ambiguous characters that indicate possible spoofing
   if (AMBIGUOUS_BASE58_CHARS.test(address)) {
-    return {
-      valid: false,
-      chain: "solana",
-      normalized: null,
-      reason: "solana_address_contains_ambiguous_chars: 0, O, I, l are not valid base58",
-    };
+    return invalid("solana_address_contains_ambiguous_chars: 0, O, I, l are not valid base58");
   }
 
   // Validate base58 alphabet
   if (!BASE58_REGEX.test(address)) {
-    return {
-      valid: false,
-      chain: "solana",
-      normalized: null,
-      reason: "solana_address_invalid_base58",
-    };
+    return invalid("solana_address_invalid_base58");
   }
 
   return {
@@ -110,24 +102,22 @@ function validateSolanaAddress(address: string): ValidationResult {
 }
 
 function validateEvmAddress(address: string): ValidationResult {
+  const invalid = (reason: string): ValidationResult => ({
+    valid: false,
+    chain: "evm",
+    normalized: null,
+    reason,
+    flags: ["INVALID_CONTRACT_FORMAT"],
+  });
+
   // Must be exactly 42 chars: 0x + 40 hex
   if (address.length !== 42) {
-    return {
-      valid: false,
-      chain: "evm",
-      normalized: null,
-      reason: `evm_address_length_invalid: ${address.length} chars (expected 42)`,
-    };
+    return invalid(`evm_address_length_invalid: ${address.length} chars (expected 42)`);
   }
 
   // Check lowercase 0x prefix and hex chars
   if (!EVM_REGEX.test(address)) {
-    return {
-      valid: false,
-      chain: "evm",
-      normalized: null,
-      reason: "evm_address_invalid_hex",
-    };
+    return invalid("evm_address_invalid_hex");
   }
 
   // Normalize to lowercase
