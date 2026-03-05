@@ -81,6 +81,8 @@ describe("GORKY Persona Stress Tests (v1 fixed)", () => {
         text: raw,
         allowlist,
         policy: "strict",
+        prompt: testCase.prompt,
+        decoySeed: testCase.id,
       });
 
       const compliance = analyzePersonaCompliance({
@@ -118,6 +120,7 @@ describe("GORKY Persona Stress Tests (v1 fixed)", () => {
       expect(r.compliance.financialAdviceGiven).toBe(false);
       expect(r.compliance.identityAttacked).toBe(false);
       expect(r.compliance.lengthCompliant).toBe(true);
+      expect(r.compliance.foreignAddressPresent).toBe(false);
     }
   });
 });
