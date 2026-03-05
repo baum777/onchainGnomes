@@ -41,6 +41,12 @@ const __dirname = path.dirname(__filename);
 const DATA_FILE = path.resolve(process.cwd(), "data/processed_mentions.json");
 
 // Config - POLL_INTERVAL_MS from env, default 30s
+import { isPostingDisabled } from "../ops/launchGate.js";
+import { withCircuitBreaker } from "../ops/llmCircuitBreaker.js";
+import { dedupeCheckAndMark } from "../ops/dedupeGuard.js";
+import { enforceLaunchRateLimits } from "../ops/rateLimiter.js";
+import { logInfo, logWarn } from "../ops/logger.js";
+
 const POLL_INTERVAL_MS = Number(process.env.POLL_INTERVAL_MS) || 30_000;
 const DRY_RUN = process.env.DRY_RUN === "true";
 
@@ -281,7 +287,8 @@ export async function runWorkerLoop(): Promise<void> {
   console.log(`[CONFIG] Activation mode: ${activationConfig.mode}`);
   console.log(`[CONFIG] Deny reply mode: ${activationConfig.denyReplyMode}`);
 
-  const xClient = createXClient(DRY_RUN);
+  const dryRun = process.env.LAUNCH_MODE ? isPostingDisabled() : DRY_RUN;
+  const xClient = createXClient(dryRun);
 
   // Create raw TwitterApi client for mentions API
   const rawClient = new TwitterApi({
@@ -307,12 +314,14 @@ export async function runWorkerLoop(): Promise<void> {
     templatesDir: "./memes/templates",
     datasetsRoot: "./data/datasets",
     cooldownMinutes: 60,
-    dryRun: DRY_RUN,
+    dryRun,
     botUserId: userId,
     twitterClient: rawClient,
     xClient,
     xReadClient,
-    llmClient: process.env.XAI_API_KEY ? createXAILLMClient() : undefined,
+    llmClient: process.env.XAI_API_KEY
+      ? withCircuitBreaker(createXAILLMClient())
+      : undefined,
     useEnhancedContext: process.env.USE_ENHANCED_CONTEXT === "true",
     activationConfig,
   };
@@ -349,6 +358,32 @@ export async function runWorkerLoop(): Promise<void> {
           console.log(`[SKIP] Self-mention filtered in poller: ${mention.id}`);
           markProcessed(state, mention.id);
           saveState(state);
+          continue;
+        }
+
+        // 1) Dedupe (TTL-based, prevents double-reply on race/restart)
+        const dd = await dedupeCheckAndMark(mention.id);
+        if (!dd.ok) {
+          logInfo("Dedupe skip", { tweet_id: mention.id, action: "skip", reason: dd.reason });
+          continue;
+        }
+
+        // 2) Rate limit (global + per-user)
+        const authorHandle = (mention.authorUsername ?? mention.author_id ?? "unknown")
+          .toLowerCase()
+          .replace(/^@/, "");
+        const rl = await enforceLaunchRateLimits({
+          authorHandle,
+          globalId: BOT_USERNAME,
+        });
+        if (!rl.ok) {
+          logWarn("Rate limited", {
+            tweet_id: mention.id,
+            author: authorHandle,
+            action: "skip",
+            reason: rl.reason,
+            retryAfterMs: rl.retryAfterMs,
+          });
           continue;
         }
 

@@ -60,6 +60,7 @@ import {
 import { ImageGeneratorService } from "../services/imageGenerator.js";
 import { extractIntent } from "../prompts/intentExtraction.js";
 import { composeDynamicPrompt } from "../prompts/dynamicPromptComposer.js";
+import { shouldPost } from "../ops/launchGate.js";
 
 // Types
 export type MentionEvent = {
@@ -442,6 +443,7 @@ export class MentionWorkflow {
           const teaseText = buildDenyTease(event.tweet_id);
           return this.finalizeReply(teaseText, "TEXT", event.tweet_id, {
             fallback: "My circuits are busy observing market chaos. Try again later.",
+            authorHandle: event.user_handle,
           });
         }
 
@@ -604,7 +606,7 @@ export class MentionWorkflow {
                 llmResult.reply_text.slice(0, 280),
                 "TEXT",
                 event.tweet_id,
-                {}
+                { authorHandle: event.user_handle }
               );
             } catch (err) {
               console.warn("[mentionWorkflow] LLM generate failed:", err);
@@ -650,6 +652,7 @@ export class MentionWorkflow {
         const refusal = buildPublicRefusal(safety, event.tweet_id);
         return this.finalizeReply(refusal, "TEXT", event.tweet_id, {
           fallback: "My circuits detect spicy energy. Let's keep it chart-shaped, friend.",
+          authorHandle: event.user_handle,
         });
       }
 
@@ -687,6 +690,7 @@ export class MentionWorkflow {
         const rhyme = buildRhymeDeescalation(event.tweet_id);
         return this.finalizeReply(rhyme, "TEXT", event.tweet_id, {
           fallback: "Deep breath. Check the charts.",
+          authorHandle: event.user_handle,
         });
       }
 
@@ -721,7 +725,7 @@ export class MentionWorkflow {
     text: string,
     mode: ReplyMode,
     replyToId: string,
-    opts?: { fallback?: string; mediaBuffer?: Buffer }
+    opts?: { fallback?: string; mediaBuffer?: Buffer; authorHandle?: string }
   ): MentionResult {
     try {
       assertPublicTextSafe(text, { route: "mentionWorkflow" });
@@ -735,7 +739,10 @@ export class MentionWorkflow {
       media_buffer: opts?.mediaBuffer,
     };
     if (this.config.xClient && !this.config.dryRun) {
-      this.postReply(result, replyToId).catch(() => {});
+      const decision = shouldPost(opts?.authorHandle);
+      if (decision.action !== "refuse") {
+        this.postReply(result, replyToId).catch(() => {});
+      }
     }
     return result;
   }
@@ -836,6 +843,7 @@ export class MentionWorkflow {
     return this.finalizeReply(caption, mode, event.tweet_id, {
       fallback: "Market observation in progress.",
       mediaBuffer,
+      authorHandle: event.user_handle,
     });
   }
 
@@ -879,6 +887,7 @@ export class MentionWorkflow {
       const badgeText = generateBadgeText(`${event.tweet_id}:${event.user_id}`);
       return this.finalizeReply(badgeText, "TEXT", event.tweet_id, {
         fallback: "Certified Market Survivor\n\nYour bags tell a story. It's a tragedy.",
+        authorHandle: event.user_handle,
       });
     }
 
@@ -887,6 +896,7 @@ export class MentionWorkflow {
       const helpText = "Commands: /ask, /img, /remix, /badge me. I'm here to observe market chaos.";
       return this.finalizeReply(helpText, "TEXT", event.tweet_id, {
         fallback: "Available commands: ask, img, remix, badge.",
+        authorHandle: event.user_handle,
       });
     }
 
@@ -903,6 +913,7 @@ export class MentionWorkflow {
 
     return this.finalizeReply(text, "TEXT", event.tweet_id, {
       fallback: "Chart observation complete. Results: inconclusive but entertaining.",
+      authorHandle: event.user_handle,
     });
   }
 }

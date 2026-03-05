@@ -20,6 +20,7 @@ import type {
   ReplyCandidate,
   MemoryRetrievalResult,
   UserRelationship,
+  LegacyLoreEntry,
 } from "../types/coreTypes.js";
 import type { ContextBundle, ThreadContext, TimelineBrief } from "../context/types.js";
 import { buildThreadContext, type ContextBuilderDeps } from "../context/contextBuilder.js";
@@ -40,6 +41,7 @@ import { createFactsStore, FactsStore } from "../memory/factsStore.js";
 import { createUserGraph, UserGraph } from "../memory/userGraph.js";
 import { performWriteback } from "../memory/writeback.js";
 import { stableHash } from "../utils/hash.js";
+import { shouldSkipLLM } from "../ops/launchGate.js";
 
 export interface ReplyEngineDeps {
   llm: LLMClient;
@@ -72,6 +74,44 @@ export async function processMention(
     defaultUserRelationship: "new",
     ...config,
   };
+
+  // LAUNCH_MODE=off: skip LLM, return safe refusal
+  if (shouldSkipLLM()) {
+    return {
+      reply_text: "Chart observation paused. My circuits are in standby — try again later.",
+      selected_candidate: {
+        candidate_id: "launch_off",
+        reply_text: "Chart observation paused. My circuits are in standby — try again later.",
+        mode: "analyst",
+        risk: "low",
+        truth_category: "OPINION",
+        estimated_length: 65,
+      },
+      trace: {
+        request_id: generateRequestId(input.mention.tweet_id),
+        started_at: new Date().toISOString(),
+        completed_at: new Date().toISOString(),
+        stages: [{
+          stage: "context_build",
+          success: true,
+          data: { action: "refuse" },
+          duration_ms: 0,
+          timestamp: new Date().toISOString(),
+        }],
+        final_reply: "Chart observation paused. My circuits are in standby — try again later.",
+        selected_candidate: {
+          candidate_id: "launch_off",
+          reply_text: "Chart observation paused. My circuits are in standby — try again later.",
+          mode: "analyst",
+          risk: "low",
+          truth_category: "OPINION",
+          estimated_length: 65,
+        },
+        errors: [],
+        warnings: ["LAUNCH_MODE=off, LLM not invoked"],
+      },
+    };
+  }
 
   // Initialize request tracing
   const requestId = generateRequestId(input.mention.tweet_id);
@@ -489,8 +529,8 @@ async function retrieveRelevantLore(
   loreStore: LoreStore,
   intent: { intent: string; topics: string[] },
   thread: { keywords: string[]; entities: string[] }
-): Promise<Array<{ id: string; topic: string; content: string; tags: string[] }>> {
-  const lore: Array<{ id: string; topic: string; content: string; tags: string[] }> = [];
+): Promise<LegacyLoreEntry[]> {
+  const lore: LegacyLoreEntry[] = [];
 
   // Search by intent topics
   for (const topic of intent.topics) {
