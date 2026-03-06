@@ -1,10 +1,20 @@
 import type {
   CanonicalEvent,
   ClassifierOutput,
+  IntentClass,
   ScoreBundle,
   ThesisBundle,
   ThesisType,
 } from "./types.js";
+
+const SOCIAL_INTENTS: IntentClass[] = [
+  "greeting",
+  "casual_ping",
+  "market_question_general",
+  "persona_query",
+  "lore_query",
+  "conversation_continue",
+];
 
 const HYPE_NO_SUBSTANCE = /\b(?:moon|mooning|100x|1000x|gem|alpha|lfg|wagmi|guaranteed|easy\s+money)\b/i;
 const PERFORMANCE_LANGUAGE = /\b(?:\d+[%xX]\s*(?:gain|profit|return|up|pump)|ath|all.time.high|breaking\s+out)\b/i;
@@ -88,7 +98,7 @@ function deriveSupportingPoint(
   if (thesis === "factual_correction_only") return null;
 
   if (cls.evidence_bullets.length >= 2) {
-    return cls.evidence_bullets[1];
+    return cls.evidence_bullets[1] ?? null;
   }
 
   if (event.parent_text && event.parent_text.length > 20) {
@@ -103,6 +113,14 @@ export function extractThesis(
   cls: ClassifierOutput,
   scores: ScoreBundle,
 ): ThesisBundle | null {
+  if (SOCIAL_INTENTS.includes(cls.intent)) {
+    return {
+      primary: "social_engagement",
+      supporting_point: null,
+      evidence_bullets: [],
+    };
+  }
+
   const primary = deriveThesisType(event, cls, scores);
   if (!primary) return null;
 

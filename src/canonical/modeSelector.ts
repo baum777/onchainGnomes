@@ -4,8 +4,18 @@ import type {
   ThesisBundle,
   CanonicalMode,
   CanonicalConfig,
+  IntentClass,
 } from "./types.js";
-import { MODE_BUDGETS } from "./modeBudgets.js";
+import { getConfidenceFloor } from "./modeBudgets.js";
+
+const SOCIAL_MODE_MAP: Partial<Record<IntentClass, CanonicalMode>> = {
+  greeting: "social_banter",
+  casual_ping: "conversation_hook",
+  market_question_general: "market_banter",
+  persona_query: "persona_reply",
+  lore_query: "lore_drop",
+  conversation_continue: "conversation_hook",
+};
 
 export function selectMode(
   cls: ClassifierOutput,
@@ -13,16 +23,18 @@ export function selectMode(
   thesis: ThesisBundle,
   config: CanonicalConfig,
 ): CanonicalMode {
-  const { confidence, severity, opportunity } = scores;
-  const floors = Object.fromEntries(
-    Object.entries(MODE_BUDGETS).map(([k, v]) => [k, v.confidence_floor]),
-  ) as Record<string, number>;
+  const socialMode = SOCIAL_MODE_MAP[cls.intent];
+  if (socialMode) {
+    return socialMode;
+  }
 
-  if (confidence < floors.soft_deflection) {
+  const { confidence, severity, opportunity } = scores;
+
+  if (confidence < getConfidenceFloor("soft_deflection")) {
     return "ignore";
   }
 
-  if (confidence < floors.neutral_clarification) {
+  if (confidence < getConfidenceFloor("neutral_clarification")) {
     return "soft_deflection";
   }
 
@@ -30,11 +42,11 @@ export function selectMode(
     return "neutral_clarification";
   }
 
-  if (severity >= 0.8 && confidence >= floors.hard_caution) {
+  if (severity >= 0.8 && confidence >= getConfidenceFloor("hard_caution")) {
     return "hard_caution";
   }
 
-  if (severity >= 0.55 && confidence >= floors.skeptical_breakdown) {
+  if (severity >= 0.55 && confidence >= getConfidenceFloor("skeptical_breakdown")) {
     return "skeptical_breakdown";
   }
 
@@ -46,13 +58,18 @@ export function selectMode(
   ]);
 
   if (opportunity >= 0.75 && oneLineCandidates.has(thesis.primary)) {
-    if (confidence >= floors.analyst_meme_lite) {
+    if (confidence >= getConfidenceFloor("analyst_meme_lite")) {
       return "analyst_meme_lite";
     }
     return "dry_one_liner";
   }
 
-  if (confidence >= floors.dry_one_liner) {
+  if (cls.intent === "question") {
+    if (confidence >= getConfidenceFloor("analyst_meme_lite")) return "analyst_meme_lite";
+    return "market_banter";
+  }
+
+  if (confidence >= getConfidenceFloor("dry_one_liner")) {
     return "dry_one_liner";
   }
 

@@ -7,6 +7,11 @@ const DOWNGRADE_MAP: Record<string, CanonicalMode> = {
   dry_one_liner: "soft_deflection",
   neutral_clarification: "soft_deflection",
   soft_deflection: "ignore",
+  social_banter: "conversation_hook",
+  market_banter: "dry_one_liner",
+  persona_reply: "social_banter",
+  lore_drop: "social_banter",
+  conversation_hook: "ignore",
 };
 
 export function downgradeMode(current: CanonicalMode): CanonicalMode {

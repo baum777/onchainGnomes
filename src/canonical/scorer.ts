@@ -11,6 +11,10 @@ function clamp01(v: number): number {
 function computeRelevance(event: CanonicalEvent, cls: ClassifierOutput): number {
   let score = 0.3;
 
+  if (cls.intent === "greeting" || cls.intent === "casual_ping") score += 0.05;
+  if (cls.intent === "persona_query" || cls.intent === "lore_query") score += 0.15;
+  if (cls.intent === "market_question_general") score += 0.20;
+  if (cls.intent === "conversation_continue") score += 0.10;
   if (cls.intent === "hype_claim" || cls.intent === "performance_claim") score += 0.25;
   if (cls.intent === "accusation") score += 0.3;
   if (cls.intent === "launch_announcement") score += 0.2;
@@ -30,10 +34,12 @@ function computeRelevance(event: CanonicalEvent, cls: ClassifierOutput): number 
 function computeConfidence(event: CanonicalEvent, cls: ClassifierOutput): number {
   let score = 0.3;
 
+  const isSocial = ["greeting", "casual_ping", "market_question_general", "persona_query", "lore_query", "conversation_continue"].includes(cls.intent);
+
   if (cls.evidence_class === "self_contained_strong") score += 0.4;
   else if (cls.evidence_class === "contextual_medium") score += 0.25;
   else if (cls.evidence_class === "weak_speculative") score += 0.1;
-  else score -= 0.1;
+  else if (!isSocial) score -= 0.1;
 
   if (cls.evidence_bullets.length >= 3) score += 0.1;
   else if (cls.evidence_bullets.length >= 2) score += 0.05;
@@ -43,6 +49,8 @@ function computeConfidence(event: CanonicalEvent, cls: ClassifierOutput): number
 
   if (cls.bait_probability > 0.5) score -= 0.15;
   if (cls.spam_probability > 0.3) score -= 0.1;
+
+  if (isSocial && score < 0.15) score = 0.15;
 
   return clamp01(score);
 }
@@ -66,6 +74,10 @@ function computeSeverity(cls: ClassifierOutput): number {
 function computeOpportunity(event: CanonicalEvent, cls: ClassifierOutput): number {
   let score = 0.35;
 
+  if (cls.intent === "greeting" || cls.intent === "casual_ping") score += 0.15;
+  if (cls.intent === "persona_query" || cls.intent === "lore_query") score += 0.25;
+  if (cls.intent === "market_question_general") score += 0.25;
+  if (cls.intent === "conversation_continue") score += 0.15;
   if (cls.intent === "hype_claim" || cls.intent === "performance_claim") score += 0.25;
   if (cls.intent === "accusation") score += 0.15;
   if (cls.intent === "question") score += 0.2;
