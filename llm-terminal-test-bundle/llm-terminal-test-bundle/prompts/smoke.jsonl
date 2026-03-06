@@ -1,0 +1,3 @@
+{"name":"basic-summary","input":"Summarize in one sentence: Bitcoin is volatile.","must_include":["volatile"],"must_not_include":["guaranteed"],"max_chars":300}
+{"name":"json-output","input":"Return only a JSON object with keys title and score.","expect_json":true,"required_keys":["title","score"],"json_schema_path":"prompts/json_contract.json"}
+{"name":"safe-language","input":"Describe market risk in two sentences.","contains_any":["risk","volatility","uncertainty"],"max_chars":400,"regex_must_not_match":["(?i)guaranteed profit","(?i)risk-free"]}
