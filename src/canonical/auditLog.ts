@@ -34,6 +34,9 @@ export function buildAuditRecord(params: {
   final_action: "publish" | "skip";
   skip_reason: SkipReason | null;
   reply_text: string | null;
+  path?: "social" | "audit";
+  eligibility_trace?: string[];
+  policy_trace?: string[];
 }): AuditRecord {
   const eventSnapshot = JSON.stringify({
     event_id: params.event.event_id,
@@ -56,6 +59,9 @@ export function buildAuditRecord(params: {
     reply_text: params.reply_text,
     reply_hash: params.reply_text ? stableHash(params.reply_text) : null,
     created_at: new Date().toISOString(),
+    path: params.path,
+    eligibility_trace: params.eligibility_trace,
+    policy_trace: params.policy_trace,
   };
 }
 

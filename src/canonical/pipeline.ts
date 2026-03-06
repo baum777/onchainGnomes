@@ -9,6 +9,7 @@ import type {
   ScoreBundle,
   SkipReason,
   AuditRecord,
+  IntentClass,
 } from "./types.js";
 import { DEFAULT_CANONICAL_CONFIG } from "./types.js";
 import { classify } from "./classifier.js";
@@ -24,6 +25,16 @@ export interface PipelineDeps {
   botUserId: string;
 }
 
+const SOCIAL_INTENTS: IntentClass[] = [
+  "greeting",
+  "casual_ping",
+  "question",
+  "market_question_general",
+  "persona_query",
+  "lore_query",
+  "conversation_continue",
+];
+
 function makeSkipResult(
   event: CanonicalEvent,
   skipReason: SkipReason,
@@ -32,9 +43,11 @@ function makeSkipResult(
   config?: CanonicalConfig,
 ): PipelineResult {
   const cfg = config ?? DEFAULT_CANONICAL_CONFIG;
+  const clsOut = cls ?? emptyClassifier();
+  const pathType = SOCIAL_INTENTS.includes(clsOut.intent) ? "social" as const : "audit" as const;
   const audit = buildAuditRecord({
     event,
-    cls: cls ?? emptyClassifier(),
+    cls: clsOut,
     scores: scores ?? emptyScores(),
     mode: "ignore",
     thesis: null,
@@ -44,6 +57,7 @@ function makeSkipResult(
     final_action: "skip",
     skip_reason: skipReason,
     reply_text: null,
+    path: pathType,
   });
   persistAuditRecord(audit);
   return { action: "skip", skip_reason: skipReason, audit };
@@ -87,13 +101,13 @@ export async function handleEvent(
 
   const cls = classify(event);
 
-  if (cls.policy_blocked) {
+  if (cls.policy_severity === "hard" || (cls.policy_blocked && !cls.policy_severity)) {
     return makeSkipResult(event, "skip_policy", cls, undefined, config);
   }
 
   const scores = scoreEvent(event, cls);
 
-  const eligibility = checkEligibility(scores, config);
+  const eligibility = checkEligibility(scores, cls, config);
   if (!eligibility.eligible) {
     return makeSkipResult(event, eligibility.skip_reason!, cls, scores, config);
   }
@@ -119,6 +133,7 @@ export async function handleEvent(
   );
 
   if (!result.success || !result.reply_text) {
+    const pathType = SOCIAL_INTENTS.includes(cls.intent) ? "social" as const : "audit" as const;
     const audit = buildAuditRecord({
       event,
       cls,
@@ -131,11 +146,13 @@ export async function handleEvent(
       final_action: "skip",
       skip_reason: "skip_validation_failure",
       reply_text: null,
+      path: pathType,
     });
     persistAuditRecord(audit);
     return { action: "skip", skip_reason: "skip_validation_failure", audit };
   }
 
+  const pathType = SOCIAL_INTENTS.includes(cls.intent) ? "social" as const : "audit" as const;
   const audit = buildAuditRecord({
     event,
     cls,
@@ -148,6 +165,7 @@ export async function handleEvent(
     final_action: "publish",
     skip_reason: null,
     reply_text: result.reply_text,
+    path: pathType,
   });
   persistAuditRecord(audit);
 

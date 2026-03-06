@@ -1,7 +1,13 @@
 import { z } from "zod";
 
 export const IntentClassSchema = z.enum([
+  "greeting",
+  "casual_ping",
   "question",
+  "market_question_general",
+  "persona_query",
+  "lore_query",
+  "conversation_continue",
   "hype_claim",
   "performance_claim",
   "launch_announcement",
@@ -22,6 +28,9 @@ export const TargetClassSchema = z.enum([
   "behavior",
   "narrative",
   "market_structure",
+  "persona",
+  "lore",
+  "conversation",
   "none",
 ]);
 export type TargetClass = z.infer<typeof TargetClassSchema>;
@@ -44,6 +53,7 @@ export const ThesisTypeSchema = z.enum([
   "unclear_or_unverifiable",
   "obvious_bait",
   "factual_correction_only",
+  "social_engagement",
 ]);
 export type ThesisType = z.infer<typeof ThesisTypeSchema>;
 
@@ -55,6 +65,11 @@ export const CanonicalModeSchema = z.enum([
   "hard_caution",
   "neutral_clarification",
   "soft_deflection",
+  "social_banter",
+  "market_banter",
+  "persona_reply",
+  "lore_drop",
+  "conversation_hook",
 ]);
 export type CanonicalMode = z.infer<typeof CanonicalModeSchema>;
 
@@ -103,6 +118,8 @@ export interface ClassifierOutput {
   bait_probability: number;
   spam_probability: number;
   policy_blocked: boolean;
+  policy_severity?: "none" | "soft" | "hard";
+  policy_reasons?: string[];
   evidence_bullets: string[];
   risk_flags: string[];
 }
@@ -177,6 +194,9 @@ export interface AuditRecord {
   reply_text: string | null;
   reply_hash: string | null;
   created_at: string;
+  path?: "social" | "audit";
+  eligibility_trace?: string[];
+  policy_trace?: string[];
 }
 
 export type PipelineResult =
@@ -201,6 +221,13 @@ export interface CanonicalConfig {
     max_risk: number;
     min_opportunity: number;
     min_novelty: number;
+    social?: {
+      min_relevance: number;
+      max_risk: number;
+      min_opportunity: number;
+      min_novelty: number;
+      min_confidence: number;
+    };
   };
   rate_limits: {
     global_per_minute: number;
@@ -228,6 +255,13 @@ export const DEFAULT_CANONICAL_CONFIG: CanonicalConfig = {
     max_risk: 0.55,
     min_opportunity: 0.40,
     min_novelty: 0.35,
+    social: {
+      min_relevance: 0.15,
+      max_risk: 0.55,
+      min_opportunity: 0.05,
+      min_novelty: 0.00,
+      min_confidence: 0.05,
+    },
   },
   rate_limits: {
     global_per_minute: 5,

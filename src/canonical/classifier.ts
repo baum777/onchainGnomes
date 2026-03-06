@@ -7,6 +7,35 @@ import type {
   EvidenceClass,
 } from "./types.js";
 
+const GREETING_PATTERNS = [
+  /^(?:hey|hi|hello|gm|yo|sup|waddup|howdy|hola|ayo|wsg)[\s!?.]*$/i,
+  /^(?:good\s+(?:morning|evening|night))[\s!?.]*$/i,
+];
+
+const CASUAL_PING_PATTERNS = [
+  /^(?:thoughts|well|so|hmm|hm)[\s?!.]*$/i,
+  /^\S+\s+(?:thoughts|well|so)\s*\??$/i,
+  /^what\s+(?:we|u|you)\s+(?:saying|think|reckon)\s*\??$/i,
+];
+
+const PERSONA_QUERY_PATTERNS = [
+  /\b(?:who\s+are\s+you|what(?:'s|\s+is)\s+your\s+deal|why\s+are\s+you\s+like\s+this)\b/i,
+  /\b(?:tell\s+(?:me|us)\s+about\s+yourself|what\s+do\s+you\s+do|what\s+are\s+you)\b/i,
+];
+
+const LORE_QUERY_PATTERNS = [
+  /\b(?:where\s+are\s+you\s+from|what\s+is\s+(?:the\s+)?liquidity\s+void|tell\s+(?:me|us)\s+your\s+lore)\b/i,
+  /\b(?:your\s+(?:origin|backstory|story|lore))\b/i,
+];
+
+const MARKET_QUESTION_GENERAL_PATTERNS = [
+  /\b(?:altseason|alt\s+season|alt\s+szn)\b/i,
+  /\b(?:market\s+(?:cooked|done|dead|pumping|dumping|vibes?))\b/i,
+  /\b(?:do\s+you\s+think|you\s+think)\b.*\b(?:runs?|pumps?|dumps?|moons?|crash(?:es|ing)?|rall(?:y|ies)|dips?)\b/i,
+  /\b(?:are\s+we)\s+(?:bullish|bearish|cooked|early|late)\b/i,
+  /\b(?:what(?:'s|\s+is)\s+(?:the\s+)?(?:play|move|call))\b/i,
+];
+
 const HYPE_PATTERNS = [
   /\b(?:moon|mooning|100x|1000x|10x|50x|gem|alpha|next\s+\w+x)\b/i,
   /\b(?:going\s+parabolic|lfg|wagmi|ngmi|to\s+the\s+moon)\b/i,
@@ -73,11 +102,20 @@ function classifyIntent(event: CanonicalEvent): IntentClass {
 
   if (countPatternMatches(text, SPAM_PATTERNS) >= 1) return "spam";
   if (countPatternMatches(text, BAIT_PATTERNS) >= 1) return "bait";
+
+  if (GREETING_PATTERNS.some((p) => p.test(text.trim()))) return "greeting";
+  if (CASUAL_PING_PATTERNS.some((p) => p.test(text.trim()))) return "casual_ping";
+  if (PERSONA_QUERY_PATTERNS.some((p) => p.test(text))) return "persona_query";
+  if (LORE_QUERY_PATTERNS.some((p) => p.test(text))) return "lore_query";
+
   if (countPatternMatches(text, ACCUSATION_PATTERNS) >= 1) return "accusation";
   if (countPatternMatches(text, LAUNCH_PATTERNS) >= 1) return "launch_announcement";
   if (countPatternMatches(text, PERFORMANCE_PATTERNS) >= 1) return "performance_claim";
   if (countPatternMatches(text, HYPE_PATTERNS) >= 1) return "hype_claim";
   if (countPatternMatches(text, MARKET_NARRATIVE_PATTERNS) >= 1) return "market_narrative";
+
+  if (MARKET_QUESTION_GENERAL_PATTERNS.some((p) => p.test(text))) return "market_question_general";
+
   if (countPatternMatches(text, QUESTION_PATTERNS) >= 1) return "question";
   if (countPatternMatches(text, MEME_PATTERNS) >= 2) return "meme_only";
 
@@ -86,6 +124,10 @@ function classifyIntent(event: CanonicalEvent): IntentClass {
 
 function classifyTarget(event: CanonicalEvent, intent: IntentClass): TargetClass {
   if (event.cashtags.length > 0) return "token";
+  if (intent === "persona_query") return "persona";
+  if (intent === "lore_query") return "lore";
+  if (intent === "greeting" || intent === "casual_ping" || intent === "conversation_continue") return "conversation";
+  if (intent === "market_question_general") return "market_structure";
   if (intent === "accusation") return "behavior";
   if (intent === "market_narrative") return "market_structure";
   if (intent === "performance_claim" || intent === "hype_claim") return "claim";
@@ -181,10 +223,31 @@ function extractRiskFlags(event: CanonicalEvent, intent: IntentClass): string[] 
   return flags;
 }
 
-function isPolicyBlocked(intent: IntentClass, spamProb: number): boolean {
-  if (intent === "spam") return true;
-  if (intent === "irrelevant") return true;
-  return false;
+function classifyPolicyBlock(intent: IntentClass, spamProb: number, riskFlags: string[]): {
+  blocked: boolean;
+  severity: "none" | "soft" | "hard";
+  reasons: string[];
+} {
+  const reasons: string[] = [];
+
+  if (intent === "spam") {
+    reasons.push("spam_detected");
+    return { blocked: true, severity: "hard", reasons };
+  }
+
+  if (intent === "irrelevant") {
+    reasons.push("irrelevant_content");
+    return { blocked: true, severity: "hard", reasons };
+  }
+
+  if (riskFlags.includes("contains_urls")) reasons.push("contains_urls");
+  if (intent === "greeting" || intent === "casual_ping") reasons.push("low_content");
+
+  if (reasons.length > 0) {
+    return { blocked: false, severity: "soft", reasons };
+  }
+
+  return { blocked: false, severity: "none", reasons: [] };
 }
 
 export function classify(event: CanonicalEvent): ClassifierOutput {
@@ -195,7 +258,7 @@ export function classify(event: CanonicalEvent): ClassifierOutput {
   const spam_probability = estimateSpamProbability(event);
   const evidence_bullets = extractEvidenceBullets(event, intent);
   const risk_flags = extractRiskFlags(event, intent);
-  const policy_blocked = isPolicyBlocked(intent, spam_probability);
+  const policy = classifyPolicyBlock(intent, spam_probability, risk_flags);
 
   return {
     intent,
@@ -203,7 +266,9 @@ export function classify(event: CanonicalEvent): ClassifierOutput {
     evidence_class,
     bait_probability,
     spam_probability,
-    policy_blocked,
+    policy_blocked: policy.blocked,
+    policy_severity: policy.severity,
+    policy_reasons: policy.reasons,
     evidence_bullets,
     risk_flags,
   };

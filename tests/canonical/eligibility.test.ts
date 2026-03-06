@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { checkEligibility } from "../../src/canonical/eligibility.js";
 import { DEFAULT_CANONICAL_CONFIG } from "../../src/canonical/types.js";
-import type { ScoreBundle } from "../../src/canonical/types.js";
+import type { ScoreBundle, ClassifierOutput } from "../../src/canonical/types.js";
 
 function makeScores(overrides: Partial<ScoreBundle> = {}): ScoreBundle {
   return {
@@ -15,9 +15,23 @@ function makeScores(overrides: Partial<ScoreBundle> = {}): ScoreBundle {
   };
 }
 
+function makeAuditClassifier(overrides: Partial<ClassifierOutput> = {}): ClassifierOutput {
+  return {
+    intent: "hype_claim",
+    target: "claim",
+    evidence_class: "contextual_medium",
+    bait_probability: 0.1,
+    spam_probability: 0.05,
+    policy_blocked: false,
+    evidence_bullets: [],
+    risk_flags: [],
+    ...overrides,
+  };
+}
+
 describe("eligibility", () => {
   it("allows when all thresholds pass", () => {
-    const result = checkEligibility(makeScores(), DEFAULT_CANONICAL_CONFIG);
+    const result = checkEligibility(makeScores(), makeAuditClassifier(), DEFAULT_CANONICAL_CONFIG);
     expect(result.eligible).toBe(true);
     expect(result.skip_reason).toBeNull();
   });
@@ -25,6 +39,7 @@ describe("eligibility", () => {
   it("rejects low relevance", () => {
     const result = checkEligibility(
       makeScores({ relevance: 0.2 }),
+      makeAuditClassifier(),
       DEFAULT_CANONICAL_CONFIG,
     );
     expect(result.eligible).toBe(false);
@@ -34,6 +49,7 @@ describe("eligibility", () => {
   it("rejects high risk", () => {
     const result = checkEligibility(
       makeScores({ risk: 0.9 }),
+      makeAuditClassifier(),
       DEFAULT_CANONICAL_CONFIG,
     );
     expect(result.eligible).toBe(false);
@@ -43,6 +59,7 @@ describe("eligibility", () => {
   it("rejects low opportunity", () => {
     const result = checkEligibility(
       makeScores({ opportunity: 0.1 }),
+      makeAuditClassifier(),
       DEFAULT_CANONICAL_CONFIG,
     );
     expect(result.eligible).toBe(false);
@@ -52,6 +69,7 @@ describe("eligibility", () => {
   it("rejects low novelty", () => {
     const result = checkEligibility(
       makeScores({ novelty: 0.1 }),
+      makeAuditClassifier(),
       DEFAULT_CANONICAL_CONFIG,
     );
     expect(result.eligible).toBe(false);
@@ -61,6 +79,7 @@ describe("eligibility", () => {
   it("rejects very low confidence", () => {
     const result = checkEligibility(
       makeScores({ confidence: 0.1 }),
+      makeAuditClassifier(),
       DEFAULT_CANONICAL_CONFIG,
     );
     expect(result.eligible).toBe(false);
@@ -76,6 +95,7 @@ describe("eligibility", () => {
         novelty: 0.35,
         confidence: 0.25,
       }),
+      makeAuditClassifier(),
       DEFAULT_CANONICAL_CONFIG,
     );
     expect(result.eligible).toBe(true);
