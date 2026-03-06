@@ -218,7 +218,7 @@ async function processCanonicalMention(
       return;
     }
 
-    const postDecision = shouldPost(mention.authorUsername);
+    const postDecision = shouldPost(mention.authorUsername ?? undefined);
     if (postDecision.action !== "post") {
       console.log(`[LAUNCH_GATE] ${mention.id}: ${postDecision.action} — ${(postDecision as { reason: string }).reason}`);
       markProcessed(state, mention.id);
