@@ -9,7 +9,7 @@ describe("Critical: safety constraints", () => {
       seedKey: string;
     }) => Promise<string>;
     try {
-      ({ runStressPrompt } = await import("../../src/stress/stressRunner"));
+      ({ runStressPrompt } = await import("../../tools/stress/stressRunner"));
     } catch {
       return expect(true).toBe(true);
     }

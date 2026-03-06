@@ -19,8 +19,6 @@ export type ActivationConfig = {
   denyReplyMode: DenyReplyMode;
 };
 
-const DEFAULT_WHITELIST = "@twimsalot,@nirapump_";
-
 function normalizeUsername(raw: string): string {
   let u = raw.trim().toLowerCase();
   if (u && !u.startsWith("@")) {
@@ -31,7 +29,7 @@ function normalizeUsername(raw: string): string {
 
 function parseUsernames(value: string): string[] {
   if (!value || !value.trim()) {
-    return DEFAULT_WHITELIST.split(",").map(normalizeUsername).filter(Boolean);
+    return [];
   }
   return value
     .split(",")
@@ -68,7 +66,7 @@ export function readActivationConfigFromEnv(): ActivationConfig {
     modeRaw === "whitelist" ? "whitelist" : "global";
 
   const whitelistUsernames = parseUsernames(
-    process.env.BOT_WHITELIST_USERNAMES ?? DEFAULT_WHITELIST
+    process.env.BOT_WHITELIST_USERNAMES ?? ""
   );
 
   const whitelistUserIds = parseUserIds(

@@ -33,10 +33,9 @@ describe("botActivationConfig", () => {
     expect(config.mode).toBe("whitelist");
   });
 
-  it("default whitelist has @twimsalot and @nirapump_", () => {
+  it("default whitelist is empty when BOT_WHITELIST_USERNAMES is not set", () => {
     const config = readActivationConfigFromEnv();
-    expect(config.whitelistUsernames).toContain("@twimsalot");
-    expect(config.whitelistUsernames).toContain("@nirapump_");
+    expect(config.whitelistUsernames).toEqual([]);
   });
 
   it("normalizes usernames: lowercase, @ prefix", () => {

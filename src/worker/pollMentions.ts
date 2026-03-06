@@ -1,7 +1,7 @@
 /**
  * serGorky Mention Poller
  *
- * Fetches mentions, processes via MentionWorkflow (global activation).
+ * Fetches mentions, processes via canonical pipeline.
  * Uses file-based storage for idempotency.
  * Runs in an infinite loop with configurable sleep.
  */
@@ -14,18 +14,6 @@ import { createXClient } from "../clients/xClient.js";
 import { createXReadClient } from "../clients/xReadClient.js";
 import { createXAILLMClient } from "../clients/llmClient.xai.js";
 import {
-  MentionWorkflow,
-  type MentionEvent,
-  type ProcessedEvent,
-  type UserProfile,
-  type WorkflowConfig,
-} from "../workflows/mentionWorkflow.js";
-import {
-  RewardEngine,
-  type RewardStateRepo,
-  type RewardUserProfile,
-} from "../reward_engine/index.js";
-import {
   mapMentionsResponse,
   MENTIONS_FETCH_OPTIONS,
   type Mention,
@@ -34,17 +22,16 @@ import {
   readActivationConfigFromEnv,
   type ActivationConfig,
 } from "../config/botActivationConfig.js";
+import { handleEvent, type PipelineDeps } from "../canonical/pipeline.js";
+import type { CanonicalEvent } from "../canonical/types.js";
+import { DEFAULT_CANONICAL_CONFIG } from "../canonical/types.js";
 
-// Paths - use cwd for data file (project root at runtime)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DATA_FILE = path.resolve(process.cwd(), "data/processed_mentions.json");
 
-// Config - POLL_INTERVAL_MS from env, default 30s
-import { isPostingDisabled } from "../ops/launchGate.js";
+import { isPostingDisabled, shouldPost } from "../ops/launchGate.js";
 import { withCircuitBreaker } from "../ops/llmCircuitBreaker.js";
-import { dedupeCheckAndMark } from "../ops/dedupeGuard.js";
-import { enforceLaunchRateLimits } from "../ops/rateLimiter.js";
 import { logInfo, logWarn } from "../ops/logger.js";
 
 const POLL_INTERVAL_MS = Number(process.env.POLL_INTERVAL_MS) || 30_000;
@@ -176,90 +163,73 @@ async function fetchMentions(
   }
 }
 
-// In-memory reward state (poll does not persist XP across restarts)
-function createPollRewardRepo(): RewardStateRepo {
-  const profiles = new Map<string, RewardUserProfile>();
-  const processedEvents = new Set<string>();
-  let globalImageCount = 0;
+function mentionToCanonicalEvent(mention: Mention): CanonicalEvent {
+  const authorHandle = mention.authorUsername
+    ? `@${mention.authorUsername.toLowerCase()}`
+    : mention.author_id;
+
+  const cashtags = (mention.text.match(/\$[A-Z]{2,10}/gi) ?? []).map((t) =>
+    t.toUpperCase(),
+  );
+  const hashtags = (mention.text.match(/#\w+/g) ?? []);
+  const urls = (mention.text.match(/https?:\/\/\S+/gi) ?? []);
 
   return {
-    async getUserProfile(userId: string) {
-      return profiles.get(userId) ?? null;
-    },
-    async saveUserProfile(profile: RewardUserProfile) {
-      profiles.set(profile.user_id, { ...profile });
-    },
-    async isEventProcessed(eventId: string) {
-      return processedEvents.has(eventId);
-    },
-    async markEventProcessed(eventId: string) {
-      processedEvents.add(eventId);
-    },
-    async getGlobalImageCount24h() {
-      return globalImageCount;
-    },
-    async incrementGlobalImageCount() {
-      globalImageCount++;
-    },
+    event_id: mention.id,
+    platform: "twitter",
+    trigger_type: "mention",
+    author_handle: authorHandle,
+    author_id: mention.author_id,
+    text: mention.text,
+    parent_text: null,
+    quoted_text: null,
+    conversation_context: [],
+    cashtags,
+    hashtags,
+    urls,
+    timestamp: mention.created_at ?? new Date().toISOString(),
   };
 }
 
-// Process single mention via MentionWorkflow
-async function processMention(
-  workflow: MentionWorkflow,
+async function processCanonicalMention(
+  deps: PipelineDeps,
+  xClient: ReturnType<typeof createXClient>,
   mention: Mention,
-  state: ProcessedMentionsState
+  state: ProcessedMentionsState,
+  dryRun: boolean,
 ): Promise<void> {
   if (isProcessed(state, mention.id)) {
     console.log(`[SKIP] Already processed: ${mention.id}`);
     return;
   }
 
-  // Safe text preview
   const preview = (mention.text ?? "").slice(0, 50);
   console.log(`[NEW] Mention ${mention.id} from @${mention.authorUsername ?? "unknown"}: "${preview}..."`);
 
-  // Format user_handle with @ prefix if username exists
-  const userHandle = mention.authorUsername
-    ? `@${mention.authorUsername.toLowerCase()}`
-    : mention.author_id;
-
-  const event: MentionEvent = {
-    tweet_id: mention.id,
-    user_id: mention.author_id,
-    user_handle: userHandle,
-    text: mention.text,
-    created_at: mention.created_at ?? new Date().toISOString(),
-  };
-  const profile: UserProfile = {
-    user_id: mention.author_id,
-    reward_pending: false,
-    reply_count_24h: 0,
-  };
-
-  const processedEvents: ProcessedEvent[] = state.processed.map((id) => ({
-    event_id: id,
-    processed_at: new Date().toISOString(),
-  }));
+  const event = mentionToCanonicalEvent(mention);
 
   try {
-    const result = await workflow.process(event, profile, processedEvents);
+    const result = await handleEvent(event, deps, DEFAULT_CANONICAL_CONFIG);
 
-    if (result.skip_reason) {
+    if (result.action === "skip") {
       console.log(`[SKIP] ${mention.id}: ${result.skip_reason}`);
       markProcessed(state, mention.id);
       saveState(state);
       return;
     }
 
-    if (!result.success) {
-      console.error(`[ERROR] ${mention.id}: ${result.error ?? "Unknown"}`);
+    const postDecision = shouldPost(mention.authorUsername);
+    if (postDecision.action !== "post") {
+      console.log(`[LAUNCH_GATE] ${mention.id}: ${postDecision.action} — ${(postDecision as { reason: string }).reason}`);
+      markProcessed(state, mention.id);
+      saveState(state);
       return;
     }
 
-    if (DRY_RUN) {
+    if (dryRun) {
       console.log(`[DRY_RUN] Would reply to ${mention.id}: "${result.reply_text.substring(0, 80)}..."`);
     } else {
+      await xClient.reply(result.reply_text, mention.id);
       console.log(`[POSTED] Reply to ${mention.id}: "${result.reply_text.substring(0, 80)}..."`);
     }
 
@@ -274,7 +244,7 @@ async function processMention(
 
 /** Main worker loop. Exported for index.ts entrypoint. */
 export async function runWorkerLoop(): Promise<void> {
-  console.log("[START] serGorky Mention Poller");
+  console.log("[START] serGorky Mention Poller (canonical pipeline)");
   console.log(`[CONFIG] DRY_RUN=${DRY_RUN}`);
   console.log(`[CONFIG] POLL_INTERVAL=${POLL_INTERVAL_MS}ms`);
   console.log(`[CONFIG] Mentions source: ${MENTIONS_SOURCE}`);
@@ -282,15 +252,12 @@ export async function runWorkerLoop(): Promise<void> {
     console.log(`[CONFIG] BOT_USERNAME=@${BOT_USERNAME}`);
   }
 
-  // Cache activation config once on startup (no repeated env parsing per event)
   const activationConfig: ActivationConfig = readActivationConfigFromEnv();
   console.log(`[CONFIG] Activation mode: ${activationConfig.mode}`);
-  console.log(`[CONFIG] Deny reply mode: ${activationConfig.denyReplyMode}`);
 
   const dryRun = process.env.LAUNCH_MODE ? isPostingDisabled() : DRY_RUN;
   const xClient = createXClient(dryRun);
 
-  // Create raw TwitterApi client for mentions API
   const rawClient = new TwitterApi({
     appKey: process.env.X_API_KEY || "",
     appSecret: process.env.X_API_SECRET || "",
@@ -298,35 +265,22 @@ export async function runWorkerLoop(): Promise<void> {
     accessSecret: process.env.X_ACCESS_SECRET || "",
   });
 
-  const xReadClient = createXReadClient(rawClient);
-
   const userId = await getUserId(rawClient);
   console.log(`[AUTH] Authenticated as user: ${userId}`);
 
-  const rewardRepo = createPollRewardRepo();
-  const rewardEngine = new RewardEngine(rewardRepo, {
-    cooldownHours: 24,
-    globalImageCap24h: 100,
-  });
+  const llmClient = process.env.XAI_API_KEY
+    ? withCircuitBreaker(createXAILLMClient())
+    : undefined;
 
-  const workflowConfig: WorkflowConfig = {
-    presetsDir: "./memes/presets",
-    templatesDir: "./memes/templates",
-    datasetsRoot: "./data/datasets",
-    cooldownMinutes: 60,
-    dryRun,
+  if (!llmClient) {
+    console.error("[FATAL] No XAI_API_KEY set — LLM client unavailable.");
+    process.exit(1);
+  }
+
+  const pipelineDeps: PipelineDeps = {
+    llm: llmClient,
     botUserId: userId,
-    twitterClient: rawClient,
-    xClient,
-    xReadClient,
-    llmClient: process.env.XAI_API_KEY
-      ? withCircuitBreaker(createXAILLMClient())
-      : undefined,
-    useEnhancedContext: process.env.USE_ENHANCED_CONTEXT === "true",
-    activationConfig,
   };
-
-  const workflow = new MentionWorkflow(workflowConfig, rewardEngine);
 
   const state = loadState();
   console.log(`[STATE] Loaded ${state.processed.length} processed mentions`);
@@ -354,41 +308,8 @@ export async function runWorkerLoop(): Promise<void> {
       console.log(`[POLL] Found ${mentions.length} new mention(s)`);
 
       for (const mention of mentions) {
-        if (mention.author_id === userId) {
-          console.log(`[SKIP] Self-mention filtered in poller: ${mention.id}`);
-          markProcessed(state, mention.id);
-          saveState(state);
-          continue;
-        }
-
-        // 1) Dedupe (TTL-based, prevents double-reply on race/restart)
-        const dd = await dedupeCheckAndMark(mention.id);
-        if (!dd.ok) {
-          logInfo("Dedupe skip", { tweet_id: mention.id, action: "skip", reason: dd.reason });
-          continue;
-        }
-
-        // 2) Rate limit (global + per-user)
-        const authorHandle = (mention.authorUsername ?? mention.author_id ?? "unknown")
-          .toLowerCase()
-          .replace(/^@/, "");
-        const rl = await enforceLaunchRateLimits({
-          authorHandle,
-          globalId: BOT_USERNAME,
-        });
-        if (!rl.ok) {
-          logWarn("Rate limited", {
-            tweet_id: mention.id,
-            author: authorHandle,
-            action: "skip",
-            reason: rl.reason,
-            retryAfterMs: rl.retryAfterMs,
-          });
-          continue;
-        }
-
         try {
-          await processMention(workflow, mention, state);
+          await processCanonicalMention(pipelineDeps, xClient, mention, state, dryRun);
         } catch (error) {
           console.error(`[ERROR] Processing mention ${mention.id}:`, error);
         }
@@ -417,7 +338,6 @@ export async function runWorkerLoop(): Promise<void> {
         process.exit(1);
       }
 
-      // Exponential backoff for rate limits (429) and network/server errors
       const backoffMs = Math.min(
         BACKOFF_BASE_MS * Math.pow(2, consecutiveFailures - 1),
         BACKOFF_MAX_MS

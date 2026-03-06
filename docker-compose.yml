@@ -6,6 +6,7 @@ services:
     environment:
       - DRY_RUN=${DRY_RUN:-true}
       - DEBUG=${DEBUG:-false}
+      - LAUNCH_MODE=${LAUNCH_MODE:-dry_run}
       - X_API_KEY=${X_API_KEY}
       - X_API_SECRET=${X_API_SECRET}
       - X_ACCESS_TOKEN=${X_ACCESS_TOKEN}

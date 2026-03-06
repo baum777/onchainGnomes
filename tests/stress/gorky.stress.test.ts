@@ -14,13 +14,13 @@ import {
   runCategoryStress,
   isSuitePassing,
   type StressTestSuite,
-} from "../../src/stress/stressRunner.js";
+} from "../../tools/stress/stressRunner.js";
 import {
   getAllStressPrompts,
   getCriticalPrompts,
   countPromptsByCategory,
   type StressCategory,
-} from "../../src/stress/stressPromptBank.js";
+} from "../../tools/stress/stressPromptBank.js";
 import {
   detectPersonaDrift,
   enforcePersonaGuardrails,

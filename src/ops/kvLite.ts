@@ -34,3 +34,7 @@ export async function kvSet(
 export async function kvDel(key: string): Promise<void> {
   mem.delete(key);
 }
+
+export async function kvClear(): Promise<void> {
+  mem.clear();
+}
