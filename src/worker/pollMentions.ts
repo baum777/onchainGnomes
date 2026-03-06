@@ -23,7 +23,7 @@ import {
   type ActivationConfig,
 } from "../config/botActivationConfig.js";
 import { handleEvent, type PipelineDeps } from "../canonical/pipeline.js";
-import type { CanonicalEvent } from "../canonical/types.js";
+import type { CanonicalEvent, PipelineResult } from "../canonical/types.js";
 import { DEFAULT_CANONICAL_CONFIG } from "../canonical/types.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -191,16 +191,16 @@ function mentionToCanonicalEvent(mention: Mention): CanonicalEvent {
   };
 }
 
-async function processCanonicalMention(
+export async function processCanonicalMention(
   deps: PipelineDeps,
   xClient: ReturnType<typeof createXClient>,
   mention: Mention,
   state: ProcessedMentionsState,
   dryRun: boolean,
-): Promise<void> {
+): Promise<PipelineResult | undefined> {
   if (isProcessed(state, mention.id)) {
     console.log(`[SKIP] Already processed: ${mention.id}`);
-    return;
+    return undefined;
   }
 
   const preview = (mention.text ?? "").slice(0, 50);
@@ -215,7 +215,7 @@ async function processCanonicalMention(
       console.log(`[SKIP] ${mention.id}: ${result.skip_reason}`);
       markProcessed(state, mention.id);
       saveState(state);
-      return;
+      return result;
     }
 
     const postDecision = shouldPost(mention.authorUsername ?? undefined);
@@ -223,7 +223,7 @@ async function processCanonicalMention(
       console.log(`[LAUNCH_GATE] ${mention.id}: ${postDecision.action} — ${(postDecision as { reason: string }).reason}`);
       markProcessed(state, mention.id);
       saveState(state);
-      return;
+      return result;
     }
 
     if (dryRun) {
@@ -236,6 +236,7 @@ async function processCanonicalMention(
     markProcessed(state, mention.id);
     saveState(state);
     console.log(`[SAVED] Marked ${mention.id} as processed`);
+    return result;
   } catch (error) {
     console.error(`[ERROR] Processing mention ${mention.id}:`, error);
     throw error;
