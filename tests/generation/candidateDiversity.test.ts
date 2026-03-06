@@ -134,7 +134,7 @@ describe("Candidate Generation - Stochastic", () => {
       const llm: LLMClient = {
         generateJSON: vi.fn().mockImplementation(({ developer }) => {
           // Extract seed from developer prompt
-          const seedMatch = developer?.match(/Seed: ([^\.]+)/);
+          const seedMatch = developer?.match(/Seed: ([^.]+)/);
           const seed = seedMatch ? seedMatch[1] : "unknown";
 
           return Promise.resolve({

@@ -65,7 +65,7 @@ export class ImageGeneratorService {
 
   async generateWithMetrics(args: GenerateImageArgs): Promise<GenerateResult> {
     const startTime = Date.now();
-    let fromCache = false;
+    const fromCache = false;
     let buffer: Buffer;
 
     // Check cache if context provided
@@ -175,6 +175,7 @@ export function createImageGeneratorService(
 
   if (options?.enableCache) {
     // Dynamic import to avoid circular deps
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { getGlobalImageCache } = require("../cache/lruImageCache.js");
     cache = getGlobalImageCache({
       maxSize: options.maxCacheSize,

@@ -20,7 +20,7 @@
 import type {
   PersonaMode,
   PersonaModeConfig,
-  IntentCategory,
+  Intent,
   UserRelationship,
 } from "../types/coreTypes.js";
 
@@ -34,7 +34,7 @@ export interface PersonaRouterDeps {
 
 /** Routing criteria */
 export interface RoutingCriteria {
-  intent: IntentCategory;
+  intent: Intent;
   aggression_level: "low" | "medium" | "high";
   topic_seriousness: "low" | "medium" | "high";
   timeline_sentiment: "negative" | "neutral" | "positive";
@@ -250,7 +250,7 @@ export function checkPersonaConsistency(
  * Determines topic seriousness based on content analysis.
  */
 export function determineTopicSeriousness(
-  intent: IntentCategory,
+  intent: Intent,
   entities: { coins: string[]; cashtags: string[] },
   hasContractAddress: boolean
 ): "low" | "medium" | "high" {
@@ -292,7 +292,7 @@ export function determineTopicSeriousness(
  * Creates routing criteria from components.
  */
 export function buildRoutingCriteria(params: {
-  intent: IntentCategory;
+  intent: Intent;
   aggression_level: "low" | "medium" | "high";
   timeline_sentiment: "negative" | "neutral" | "positive";
   user_relationship: UserRelationship;

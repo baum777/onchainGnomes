@@ -20,7 +20,7 @@ import type {
   IntentDetectionResult,
   TruthClassification,
   MemoryWriteback,
-  LoreEntry,
+  LegacyLoreEntry,
   SentimentLabel,
 } from "../types/coreTypes.js";
 
@@ -67,7 +67,7 @@ export async function performWriteback(
   };
 
   // Step 1: Extract and store lore if applicable
-  if (truthClassification.category === "LORE") {
+  if (params.truthClassification.category === "LORE") {
     try {
       const loreId = await extractAndStoreLore(deps.loreStore, params);
       result.loreWritten = true;
@@ -106,7 +106,7 @@ export async function performWriteback(
 
   // Determine overall success
   result.success = errors.length === 0 ||
-    (result.loreWritten || truthClassification.category !== "LORE") &&
+    (result.loreWritten || params.truthClassification.category !== "LORE") &&
     result.interactionRecorded;
 
   return result;
@@ -191,9 +191,7 @@ function determineLoreTopic(
  */
 function extractNarrativeContent(replyText: string): string {
   // Remove questions (we only want statements for lore)
-  let content = replyText
-    .split(/\?/)[0] // Take only part before first question mark
-    .trim();
+  let content = (replyText.split(/\?/)[0] ?? replyText).trim();
 
   // Remove common prefixes
   const prefixesToRemove = [

@@ -14,11 +14,10 @@
 import type {
   ReplyCandidate,
   CandidateScore,
-  ThreadContext,
-  TimelineBrief,
   PersonaMode,
   IntentCategory,
 } from "../types/coreTypes.js";
+import type { ThreadContext, TimelineBrief } from "../context/types.js";
 import { checkPersonaConsistency } from "../persona/personaRouter.js";
 import { isResponseSafe, type TruthGateContext } from "../truth/truthGate.js";
 
@@ -52,9 +51,9 @@ export function selectBest(
   }
 
   if (candidates.length === 1) {
-    const score = scoreCandidate(candidates[0], context, deps);
+    const score = scoreCandidate(candidates[0]!, context, deps);
     return {
-      selected: candidates[0],
+      selected: candidates[0]!,
       scores: [score],
     };
   }
@@ -67,7 +66,8 @@ export function selectBest(
 
   // Select highest scoring
   const best = scored[0];
-  const selected = candidates.find(c => c.candidate_id === best.candidate_id)!;
+  if (!best) throw new Error("No scored candidates");
+  const selected = candidates.find(c => c.candidate_id === best.candidate_id) ?? candidates[0]!;
 
   return {
     selected,
@@ -346,8 +346,9 @@ function buildSelectionReason(
 
   const strongest = Object.entries(factorNames)
     .sort((a, b) => b[1] - a[1])[0];
-
-  parts.push(`Strong ${strongest[0]} (${strongest[1]})`);
+  if (strongest) {
+    parts.push(`Strong ${strongest[0]} (${strongest[1]})`);
+  }
 
   // Note risk level
   parts.push(`${candidate.risk} risk`);
@@ -374,7 +375,10 @@ export function batchSelectBest(
   const results: Array<{ selected: ReplyCandidate; scores: CandidateScore[] }> = [];
 
   for (let i = 0; i < candidateGroups.length; i++) {
-    const result = selectBest(candidateGroups[i], contexts[i], deps);
+    const group = candidateGroups[i] ?? [];
+    const context = contexts[i];
+    if (!context) continue;
+    const result = selectBest(group, context, deps);
     results.push(result);
   }
 
@@ -416,3 +420,4 @@ export function getTopCandidates(
 
   return scored.slice(0, n);
 }
+

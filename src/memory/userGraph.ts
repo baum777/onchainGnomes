@@ -328,6 +328,7 @@ export class UserGraph {
       regular: 0,
       enemy: 0,
       vip: 0,
+      dev: 0,
     };
 
     for (const profile of this.profiles.values()) {

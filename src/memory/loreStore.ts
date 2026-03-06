@@ -16,7 +16,7 @@
  * → Lore entry appended for future consistency
  */
 
-import type { LoreEntry } from "../types/coreTypes.js";
+import type { LegacyLoreEntry } from "../types/coreTypes.js";
 import { stableHash } from "../utils/hash.js";
 
 export interface LoreStoreDeps {
@@ -26,31 +26,31 @@ export interface LoreStoreDeps {
 
 /** Storage interface for lore persistence */
 export interface LoreStorage {
-  load(): Promise<LoreEntry[]>;
-  save(entries: LoreEntry[]): Promise<void>;
-  append(entry: LoreEntry): Promise<void>;
+  load(): Promise<LegacyLoreEntry[]>;
+  save(entries: LegacyLoreEntry[]): Promise<void>;
+  append(entry: LegacyLoreEntry): Promise<void>;
 }
 
 /** In-memory storage implementation */
 export class InMemoryLoreStorage implements LoreStorage {
-  private entries: LoreEntry[] = [];
+  private entries: LegacyLoreEntry[] = [];
 
-  async load(): Promise<LoreEntry[]> {
+  async load(): Promise<LegacyLoreEntry[]> {
     return [...this.entries];
   }
 
-  async save(entries: LoreEntry[]): Promise<void> {
+  async save(entries: LegacyLoreEntry[]): Promise<void> {
     this.entries = [...entries];
   }
 
-  async append(entry: LoreEntry): Promise<void> {
+  async append(entry: LegacyLoreEntry): Promise<void> {
     this.entries.push(entry);
   }
 }
 
 /** Lore store implementation */
 export class LoreStore {
-  private entries: Map<string, LoreEntry> = new Map();
+  private entries: Map<string, LegacyLoreEntry> = new Map();
   private storage?: LoreStorage;
   private initialized = false;
 
@@ -78,10 +78,10 @@ export class LoreStore {
    * Adds a new lore entry (append-only).
    * Returns the created entry with generated ID.
    */
-  async addLore(entry: Omit<LoreEntry, "id" | "created_at" | "access_count">): Promise<LoreEntry> {
+  async addLore(entry: Omit<LegacyLoreEntry, "id" | "created_at" | "access_count">): Promise<LegacyLoreEntry> {
     await this.initialize();
 
-    const newEntry: LoreEntry = {
+    const newEntry: LegacyLoreEntry = {
       ...entry,
       id: generateLoreId(entry.topic, entry.content),
       created_at: new Date().toISOString(),
@@ -101,10 +101,10 @@ export class LoreStore {
    * Retrieves lore entries by topic/tag.
    * Updates access count for retrieved entries.
    */
-  async getLoreByTopic(topic: string, limit: number = 5): Promise<LoreEntry[]> {
+  async getLoreByTopic(topic: string, limit: number = 5): Promise<LegacyLoreEntry[]> {
     await this.initialize();
 
-    const matches: LoreEntry[] = [];
+    const matches: LegacyLoreEntry[] = [];
 
     for (const entry of this.entries.values()) {
       if (entry.topic.toLowerCase() === topic.toLowerCase() ||
@@ -128,30 +128,30 @@ export class LoreStore {
   /**
    * Searches lore entries by content match.
    */
-  async searchLore(query: string, limit: number = 5): Promise<LoreEntry[]> {
+  async searchLore(query: string, limit: number = 5): Promise<LegacyLoreEntry[]> {
     await this.initialize();
 
     const queryLower = query.toLowerCase();
-    const matches: LoreEntry[] = [];
+    const matches: Array<{ entry: LegacyLoreEntry; score: number }> = [];
 
     for (const entry of this.entries.values()) {
       const score = calculateMatchScore(entry, queryLower);
       if (score > 0) {
-        matches.push({ ...entry, score });
+        matches.push({ entry, score });
       }
     }
 
     // Sort by relevance score
-    return (matches as Array<LoreEntry & { score: number }>)
+    return matches
       .sort((a, b) => b.score - a.score)
       .slice(0, limit)
-      .map(({ score, ...entry }) => entry);
+      .map(({ entry }) => entry);
   }
 
   /**
    * Gets the most frequently accessed lore (popular lore).
    */
-  async getPopularLore(limit: number = 5): Promise<LoreEntry[]> {
+  async getPopularLore(limit: number = 5): Promise<LegacyLoreEntry[]> {
     await this.initialize();
 
     return Array.from(this.entries.values())
@@ -162,7 +162,7 @@ export class LoreStore {
   /**
    * Gets all lore entries for a specific tag.
    */
-  async getLoreByTag(tag: string, limit: number = 5): Promise<LoreEntry[]> {
+  async getLoreByTag(tag: string, limit: number = 5): Promise<LegacyLoreEntry[]> {
     await this.initialize();
 
     const matches = Array.from(this.entries.values())
@@ -181,7 +181,7 @@ export class LoreStore {
   /**
    * Retrieves recent lore entries (chronological).
    */
-  async getRecentLore(limit: number = 5): Promise<LoreEntry[]> {
+  async getRecentLore(limit: number = 5): Promise<LegacyLoreEntry[]> {
     await this.initialize();
 
     return Array.from(this.entries.values())
@@ -208,7 +208,7 @@ export class LoreStore {
   /**
    * Gets a specific lore entry by ID.
    */
-  async getLoreById(id: string): Promise<LoreEntry | null> {
+  async getLoreById(id: string): Promise<LegacyLoreEntry | null> {
     await this.initialize();
 
     const entry = this.entries.get(id);
@@ -223,7 +223,7 @@ export class LoreStore {
   /**
    * Gets all lore entries (for debugging/inspection).
    */
-  async getAllLore(): Promise<LoreEntry[]> {
+  async getAllLore(): Promise<LegacyLoreEntry[]> {
     await this.initialize();
 
     return Array.from(this.entries.values())
@@ -272,7 +272,7 @@ function generateLoreId(topic: string, content: string): string {
 /**
  * Calculates match score for search queries.
  */
-function calculateMatchScore(entry: LoreEntry, query: string): number {
+function calculateMatchScore(entry: LegacyLoreEntry, query: string): number {
   let score = 0;
 
   // Topic match
@@ -342,7 +342,10 @@ export async function seedLore(store: LoreStore): Promise<void> {
     // Check if similar lore already exists
     const existing = await store.getLoreByTopic(lore.topic, 1);
     if (existing.length === 0) {
-      await store.addLore(lore);
+      await store.addLore({
+        ...lore,
+        last_accessed: new Date().toISOString(),
+      });
     }
   }
 }
