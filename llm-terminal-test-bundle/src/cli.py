@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -22,6 +24,74 @@ console = Console()
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
+def _resolve_bridge_command(
+    user_input: str,
+    *,
+    debug_prompt: bool = False,
+    debug_bridge: bool = False,
+    debug_decision: bool = False,
+) -> tuple[list[str] | None, dict[str, Any]]:
+    """Resolve pnpm/tsx binary for the bridge. Prefers pnpm exec tsx, falls back to direct tsx.
+    On Windows, accepts .cmd executables. Returns (cmd, debug_info)."""
+    which_pnpm = shutil.which("pnpm")
+    which_pnpm_cmd = shutil.which("pnpm.cmd")
+    which_tsx = shutil.which("tsx")
+    which_tsx_cmd = shutil.which("tsx.cmd")
+
+    debug_info: dict[str, Any] = {
+        "resolved_repo_root": str(PROJECT_ROOT),
+        "cwd": str(PROJECT_ROOT),
+        "pnpm": which_pnpm,
+        "pnpm.cmd": which_pnpm_cmd,
+        "tsx": which_tsx,
+        "tsx.cmd": which_tsx_cmd,
+    }
+
+    base_args = ["scripts/cliPromptBridge.ts"]
+    if debug_prompt:
+        base_args.append("--debug-prompt")
+    if debug_bridge:
+        base_args.append("--debug-bridge")
+    if debug_decision:
+        base_args.append("--debug-decision")
+    base_args.append(user_input)
+
+    # Resolution order: pnpm exec tsx, pnpm.cmd exec tsx, tsx, tsx.cmd
+    if which_pnpm:
+        cmd = [which_pnpm, "exec", "tsx"] + base_args
+        debug_info["attempted_command"] = cmd
+        return (cmd, debug_info)
+    if which_pnpm_cmd:
+        cmd = [which_pnpm_cmd, "exec", "tsx"] + base_args
+        debug_info["attempted_command"] = cmd
+        return (cmd, debug_info)
+    if which_tsx:
+        cmd = [which_tsx] + base_args
+        debug_info["attempted_command"] = cmd
+        return (cmd, debug_info)
+    if which_tsx_cmd:
+        cmd = [which_tsx_cmd] + base_args
+        debug_info["attempted_command"] = cmd
+        return (cmd, debug_info)
+
+    debug_info["attempted_command"] = None
+    return (None, debug_info)
+
+
+def _format_binary_resolution_error(debug_info: dict[str, Any]) -> str:
+    """Format a detailed error message when binary resolution fails."""
+    lines = [
+        "bridge_error: binary resolution failed",
+        f"cwd={debug_info.get('cwd', '?')}",
+        f"pnpm={debug_info.get('pnpm') or 'None'}",
+        f"pnpm.cmd={debug_info.get('pnpm.cmd') or 'None'}",
+        f"tsx={debug_info.get('tsx') or 'None'}",
+        f"tsx.cmd={debug_info.get('tsx.cmd') or 'None'}",
+        f"attempted_command={debug_info.get('attempted_command')}",
+    ]
+    return "\n".join(lines)
+
+
 def run_canonical_prompt_bridge(
     user_input: str,
     *,
@@ -30,18 +100,31 @@ def run_canonical_prompt_bridge(
     debug_decision: bool = False,
 ) -> dict[str, Any]:
     """Run the TypeScript CLI prompt bridge (full canonical pipeline)."""
-    cmd = ["pnpm", "exec", "tsx", "scripts/cliPromptBridge.ts"]
-    if debug_prompt:
-        cmd.append("--debug-prompt")
+    cmd, debug_info = _resolve_bridge_command(
+        user_input,
+        debug_prompt=debug_prompt,
+        debug_bridge=debug_bridge,
+        debug_decision=debug_decision,
+    )
+
+    if cmd is None:
+        return {
+            "skip": True,
+            "reason": "bridge_error",
+            "bridge_error_detail": _format_binary_resolution_error(debug_info),
+        }
+
     if debug_bridge:
-        cmd.append("--debug-bridge")
-    if debug_decision:
-        cmd.append("--debug-decision")
-    cmd.append(user_input)
+        console.print("[dim]Bridge debug:[/dim]")
+        for k, v in debug_info.items():
+            console.print(f"  [dim]{k}=[/dim] {v}")
+        console.print()
+
     try:
         result = subprocess.run(
             cmd,
             cwd=PROJECT_ROOT,
+            env=os.environ.copy(),
             capture_output=True,
             text=True,
             timeout=90,
@@ -54,7 +137,11 @@ def run_canonical_prompt_bridge(
     except json.JSONDecodeError as e:
         return {"skip": True, "reason": "bridge_error", "bridge_error_detail": f"invalid JSON: {e}"}
     except FileNotFoundError:
-        return {"skip": True, "reason": "bridge_error", "bridge_error_detail": "pnpm/tsx not found"}
+        return {
+            "skip": True,
+            "reason": "bridge_error",
+            "bridge_error_detail": _format_binary_resolution_error(debug_info),
+        }
 
 
 def run_interactive(
