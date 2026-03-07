@@ -1,100 +1,149 @@
 /**
- * CLI Prompt Bridge — Generates canonical prompts from terminal input.
- * Used by the Python CLI to reuse the production prompt pipeline.
- * Outputs JSON: { skip, reason?, system?, developer?, user?, mode? }
+ * CLI Prompt Bridge — Terminal-to-canonical mention simulator.
+ * Wraps terminal input as a simulated X mention and runs the full production pipeline.
+ * Outputs JSON: { skip, reason?, reply_text?, mode?, debug? }
+ *
+ * Uses handleEvent() — no direct LLM shortcut. Pipeline: classify → score → eligibility
+ * → thesis → mode → fallbackCascade (LLM) → validate.
  */
 
-import type { CanonicalEvent } from "../src/canonical/types.js";
-import { DEFAULT_CANONICAL_CONFIG } from "../src/canonical/types.js";
-import { classify } from "../src/canonical/classifier.js";
-import { scoreEvent } from "../src/canonical/scorer.js";
-import { checkEligibility } from "../src/canonical/eligibility.js";
-import { extractThesis } from "../src/canonical/thesisExtractor.js";
-import { selectMode } from "../src/canonical/modeSelector.js";
-import { buildPrompt, promptToLLMInput } from "../src/canonical/promptBuilder.js";
+import "dotenv/config";
+import { createSimulatedMention } from "../src/canonical/createSimulatedMention.js";
+import { handleEvent } from "../src/canonical/pipeline.js";
+import {
+  DEFAULT_CANONICAL_CONFIG,
+  type CanonicalEvent,
+} from "../src/canonical/types.js";
+import { createXAILLMClient } from "../src/clients/llmClient.xai.js";
+import { withCircuitBreaker } from "../src/ops/llmCircuitBreaker.js";
 
-function extractCashtags(text: string): string[] {
-  const matches = text.match(/\$([A-Za-z0-9]{1,15})\b/g);
-  return matches ? [...new Set(matches.map((m) => m.slice(1).toUpperCase()))] : [];
-}
+const BOT_USER_ID_TERMINAL = "terminal-bot-1";
 
-function extractHashtags(text: string): string[] {
-  const matches = text.match(/#(\w+)/g);
-  return matches ? [...new Set(matches.map((m) => m.slice(1)))] : [];
-}
+function parseArgs(): {
+  userInput: string;
+  debugPrompt: boolean;
+  debugBridge: boolean;
+  debugDecision: boolean;
+} {
+  const args = process.argv.slice(2);
+  const flags = new Set(args.filter((a) => a.startsWith("--")));
+  const nonFlags = args.filter((a) => !a.startsWith("--"));
+  const userInput = nonFlags.join(" ").trim();
 
-function extractUrls(text: string): string[] {
-  const matches = text.match(/https?:\/\/[^\s]+/g);
-  return matches ?? [];
-}
-
-function createMinimalEvent(userInput: string): CanonicalEvent {
-  const now = new Date().toISOString();
   return {
-    event_id: `cli_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
-    platform: "twitter",
-    trigger_type: "mention",
-    author_handle: "terminal_user",
-    author_id: "cli_terminal",
-    text: userInput.trim(),
-    parent_text: null,
-    quoted_text: null,
-    conversation_context: [],
-    cashtags: extractCashtags(userInput),
-    hashtags: extractHashtags(userInput),
-    urls: extractUrls(userInput),
-    timestamp: now,
+    userInput,
+    debugPrompt: flags.has("--debug-prompt"),
+    debugBridge: flags.has("--debug-bridge"),
+    debugDecision: flags.has("--debug-decision"),
   };
 }
 
-function main(): void {
-  const userInput = process.argv[2] ?? "";
-  if (!userInput.trim()) {
-    console.error(JSON.stringify({ skip: true, reason: "skip_invalid_input" }));
-    process.exit(1);
+function outputJson(obj: object): void {
+  console.log(JSON.stringify(obj));
+}
+
+function outputError(reason: string, detail?: string): never {
+  const payload: Record<string, unknown> = { skip: true, reason };
+  if (detail) payload.bridge_error_detail = detail;
+  outputJson(payload);
+  process.exit(0);
+}
+
+async function main(): Promise<void> {
+  const { userInput, debugPrompt, debugBridge, debugDecision } = parseArgs();
+
+  if (!userInput) {
+    outputError("skip_invalid_input", "empty input");
   }
 
+  const apiKey = process.env.XAI_API_KEY;
+  if (!apiKey) {
+    outputError(
+      "bridge_error",
+      "XAI_API_KEY not set — LLM required for canonical pipeline"
+    );
+  }
+
+  const llmClient = withCircuitBreaker(createXAILLMClient());
+  const deps = { llm: llmClient, botUserId: BOT_USER_ID_TERMINAL };
   const config = DEFAULT_CANONICAL_CONFIG;
-  const event = createMinimalEvent(userInput);
 
-  const cls = classify(event);
-
-  if (cls.policy_severity === "hard" || (cls.policy_blocked && !cls.policy_severity)) {
-    console.log(JSON.stringify({ skip: true, reason: "skip_policy" }));
-    return;
+  let event: CanonicalEvent;
+  try {
+    event = createSimulatedMention(userInput);
+  } catch (e) {
+    outputError("skip_invalid_input", e instanceof Error ? e.message : String(e));
   }
 
-  const scores = scoreEvent(event, cls);
-  const eligibility = checkEligibility(scores, cls, config);
-  if (!eligibility.eligible) {
-    console.log(JSON.stringify({ skip: true, reason: eligibility.skip_reason ?? "skip_low_relevance" }));
-    return;
+  const debug: Record<string, unknown> = {};
+  if (debugBridge) {
+    debug.simulated_mention = {
+      event_id: event.event_id,
+      text: event.text,
+      author_handle: event.author_handle,
+      author_id: event.author_id,
+      platform: event.platform,
+      trigger_type: event.trigger_type,
+      timestamp: event.timestamp,
+    };
   }
 
-  const thesis = extractThesis(event, cls, scores);
-  if (!thesis) {
-    console.log(JSON.stringify({ skip: true, reason: "skip_no_thesis" }));
-    return;
-  }
+  try {
+    const startMs = Date.now();
+    const result = await handleEvent(event, deps, config);
+    const latencyMs = Date.now() - startMs;
 
-  const mode = selectMode(cls, scores, thesis, config);
-  if (mode === "ignore") {
-    console.log(JSON.stringify({ skip: true, reason: "skip_low_confidence" }));
-    return;
-  }
+    if (result.action === "skip") {
+      if (debugDecision || debugBridge) {
+        debug.skip_reason = result.skip_reason;
+        debug.audit_path = result.audit?.path;
+        debug.audit_eligibility_trace = result.audit?.eligibility_trace;
+        debug.audit_policy_trace = result.audit?.policy_trace;
+      }
+      if (debugDecision && result.audit) {
+        debug.classifier = {
+          intent: result.audit.classifier_output.intent,
+          target: result.audit.classifier_output.target,
+          policy_blocked: result.audit.classifier_output.policy_blocked,
+          policy_severity: result.audit.classifier_output.policy_severity,
+        };
+        debug.scores = result.audit.score_bundle;
+        debug.mode = result.audit.mode;
+        debug.thesis = result.audit.thesis?.primary ?? null;
+      }
 
-  const prompt = buildPrompt(event, mode, thesis, scores, config);
-  const llmInput = promptToLLMInput(prompt);
+      outputJson({
+        skip: true,
+        reason: result.skip_reason,
+        latency_ms: latencyMs,
+        ...(Object.keys(debug).length > 0 ? { debug } : {}),
+      });
+      return;
+    }
 
-  console.log(
-    JSON.stringify({
+    if (debugDecision || debugBridge) {
+      debug.mode = result.mode;
+      debug.thesis = result.thesis.primary;
+    }
+    if (debugPrompt && result.audit) {
+      debug.prompt_hash = result.audit.prompt_hash;
+    }
+
+    outputJson({
       skip: false,
-      mode,
-      system: llmInput.system,
-      developer: llmInput.developer,
-      user: llmInput.user,
-    })
-  );
+      reply_text: result.reply_text,
+      mode: result.mode,
+      latency_ms: latencyMs,
+      ...(Object.keys(debug).length > 0 ? { debug } : {}),
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const stack = err instanceof Error ? err.stack : undefined;
+    outputError(
+      "bridge_error",
+      `pipeline threw: ${msg}${stack ? `\n${stack}` : ""}`
+    );
+  }
 }
 
 main();

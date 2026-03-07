@@ -14,7 +14,6 @@ from rich.panel import Panel
 from rich.table import Table
 
 from evaluator import evaluate_response
-from llm_client import ask_llm_canonical
 from logger import write_ndjson
 
 console = Console()
@@ -23,27 +22,46 @@ console = Console()
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
-def run_canonical_prompt_bridge(user_input: str) -> dict[str, Any]:
-    """Run the TypeScript CLI prompt bridge to get canonical prompt layers."""
-    cmd = ["pnpm", "exec", "tsx", "scripts/cliPromptBridge.ts", user_input]
+def run_canonical_prompt_bridge(
+    user_input: str,
+    *,
+    debug_prompt: bool = False,
+    debug_bridge: bool = False,
+    debug_decision: bool = False,
+) -> dict[str, Any]:
+    """Run the TypeScript CLI prompt bridge (full canonical pipeline)."""
+    cmd = ["pnpm", "exec", "tsx", "scripts/cliPromptBridge.ts"]
+    if debug_prompt:
+        cmd.append("--debug-prompt")
+    if debug_bridge:
+        cmd.append("--debug-bridge")
+    if debug_decision:
+        cmd.append("--debug-decision")
+    cmd.append(user_input)
     try:
         result = subprocess.run(
             cmd,
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True,
-            timeout=30,
+            timeout=90,
         )
         if result.returncode != 0:
-            return {"skip": True, "reason": "bridge_error"}
+            return {"skip": True, "reason": "bridge_error", "bridge_error_detail": result.stderr or "subprocess failed"}
         return json.loads(result.stdout)
-    except (subprocess.TimeoutExpired, json.JSONDecodeError, FileNotFoundError):
-        return {"skip": True, "reason": "bridge_error"}
+    except subprocess.TimeoutExpired:
+        return {"skip": True, "reason": "bridge_error", "bridge_error_detail": "timeout (90s)"}
+    except json.JSONDecodeError as e:
+        return {"skip": True, "reason": "bridge_error", "bridge_error_detail": f"invalid JSON: {e}"}
+    except FileNotFoundError:
+        return {"skip": True, "reason": "bridge_error", "bridge_error_detail": "pnpm/tsx not found"}
 
 
 def run_interactive(
     system_prompt: str | None,
     debug_prompt: bool,
+    debug_bridge: bool,
+    debug_decision: bool,
 ) -> None:
     console.print("[bold cyan]Interactive LLM Test Mode (Canonical Pipeline)[/bold cyan]")
     console.print("Type [bold]exit[/bold] or [bold]quit[/bold] to stop.\n")
@@ -55,34 +73,35 @@ def run_interactive(
         if not user_input:
             continue
 
-        prompt_data = run_canonical_prompt_bridge(user_input)
+        prompt_data = run_canonical_prompt_bridge(
+            user_input,
+            debug_prompt=debug_prompt,
+            debug_bridge=debug_bridge,
+            debug_decision=debug_decision,
+        )
 
         if prompt_data.get("skip"):
-            console.print(
-                f"[yellow]Skipped:[/yellow] {prompt_data.get('reason', 'unknown')} "
-                "(pipeline would not reply)"
-            )
+            reason = prompt_data.get("reason", "unknown")
+            detail = prompt_data.get("bridge_error_detail")
+            msg = f"[yellow]Skipped:[/yellow] {reason} (pipeline would not reply)"
+            if detail:
+                msg += f"\n[dim]bridge_error: {detail}[/dim]"
+            console.print(msg)
+            debug = prompt_data.get("debug", {})
+            if debug:
+                console.print(Panel(str(debug), title="[dim]Debug[/dim]", expand=False))
             console.print()
             continue
 
-        if debug_prompt:
-            console.print("\n[bold]SYSTEM PROMPT[/bold]")
-            console.print(Panel(prompt_data.get("system", ""), expand=True))
-            console.print("\n[bold]DEVELOPER PROMPT[/bold]")
-            console.print(Panel(prompt_data.get("developer", ""), expand=True))
-            console.print("\n[bold]USER PROMPT[/bold]")
-            console.print(Panel(prompt_data.get("user", ""), expand=True))
+        if debug_prompt and prompt_data.get("debug"):
+            console.print("\n[bold]DEBUG[/bold]")
+            console.print(Panel(str(prompt_data["debug"]), expand=False))
             console.print()
 
-        result = ask_llm_canonical(
-            system=prompt_data["system"],
-            developer=prompt_data["developer"],
-            user=prompt_data["user"],
-        )
-        title = f"LLM Response · {result.raw_model or 'unknown-model'} · {result.latency_ms} ms"
-        console.print(Panel(result.text or "<empty response>", title=title, expand=True))
-        if result.usage:
-            console.print(f"[dim]Usage:[/dim] {result.usage}")
+        reply_text = prompt_data.get("reply_text", "")
+        mode = prompt_data.get("mode", "unknown")
+        title = f"Pipeline Response · mode={mode}"
+        console.print(Panel(reply_text or "<empty response>", title=title, expand=True))
         console.print()
 
 
@@ -108,11 +127,18 @@ def run_file_tests(
             name = testcase.get("name", f"test-{total}")
             prompt = testcase["input"]
 
-            prompt_data = run_canonical_prompt_bridge(prompt)
+            prompt_data = run_canonical_prompt_bridge(
+                prompt,
+                debug_prompt=debug_prompt,
+                debug_bridge=False,
+                debug_decision=False,
+            )
             if prompt_data.get("skip"):
+                reason = prompt_data.get("reason", "unknown")
+                detail = prompt_data.get("bridge_error_detail")
                 console.print(
-                    f"[yellow]SKIP[/yellow] {name} — pipeline would skip: "
-                    f"{prompt_data.get('reason', 'unknown')}"
+                    f"[yellow]SKIP[/yellow] {name} — pipeline would skip: {reason}"
+                    + (f" — {detail}" if detail else "")
                 )
                 if log_file:
                     write_ndjson(
@@ -121,9 +147,9 @@ def run_file_tests(
                             "test_name": name,
                             "input": prompt,
                             "passed": False,
-                            "errors": [f"Pipeline skip: {prompt_data.get('reason')}"],
+                            "errors": [f"Pipeline skip: {reason}"],
                             "response": None,
-                            "latency_ms": 0,
+                            "latency_ms": prompt_data.get("latency_ms", 0),
                             "usage": None,
                             "model": None,
                         },
@@ -132,24 +158,21 @@ def run_file_tests(
                     passed = passed  # don't count as passed
                 continue
 
-            if debug_prompt:
+            if debug_prompt and prompt_data.get("debug"):
                 console.print(f"\n[bold]{name}[/bold]")
-                console.print("[dim]SYSTEM[/dim]", prompt_data.get("system", "")[:200] + "...")
+                console.print(Panel(str(prompt_data["debug"]), title="[dim]Debug[/dim]", expand=False))
                 console.print()
 
-            llm_result = ask_llm_canonical(
-                system=prompt_data["system"],
-                developer=prompt_data["developer"],
-                user=prompt_data["user"],
-            )
-            latencies.append(llm_result.latency_ms)
-            result = evaluate_response(testcase, llm_result.text)
+            reply_text = prompt_data.get("reply_text", "")
+            latency_ms = prompt_data.get("latency_ms", 0)
+            latencies.append(latency_ms)
+            result = evaluate_response(testcase, reply_text)
 
             if result["passed"]:
                 passed += 1
-                console.print(f"[green]PASS[/green] {name} [dim]({llm_result.latency_ms} ms)[/dim]")
+                console.print(f"[green]PASS[/green] {name} [dim]({latency_ms} ms)[/dim]")
             else:
-                console.print(f"[red]FAIL[/red] {name} [dim]({llm_result.latency_ms} ms)[/dim]")
+                console.print(f"[red]FAIL[/red] {name} [dim]({latency_ms} ms)[/dim]")
                 for err in result["errors"]:
                     console.print(f"  - {err}")
                 console.print(Panel(result["response"] or "<empty response>", title=f"Response · {name}", expand=True))
@@ -163,9 +186,9 @@ def run_file_tests(
                         "passed": result["passed"],
                         "errors": result["errors"],
                         "response": result["response"],
-                        "latency_ms": llm_result.latency_ms,
-                        "usage": llm_result.usage,
-                        "model": llm_result.raw_model,
+                        "latency_ms": latency_ms,
+                        "usage": None,
+                        "model": None,
                     },
                 )
 
@@ -194,7 +217,17 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--debug-prompt",
         action="store_true",
-        help="Print generated SYSTEM/DEVELOPER/USER prompt layers before LLM call",
+        help="Print prompt hash and debug info when pipeline replies",
+    )
+    parser.add_argument(
+        "--debug-bridge",
+        action="store_true",
+        help="Print simulated mention payload and bridge debug info",
+    )
+    parser.add_argument(
+        "--debug-decision",
+        action="store_true",
+        help="Print classifier result, mode, thesis, and skip reason details",
     )
     return parser
 
@@ -205,7 +238,12 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.mode == "interactive":
-        run_interactive(system_prompt=args.system, debug_prompt=args.debug_prompt)
+        run_interactive(
+            system_prompt=args.system,
+            debug_prompt=args.debug_prompt,
+            debug_bridge=args.debug_bridge,
+            debug_decision=args.debug_decision,
+        )
         raise SystemExit(0)
 
     if args.mode == "file":
