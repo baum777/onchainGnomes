@@ -1,5 +1,5 @@
 /**
- * xAi Bot / serGorky — Canonical Entrypoint
+ * Gorky_on_sol Bot — Canonical Entrypoint
  *
  * Production entrypoint for the mention poller worker.
  * Loads env, validates config, and runs the worker loop.

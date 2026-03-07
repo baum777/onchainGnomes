@@ -41,7 +41,7 @@ const MENTIONS_SOURCE = (process.env.MENTIONS_SOURCE ?? "mentions").toLowerCase(
   | "mentions"
   | "search";
 
-const BOT_USERNAME = (process.env.BOT_USERNAME ?? "serGorky").replace(/^@/, "");
+const BOT_USERNAME = (process.env.BOT_USERNAME ?? "Gorky_on_sol").replace(/^@/, "");
 
 interface ProcessedMentionsState {
   last_since_id: string | null;
@@ -247,7 +247,7 @@ export async function processCanonicalMention(
 
 /** Main worker loop. Exported for index.ts entrypoint. */
 export async function runWorkerLoop(): Promise<void> {
-  console.log("[START] serGorky Mention Poller (canonical pipeline)");
+  console.log("[START] Gorky_on_sol Mention Poller (canonical pipeline)");
   console.log(`[CONFIG] DRY_RUN=${DRY_RUN}`);
   console.log(`[CONFIG] POLL_INTERVAL=${POLL_INTERVAL_MS}ms`);
   console.log(`[CONFIG] Mentions source: ${MENTIONS_SOURCE}`);
