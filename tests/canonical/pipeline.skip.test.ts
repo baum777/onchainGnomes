@@ -96,7 +96,7 @@ describe("pipeline skip scenarios", () => {
     );
     expect(result.action).toBe("skip");
     if (result.action === "skip") {
-      expect(result.skip_reason).toBe("skip_policy");
+      expect(["skip_policy", "skip_safety_filter"]).toContain(result.skip_reason);
     }
   });
 

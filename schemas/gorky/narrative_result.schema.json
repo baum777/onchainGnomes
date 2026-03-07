@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://gorky.bot/schemas/narrative_result.json",
+  "title": "NarrativeResult",
+  "description": "Narrative label, confidence, sentiment",
+  "type": "object",
+  "required": ["label", "confidence", "sentiment"],
+  "additionalProperties": false,
+  "properties": {
+    "label": {
+      "type": "string",
+      "enum": [
+        "this_cycle_different", "utility_revolution", "meme_viral_launch",
+        "healthy_correction", "ai_defi_rwa_meta", "liquidity_volume_spike",
+        "hopium_wagmi_diamond_hands", "rug_scam_fear", "post_hype_silence",
+        "chain_superiority", "influencer_pump", "recycled_macro_thesis",
+        "unclassified"
+      ]
+    },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "sentiment": { "type": "string", "enum": ["positive", "negative", "neutral"] }
+  }
+}

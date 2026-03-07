@@ -37,6 +37,9 @@ export function buildAuditRecord(params: {
   path?: "social" | "audit";
   eligibility_trace?: string[];
   policy_trace?: string[];
+  detected_narrative?: string;
+  selected_pattern?: string;
+  response_mode?: string;
 }): AuditRecord {
   const eventSnapshot = JSON.stringify({
     event_id: params.event.event_id,
@@ -62,6 +65,9 @@ export function buildAuditRecord(params: {
     path: params.path,
     eligibility_trace: params.eligibility_trace,
     policy_trace: params.policy_trace,
+    detected_narrative: params.detected_narrative,
+    selected_pattern: params.selected_pattern,
+    response_mode: params.response_mode,
   };
 }
 

@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://gorky.bot/schemas/format_decision.json",
+  "title": "FormatDecision",
+  "description": "Response format: skip | short | expanded | thread",
+  "type": "object",
+  "required": ["format", "reason"],
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "type": "string",
+      "enum": ["skip", "short_reply", "expanded_reply", "short_thread"]
+    },
+    "reason": { "type": "string" }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://gorky.bot/schemas/pattern_selection.json",
+  "title": "PatternSelectionResult",
+  "description": "Selected roast pattern and rationale",
+  "type": "object",
+  "required": ["pattern_id", "framing", "fallback_used"],
+  "additionalProperties": false,
+  "properties": {
+    "pattern_id": { "type": "string" },
+    "framing": { "type": "string" },
+    "fallback_used": { "type": "boolean" }
+  }
+}

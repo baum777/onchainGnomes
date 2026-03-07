@@ -23,7 +23,7 @@ import {
   type ActivationConfig,
 } from "../config/botActivationConfig.js";
 import { handleEvent, type PipelineDeps } from "../canonical/pipeline.js";
-import type { CanonicalEvent, PipelineResult } from "../canonical/types.js";
+import type { CanonicalConfig, CanonicalEvent, PipelineResult } from "../canonical/types.js";
 import { DEFAULT_CANONICAL_CONFIG } from "../canonical/types.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -197,6 +197,7 @@ export async function processCanonicalMention(
   mention: Mention,
   state: ProcessedMentionsState,
   dryRun: boolean,
+  configOverride?: typeof DEFAULT_CANONICAL_CONFIG,
 ): Promise<PipelineResult | undefined> {
   if (isProcessed(state, mention.id)) {
     console.log(`[SKIP] Already processed: ${mention.id}`);
@@ -207,9 +208,10 @@ export async function processCanonicalMention(
   console.log(`[NEW] Mention ${mention.id} from @${mention.authorUsername ?? "unknown"}: "${preview}..."`);
 
   const event = mentionToCanonicalEvent(mention);
+  const config = configOverride ?? DEFAULT_CANONICAL_CONFIG;
 
   try {
-    const result = await handleEvent(event, deps, DEFAULT_CANONICAL_CONFIG);
+    const result = await handleEvent(event, deps, config);
 
     if (result.action === "skip") {
       console.log(`[SKIP] ${mention.id}: ${result.skip_reason}`);

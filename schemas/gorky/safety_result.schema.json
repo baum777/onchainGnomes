@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://gorky.bot/schemas/safety_result.json",
+  "title": "SafetyResult",
+  "description": "Pre-generation safety filter output",
+  "type": "object",
+  "required": ["passed", "policy_flags"],
+  "additionalProperties": false,
+  "properties": {
+    "passed": { "type": "boolean" },
+    "block_reason": { "type": "string" },
+    "policy_flags": { "type": "array", "items": { "type": "string" } }
+  }
+}

@@ -6,6 +6,7 @@ import type {
   ClassifierOutput,
   ValidationResult,
   ValidationCheck,
+  RepairSuggestion,
 } from "./types.js";
 import { getHardMax } from "./modeBudgets.js";
 
@@ -95,9 +96,22 @@ export function validateResponse(
     return { ok: false, reason: "raw_link_present", checks };
   }
 
+  const REPAIR_MAP: Partial<Record<string, RepairSuggestion>> = {
+    char_limit: "shorten",
+    mode_match: "swap_closer",
+    persona_compliance: "neutralize",
+    identity_attack: "neutralize",
+  };
+
   for (const [key, passed] of Object.entries(checks)) {
     if (!passed) {
-      return { ok: false, reason: key, checks };
+      const repair = REPAIR_MAP[key];
+      return {
+        ok: false,
+        reason: key,
+        checks,
+        repair_suggested: repair,
+      };
     }
   }
 

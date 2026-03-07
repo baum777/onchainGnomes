@@ -13,3 +13,27 @@ xai:
   model: grok-2
   max_tokens: 280
   temperature: 0.7
+
+# Gorky rollout stages (LAUNCH_MODE env)
+# off | dry_run | shadow | restricted | full
+rollout:
+  launch_mode: dry_run
+  stages:
+    dry_run:
+      publish: false
+      log_all: true
+    shadow:
+      publish: false
+      log_all: true
+    restricted:
+      publish: true
+      allowlist_only: true
+    full:
+      publish: true
+      allowlist_only: false
+
+# Feature flags
+features:
+  repair_enabled: true
+  thread_enabled: false
+  narrative_embedding_enabled: false

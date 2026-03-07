@@ -129,12 +129,13 @@ describe("pipeline postability integration", () => {
       const longReply = "A".repeat(300);
       const deps = makeDeps(longReply);
       const mention = makeMention();
+      const configNoRepair = { ...DEFAULT_CANONICAL_CONFIG, repair_enabled: false };
 
       const replySpy = vi.fn().mockResolvedValue({ id: "tid", text: "" });
       const xClient = { reply: replySpy } as ReturnType<typeof import("../../src/clients/xClient.js").createXClient>;
 
       const state = makeState();
-      const result = await processCanonicalMention(deps, xClient, mention, state, false);
+      const result = await processCanonicalMention(deps, xClient, mention, state, false, configNoRepair);
 
       expect(result).toBeDefined();
       expect(result!.action).toBe("skip");

@@ -1,0 +1,29 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://gorky.bot/schemas/validation_result.json",
+  "title": "ValidationResult",
+  "description": "Pass/fail + repair metadata",
+  "type": "object",
+  "required": ["ok", "reason", "checks"],
+  "additionalProperties": false,
+  "properties": {
+    "ok": { "type": "boolean" },
+    "reason": { "type": "string" },
+    "checks": {
+      "type": "object",
+      "properties": {
+        "char_limit": { "type": "boolean" },
+        "identity_attack": { "type": "boolean" },
+        "financial_advice": { "type": "boolean" },
+        "wallet_filter": { "type": "boolean" },
+        "unsupported_assertion": { "type": "boolean" },
+        "mode_match": { "type": "boolean" },
+        "persona_compliance": { "type": "boolean" }
+      }
+    },
+    "repair_suggested": {
+      "type": "string",
+      "enum": ["shorten", "neutralize", "swap_closer", "regenerate"]
+    }
+  }
+}

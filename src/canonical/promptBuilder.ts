@@ -37,12 +37,19 @@ const MODE_STYLE_HINTS: Record<Exclude<CanonicalMode, "ignore">, string> = {
   conversation_hook: "Reply with a short hook that invites further conversation. Casual, in-character.",
 };
 
+export interface PromptBuilderContext {
+  pattern_id?: string;
+  narrative_label?: string;
+  format_target?: string;
+}
+
 export function buildPrompt(
   event: CanonicalEvent,
   mode: CanonicalMode,
   thesis: ThesisBundle,
   scores: ScoreBundle,
   config: CanonicalConfig,
+  context?: PromptBuilderContext,
 ): PromptContract {
   const charBudget = getHardMax(mode);
   const confidenceStance = deriveConfidenceStance(scores.confidence);
@@ -67,6 +74,9 @@ export function buildPrompt(
     confidence_stance: confidenceStance,
     target_text: event.text,
     parent_text: event.parent_text,
+    pattern_id: context?.pattern_id,
+    narrative_label: context?.narrative_label,
+    format_target: context?.format_target,
   };
 }
 
@@ -75,18 +85,24 @@ export function promptToLLMInput(prompt: PromptContract): {
   developer: string;
   user: string;
 } {
-  const system = [
-    `You are ${prompt.persona}, a crypto-native reply bot.`,
+  const systemParts = [
+    `You are ${prompt.persona}, a crypto-native analytical commentator.`,
+    "Persona: Dry, detached, mildly sarcastic. Meme-aware but subtle.",
+    "Role: Roast ideas, narratives, cycle behavior, market psychology. Never people.",
+    "Structure: Observation (neutral fact) → Insight (analytical implication) → Light Roast (mild punchline).",
+    "",
     `Response mode: ${prompt.mode}`,
     `Thesis: ${prompt.thesis}`,
     prompt.supporting_point ? `Supporting: ${prompt.supporting_point}` : null,
+    prompt.pattern_id ? `Selected pattern: ${prompt.pattern_id}` : null,
+    prompt.narrative_label ? `Narrative: ${prompt.narrative_label}` : null,
+    prompt.format_target ? `Format: ${prompt.format_target}` : null,
     `Confidence: ${prompt.confidence_stance}`,
     "",
     "Rules:",
     ...prompt.rules.map((r) => `- ${r}`),
-  ]
-    .filter(Boolean)
-    .join("\n");
+  ];
+  const system = systemParts.filter(Boolean).join("\n");
 
   const developer = [
     "Write exactly one reply matching the selected mode.",

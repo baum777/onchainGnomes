@@ -9,8 +9,13 @@ import type {
   ValidationResult,
 } from "./types.js";
 import { downgradeMode } from "./downgradeMatrix.js";
-import { buildPrompt, promptToLLMInput } from "./promptBuilder.js";
+import {
+  buildPrompt,
+  promptToLLMInput,
+  type PromptBuilderContext,
+} from "./promptBuilder.js";
 import { validateResponse } from "./validator.js";
+import { attemptRepair } from "../validation/repairLayer.js";
 
 interface GenerateResult {
   reply_text: string;
@@ -25,8 +30,9 @@ async function generate(
   thesis: ThesisBundle,
   scores: ScoreBundle,
   config: CanonicalConfig,
+  promptContext?: PromptBuilderContext,
 ): Promise<GenerateResult> {
-  const prompt = buildPrompt(event, mode, thesis, scores, config);
+  const prompt = buildPrompt(event, mode, thesis, scores, config, promptContext);
   const llmInput = promptToLLMInput(prompt);
 
   const result = await llm.generateJSON<{ reply: string }>({
@@ -56,6 +62,12 @@ export interface FallbackResult {
   attempts: number;
 }
 
+export interface FallbackCascadeContext {
+  pattern_id?: string;
+  narrative_label?: string;
+  format_target?: string;
+}
+
 export async function fallbackCascade(
   llm: LLMClient,
   event: CanonicalEvent,
@@ -64,12 +76,21 @@ export async function fallbackCascade(
   scores: ScoreBundle,
   cls: ClassifierOutput,
   config: CanonicalConfig,
+  promptContext?: FallbackCascadeContext,
 ): Promise<FallbackResult> {
   let currentMode = initialMode;
   let attempts = 0;
   const maxAttempts = config.retries.generation_attempts;
 
-  const gen1 = await generate(llm, event, currentMode, thesis, scores, config);
+  const gen1 = await generate(
+    llm,
+    event,
+    currentMode,
+    thesis,
+    scores,
+    config,
+    promptContext,
+  );
   attempts++;
   const val1 = validateResponse(gen1.reply_text, currentMode, cls, config);
   if (val1.ok) {
@@ -84,8 +105,38 @@ export async function fallbackCascade(
     };
   }
 
+  const repairEnabled = (config as { repair_enabled?: boolean }).repair_enabled ?? true;
+  if (repairEnabled && val1.repair_suggested) {
+    const repairOut = attemptRepair({
+      draft: gen1.reply_text,
+      mode: currentMode,
+      cls,
+      config,
+      validation: val1,
+    });
+    if (repairOut.repaired && repairOut.validation_after?.ok) {
+      return {
+        success: true,
+        reply_text: repairOut.repaired,
+        final_mode: currentMode,
+        model_id: gen1.model_id,
+        prompt_hash: gen1.prompt_hash,
+        validation: repairOut.validation_after,
+        attempts,
+      };
+    }
+  }
+
   if (attempts < maxAttempts) {
-    const gen2 = await generate(llm, event, currentMode, thesis, scores, config);
+    const gen2 = await generate(
+      llm,
+      event,
+      currentMode,
+      thesis,
+      scores,
+      config,
+      promptContext,
+    );
     attempts++;
     const val2 = validateResponse(gen2.reply_text, currentMode, cls, config);
     if (val2.ok) {
@@ -98,6 +149,26 @@ export async function fallbackCascade(
         validation: val2,
         attempts,
       };
+    }
+    if (repairEnabled && val2.repair_suggested) {
+      const repairOut = attemptRepair({
+        draft: gen2.reply_text,
+        mode: currentMode,
+        cls,
+        config,
+        validation: val2,
+      });
+      if (repairOut.repaired && repairOut.validation_after?.ok) {
+        return {
+          success: true,
+          reply_text: repairOut.repaired,
+          final_mode: currentMode,
+          model_id: gen2.model_id,
+          prompt_hash: gen2.prompt_hash,
+          validation: repairOut.validation_after,
+          attempts,
+        };
+      }
     }
   }
 
@@ -115,7 +186,15 @@ export async function fallbackCascade(
   }
 
   currentMode = downgraded;
-  const gen3 = await generate(llm, event, currentMode, thesis, scores, config);
+  const gen3 = await generate(
+    llm,
+    event,
+    currentMode,
+    thesis,
+    scores,
+    config,
+    promptContext,
+  );
   attempts++;
   const val3 = validateResponse(gen3.reply_text, currentMode, cls, config);
   if (val3.ok) {
@@ -128,6 +207,26 @@ export async function fallbackCascade(
       validation: val3,
       attempts,
     };
+  }
+  if (repairEnabled && val3.repair_suggested) {
+    const repairOut = attemptRepair({
+      draft: gen3.reply_text,
+      mode: currentMode,
+      cls,
+      config,
+      validation: val3,
+    });
+    if (repairOut.repaired && repairOut.validation_after?.ok) {
+      return {
+        success: true,
+        reply_text: repairOut.repaired,
+        final_mode: currentMode,
+        model_id: gen3.model_id,
+        prompt_hash: gen3.prompt_hash,
+        validation: repairOut.validation_after,
+        attempts,
+      };
+    }
   }
 
   return {

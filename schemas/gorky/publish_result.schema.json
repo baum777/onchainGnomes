@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://gorky.bot/schemas/publish_result.json",
+  "title": "PublishResult",
+  "description": "Publishing outcome: posted | skipped | blocked | validation_failed",
+  "type": "object",
+  "required": ["outcome"],
+  "additionalProperties": false,
+  "properties": {
+    "outcome": {
+      "type": "string",
+      "enum": ["posted", "skipped", "blocked", "validation_failed"]
+    },
+    "success": { "type": "boolean", "description": "True iff outcome=posted" },
+    "tweet_id": { "type": "string" },
+    "skip_reason": { "type": "string" }
+  }
+}

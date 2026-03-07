@@ -79,7 +79,9 @@ export const SkipReasonSchema = z.enum([
   "skip_rate_limit",
   "skip_self_loop",
   "skip_policy",
+  "skip_safety_filter",
   "skip_low_relevance",
+  "skip_format_decision",
   "skip_high_risk",
   "skip_low_confidence",
   "skip_no_thesis",
@@ -161,6 +163,12 @@ export interface PromptContract {
   confidence_stance: "low" | "medium" | "high";
   target_text: string;
   parent_text: string | null;
+  /** Gorky roast pattern (optional) */
+  pattern_id?: string;
+  /** Detected narrative label (optional) */
+  narrative_label?: string;
+  /** Response format target (optional) */
+  format_target?: string;
 }
 
 export interface ValidationCheck {
@@ -173,10 +181,18 @@ export interface ValidationCheck {
   persona_compliance: boolean;
 }
 
+export type RepairSuggestion =
+  | "shorten"
+  | "neutralize"
+  | "swap_closer"
+  | "regenerate";
+
 export interface ValidationResult {
   ok: boolean;
   reason: string;
   checks: ValidationCheck;
+  /** Suggested repair when ok is false (soft fail) */
+  repair_suggested?: RepairSuggestion;
 }
 
 export interface AuditRecord {
@@ -197,6 +213,12 @@ export interface AuditRecord {
   path?: "social" | "audit";
   eligibility_trace?: string[];
   policy_trace?: string[];
+  /** Analytics: detected narrative label */
+  detected_narrative?: string;
+  /** Analytics: selected roast pattern */
+  selected_pattern?: string;
+  /** Analytics: response format (short_reply, expanded_reply, short_thread) */
+  response_mode?: string;
 }
 
 export type PipelineResult =
@@ -245,6 +267,12 @@ export interface CanonicalConfig {
     unsupported_claim_block: boolean;
   };
   model_id: string;
+  /** Feature: allow thread format (2-4 tweets) */
+  thread_enabled?: boolean;
+  /** Feature: attempt repair on validation soft-fail */
+  repair_enabled?: boolean;
+  /** Feature: use embedding for narrative classification (when available) */
+  narrative_embedding_enabled?: boolean;
 }
 
 export const DEFAULT_CANONICAL_CONFIG: CanonicalConfig = {

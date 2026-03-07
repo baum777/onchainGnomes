@@ -19,6 +19,10 @@ import { extractThesis } from "./thesisExtractor.js";
 import { selectMode } from "./modeSelector.js";
 import { fallbackCascade } from "./fallbackCascade.js";
 import { buildAuditRecord, persistAuditRecord } from "./auditLog.js";
+import { safetyFilter } from "../safety/safetyFilter.js";
+import { mapNarrative } from "../narrative/narrativeMapper.js";
+import { selectPattern } from "../roast/patternEngine.js";
+import { formatDecision } from "../roast/formatDecision.js";
 
 export interface PipelineDeps {
   llm: LLMClient;
@@ -99,6 +103,12 @@ export async function handleEvent(
     return makeSkipResult(event, "skip_self_loop", undefined, undefined, config);
   }
 
+  const safetyResult = safetyFilter(event);
+  if (!safetyResult.passed) {
+    const cls = classify(event);
+    return makeSkipResult(event, "skip_safety_filter", cls, undefined, config);
+  }
+
   const cls = classify(event);
 
   if (cls.policy_severity === "hard" || (cls.policy_blocked && !cls.policy_severity)) {
@@ -122,6 +132,35 @@ export async function handleEvent(
     return makeSkipResult(event, "skip_low_confidence", cls, scores, config);
   }
 
+  const narrative = mapNarrative(event, cls);
+  const pattern = selectPattern(
+    thesis,
+    narrative ?? { label: "unclassified", confidence: 0.5, sentiment: "neutral" },
+    scores,
+    event.author_id,
+  );
+  const minRelevance = config.thresholds.social && cls.intent && SOCIAL_INTENTS.includes(cls.intent)
+    ? (config.thresholds.social.min_relevance ?? config.thresholds.min_relevance)
+    : config.thresholds.min_relevance;
+  const format = formatDecision({
+    event,
+    cls,
+    narrative,
+    relevanceScore: scores.relevance,
+    minRelevanceThreshold: minRelevance,
+    threadEnabled: (config as { thread_enabled?: boolean }).thread_enabled ?? false,
+  });
+
+  if (format.format === "skip") {
+    return makeSkipResult(event, "skip_format_decision", cls, scores, config);
+  }
+
+  const promptContext = {
+    pattern_id: pattern.pattern_id,
+    narrative_label: narrative?.label ?? undefined,
+    format_target: format.format,
+  };
+
   const result = await fallbackCascade(
     deps.llm,
     event,
@@ -130,6 +169,7 @@ export async function handleEvent(
     scores,
     cls,
     config,
+    promptContext,
   );
 
   if (!result.success || !result.reply_text) {
@@ -147,6 +187,9 @@ export async function handleEvent(
       skip_reason: "skip_validation_failure",
       reply_text: null,
       path: pathType,
+      detected_narrative: narrative?.label,
+      selected_pattern: pattern.pattern_id,
+      response_mode: format.format,
     });
     persistAuditRecord(audit);
     return { action: "skip", skip_reason: "skip_validation_failure", audit };
@@ -166,6 +209,9 @@ export async function handleEvent(
     skip_reason: null,
     reply_text: result.reply_text,
     path: pathType,
+    detected_narrative: narrative?.label,
+    selected_pattern: pattern.pattern_id,
+    response_mode: format.format,
   });
   persistAuditRecord(audit);
 

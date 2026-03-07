@@ -1,0 +1,111 @@
+# Gorky Bot — Production Configuration
+# Extends config/default.yaml. Override via env or config/local.yaml.
+#
+# launchGate mapping (LAUNCH_MODE env):
+#   off      = disabled, no LLM
+#   dry_run  = evaluate/log only, no live post
+#   staging  = restricted (allowlist only)
+#   prod     = full rollout
+
+persona:
+  name: Gorky
+  platform: twitter
+
+# Relevance scoring weights (Gorky spec)
+relevance:
+  weights:
+    mention_signal: 0.2
+    narrative_relevance: 0.25
+    roastability: 0.25
+    analytical_opportunity: 0.15
+    sentiment_intensity: 0.05
+    risk_penalty: 0.1
+  thresholds:
+    min_relevance: 0.45
+    min_relevance_social: 0.15
+    max_risk: 0.55
+    strong_candidate_relevance: 0.65
+    strong_candidate_roastability: 0.5
+
+# Sentiment and narrative
+sentiment:
+  positive_keywords: ["wagmi", "moon", "100x", "gem", "alpha"]
+  negative_keywords: ["rug", "scam", "fud", "dump", "rekt"]
+  neutral_fallback: true
+
+narrative:
+  labels:
+    - this_cycle_different
+    - utility_revolution
+    - meme_viral_launch
+    - healthy_correction
+    - ai_defi_rwa_meta
+    - liquidity_volume_spike
+    - hopium_wagmi_diamond_hands
+    - rug_scam_fear
+    - post_hype_silence
+    - chain_superiority
+    - influencer_pump
+    - recycled_macro_thesis
+  fallback_label: unclassified
+  embedding_enabled: false
+
+# Pattern rotation and anti-repetition
+pattern:
+  recent_penalty_per_repeat: 0.2
+  recent_window_hours: 24
+  fallback_pattern_id: narrative_vs_reality
+
+# Rate limits (aligned with ops/rateLimiter)
+rate_limits:
+  global_per_minute: 5
+  per_user_per_minute: 2
+  per_thread_per_30min: 1
+
+# Cooldowns
+cooldown:
+  per_user_minutes: 60
+  per_thread_minutes: 30
+  duplicate_window_hours: 1
+
+# Dedupe
+dedupe:
+  event_id_ttl_days: 7
+  reply_hash_window_hours: 1
+
+# Thread decision
+thread:
+  enabled: false
+  max_tweets: 4
+  trigger_keywords: ["explain", "analysis", "deep dive", "why"]
+  min_context_replies: 3
+
+# Validation
+validation:
+  repair_enabled: true
+  max_repair_attempts: 2
+  identity_attack_block: true
+  financial_advice_block: true
+  persona_drift_block: true
+
+# Publish safety
+publish:
+  allow_raw_links: false
+  allow_wallet_addresses: false
+
+# Feature flags (env: REPAIR_ENABLED, THREAD_ENABLED, NARRATIVE_EMBEDDING_ENABLED)
+features:
+  repair_enabled: true
+  thread_enabled: false
+  narrative_embedding_enabled: false
+
+# Logging
+logging:
+  audit_log_path: data/audit_log.jsonl
+  log_all_events: true
+  log_skip_reasons: true
+
+# Rollout (LAUNCH_MODE drives behavior)
+rollout:
+  launch_mode: dry_run
+  allowlist: []
