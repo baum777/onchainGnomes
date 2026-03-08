@@ -21,7 +21,7 @@ type RedisClient = {
   quit: () => Promise<void>;
 };
 
-const KEY_PREFIX = "gorky:";
+const KEY_PREFIX = "gorkypf:";
 const EVENT_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
 const PUBLISHED_TTL_SECONDS = 30 * 24 * 60 * 60; // 30 days
 

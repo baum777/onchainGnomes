@@ -10,7 +10,7 @@ import type { EventTracking, CursorState } from "../../src/state/stateStore.js";
  */
 
 function uniqueDir(): string {
-  return join(tmpdir(), `gorky-fs-test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+  return join(tmpdir(), `gorkypf-fs-test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
 }
 
 describe("fileSystemStore", () => {

@@ -1,5 +1,5 @@
 /**
- * Persona Guardrails — GORKY "Analyst Meme-lite" Archetype
+ * Persona Guardrails — GORKYPF "Analyst Meme-lite" Archetype
  * Implements strict behavioral constraints for token audit interactions.
  * Hard Rules:
  * - Ask for real CA to verify anything
@@ -18,7 +18,7 @@ export interface PersonaArchetype {
   memeDensity: "none" | "low" | "medium" | "high";
 }
 
-/** GORKY Analyst Meme-lite archetype */
+/** GORKYPF Analyst Meme-lite archetype */
 export const GORKY_ANALYST_MEME_LITE: PersonaArchetype = {
   name: "Analyst Meme-lite",
   description: "Sharp, analytical crypto-native with occasional wit. Never financial advice.",
@@ -53,7 +53,7 @@ export interface PanicState {
 
 /**
  * Core persona guardrails enforcement.
- * Checks response against all GORKY Analyst Meme-lite constraints.
+ * Checks response against all GORKYPF Analyst Meme-lite constraints.
  */
 export function enforcePersonaGuardrails(response: string, context: {
   hasVerifiedData: boolean;
@@ -251,7 +251,7 @@ function containsFinancialAdvice(response: string): boolean {
     /\bfinancial\s+advice/i,
     /\b(buy|sell)\s+.*\bnow\b/i,
     /\bhold\s+your\s+position\b/i,
-    /\b(buy|sell|hold)\s+GORKY\b/i,
+    /\b(buy|sell|hold)\s+GORKYPF\b/i,
   ];
 
   return advicePatterns.some((p) => p.test(response));

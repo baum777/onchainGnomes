@@ -21,7 +21,7 @@ describe("E2E: dry_run publish gate", () => {
   });
 
   it("shouldPost returns log_only for dry_run", () => {
-    const decision = shouldPost("sergorky");
+    const decision = shouldPost("sergorkypf");
     expect(decision.action).toBe("log_only");
     expect(decision.reason).toContain("dry_run");
   });

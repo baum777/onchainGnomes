@@ -1,4 +1,4 @@
-# Render Blueprint — xAi Bot / serGorky
+# Render Blueprint — xAi Bot / serGorkypf
 # Background Worker + optional Health Web Service
 # Node.js/TypeScript project — Python files are legacy and ignored
 
@@ -41,7 +41,7 @@ services:
       - key: X_ACCESS_SECRET
         sync: false
       - key: BOT_USERNAME
-        value: serGorky
+        value: serGorkypf
       - key: BOT_ACTIVATION_MODE
         value: global
       - key: BOT_DENY_REPLY_MODE

@@ -21,7 +21,7 @@ export const mockLLM = {
       thread_summary: `Thread about crypto vibes #${seed % 97}. People argue, someone asks a question.`,
       participants: [
         { handle: "@user", role: "author" },
-        { handle: "@gorky", role: "replying" },
+        { handle: "@gorkypf", role: "replying" },
       ],
       stance_map: [{ handle: "@user", stance: pick(["bullish", "bearish", "neutral", "unknown"], seed) }],
       open_questions: ["What's the actual signal here?"],
@@ -68,7 +68,7 @@ export const mockLLM = {
 
     return {
       intent,
-      targets: ["@gorky"],
+      targets: ["@gorkypf"],
       entities: {
         ticker: s.includes("sol") ? "SOL" : null,
         coin_address: s.includes("ca:") ? currentText.split("ca:")[1]?.trim()?.slice(0, 64) ?? null : null,
@@ -179,12 +179,12 @@ export const mockLLM = {
       should_write: true,
       lore_deltas: [
         {
-          key: "gorky.origin",
+          key: "gorkypf.origin",
           canon_or_headcanon: "canon",
           text: "Born in the liquidity void between green candles.",
         },
         {
-          key: "gorky.trait",
+          key: "gorkypf.trait",
           canon_or_headcanon: "headcanon",
           text: "Sometimes audits chart ghosts for entertainment.",
         },

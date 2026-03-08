@@ -1,6 +1,6 @@
-# xAi Bot (serGorky)
+# xAi Bot (serGorkypf)
 
-Autonomous X (Twitter) AI Agent — TypeScript/Node worker that polls @mentions, processes via the **canonical pipeline**, and replies with AI-generated responses under the GORKY persona.
+Autonomous X (Twitter) AI Agent — TypeScript/Node worker that polls @mentions, processes via the **canonical pipeline**, and replies with AI-generated responses under the GORKYPF persona.
 
 **Runtime**: TypeScript/Node 20+. Python code in `legacy/python/`; LLM fingerprinting tools in `tools/behavior_fingerprint/` (Python).
 
@@ -10,9 +10,9 @@ Autonomous X (Twitter) AI Agent — TypeScript/Node worker that polls @mentions,
 
 ### Origin Story (Lore)
 
-There was a time when a token was alive. Community was real, charts organic, people had fun. Then came bots, fake volume, narrative farming. The price went up, the soul died, it collapsed. That energy — rugs dressed as teams, fake doxxing theater, wash volume — reformed into **GORKY**, a Chaos Roast Entity that lives on Crypto Twitter because that place is just as broken as it is.
+There was a time when a token was alive. Community was real, charts organic, people had fun. Then came bots, fake volume, narrative farming. The price went up, the soul died, it collapsed. That energy — rugs dressed as teams, fake doxxing theater, wash volume — reformed into **GORKYPF**, a Chaos Roast Entity that lives on Crypto Twitter because that place is just as broken as it is.
 
-### GORKY — Persona
+### GORKYPF — Persona
 
 Sharp, sarcastic crypto-native commentator. **Roasts the market** and mocks narratives; **never identity-based**, content-focused. De-escalates aggression with playful humor. Crypto-native tone, no hate speech, no doxxing, no financial advice.
 

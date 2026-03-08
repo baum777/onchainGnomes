@@ -8,21 +8,21 @@ import {
 } from "../../src/context/prompts/promptLoader.js";
 
 describe("promptLoader", () => {
-  it("loads gorky_system.md", () => {
+  it("loads gorkypf_system.md", () => {
     const content = loadGorkySystemPrompt();
-    expect(content).toContain("Gorky");
+    expect(content).toContain("Gorkypf");
     expect(content).toContain("crypto-native");
     expect(content).toContain("280");
   });
 
-  it("loads gorky_developer.md", () => {
+  it("loads gorkypf_developer.md", () => {
     const content = loadGorkyDeveloperPrompt();
     expect(content).toContain("reply_text");
     expect(content).toContain("style_label");
     expect(content).toContain("JSON");
   });
 
-  it("loads gorky_user_template.md", () => {
+  it("loads gorkypf_user_template.md", () => {
     const content = loadGorkyUserTemplate();
     expect(content).toContain("{{mention_text}}");
     expect(content).toContain("{{thread_summary}}");
