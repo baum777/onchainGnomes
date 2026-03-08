@@ -17,7 +17,13 @@ services:
       echo "Build complete. Output:"
       ls -la dist/
     startCommand: node dist/index.js
+    disk:
+      name: xai-bot-data
+      mountPath: /data
+      sizeGB: 1
     envVars:
+      - key: DATA_DIR
+        value: /data
       - key: NODE_ENV
         value: production
       - key: XAI_API_KEY
