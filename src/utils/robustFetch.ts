@@ -9,6 +9,8 @@
  */
 
 import { logWarn, logError, logInfo } from "../ops/logger.js";
+import { incrementCounter, observeHistogram } from "../observability/metrics.js";
+import { COUNTER_NAMES, HISTOGRAM_NAMES } from "../observability/metricTypes.js";
 
 // Configuration from environment
 const FETCH_TIMEOUT_MS = Number(process.env.FETCH_TIMEOUT_MS) || 30_000;
@@ -121,24 +123,27 @@ export async function robustFetch<T>(
   } = options;
 
   let lastError: Error | undefined;
+  const startMs = Date.now();
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const data = await fetchWithTimeout(fetchFn, timeoutMs);
-      
+      observeHistogram(HISTOGRAM_NAMES.FETCH_DURATION_MS, Date.now() - startMs);
+
       if (attempt > 0) {
+        incrementCounter(COUNTER_NAMES.FETCH_RETRY_TOTAL);
         logInfo("[ROBUST_FETCH] Succeeded after retry", { attempt });
       }
-      
+
       return { success: true, data };
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
-      
-      // Check for rate limiting
+
       if (isRateLimitError(error)) {
+        incrementCounter(COUNTER_NAMES.FETCH_RATE_LIMITED_TOTAL);
         const retryAfterMs = getRetryAfterMs(error);
         logWarn("[ROBUST_FETCH] Rate limited", { attempt, retryAfterMs });
-        
+
         return {
           success: false,
           error: lastError.message,
@@ -146,16 +151,16 @@ export async function robustFetch<T>(
           retryAfterMs,
         };
       }
-      
-      // Check if we should retry
+
       if (attempt < maxRetries && isTransientError(error)) {
+        incrementCounter(COUNTER_NAMES.FETCH_RETRY_TOTAL);
         const delayMs = calculateBackoffDelay(attempt, backoffBaseMs, backoffMaxMs);
         logWarn("[ROBUST_FETCH] Transient error, retrying", {
           attempt,
           delayMs,
           error: lastError.message,
         });
-        
+
         await new Promise((resolve) => setTimeout(resolve, delayMs));
         continue;
       }

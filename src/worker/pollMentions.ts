@@ -26,12 +26,20 @@ import { handleEvent, type PipelineDeps } from "../canonical/pipeline.js";
 import type { CanonicalConfig, CanonicalEvent, PipelineResult } from "../canonical/types.js";
 import { DEFAULT_CANONICAL_CONFIG } from "../canonical/types.js";
 import { logError } from "../ops/logger.js";
-import { shutdownAuditLog } from "../canonical/auditLog.js";
-import { 
-  recordEventSeen, 
-  recordEventProcessed, 
+import { shutdownAuditLog, getAuditBufferSize } from "../canonical/auditLog.js";
+import {
+  incrementCounter,
+  setGauge,
+  metrics as observabilityMetrics,
+} from "../observability/metrics.js";
+import { COUNTER_NAMES, GAUGE_NAMES, HISTOGRAM_NAMES } from "../observability/metricTypes.js";
+import { recordPollSuccess, setHealthDeps } from "../observability/health.js";
+import { loadCursorState } from "../utils/cursorPersistence.js";
+import {
+  recordEventSeen,
+  recordEventProcessed,
   publishWithRetry,
-  isPublished 
+  isPublished,
 } from "../state/eventState.js";
 import { 
   robustFetch, 
@@ -246,15 +254,15 @@ export async function processCanonicalMention(
   dryRun: boolean,
   configOverride?: typeof DEFAULT_CANONICAL_CONFIG,
 ): Promise<PipelineResult | undefined> {
-  // Check if already processed
   if (isProcessed(state, mention.id)) {
+    incrementCounter(COUNTER_NAMES.MENTIONS_SKIPPED_TOTAL);
     console.log(`[SKIP] Already processed: ${mention.id}`);
     return undefined;
   }
 
-  // Check error count - skip if too many consecutive failures
   const errorCount = mentionErrorCounts.get(mention.id) ?? 0;
   if (errorCount >= MAX_MENTION_ERRORS) {
+    incrementCounter(COUNTER_NAMES.MENTIONS_SKIPPED_TOTAL);
     console.warn(`[SKIP] Mention ${mention.id} exceeded max error count (${MAX_MENTION_ERRORS}), marking as processed`);
     markProcessed(state, mention.id);
     saveState(state);
@@ -262,16 +270,16 @@ export async function processCanonicalMention(
     return undefined;
   }
 
-  // Check idempotency - already published?
   const publishCheck = isPublished(mention.id);
   if (publishCheck.published) {
+    incrementCounter(COUNTER_NAMES.MENTIONS_SKIPPED_TOTAL);
     console.log(`[SKIP] Already published reply for ${mention.id}: tweet ${publishCheck.tweetId}`);
     markProcessed(state, mention.id);
     saveState(state);
     return undefined;
   }
 
-  // Record event seen
+  incrementCounter(COUNTER_NAMES.MENTIONS_SEEN_TOTAL);
   recordEventSeen(mention.id);
 
   const preview = (mention.text ?? "").slice(0, 50);
@@ -284,6 +292,7 @@ export async function processCanonicalMention(
     const result = await handleEvent(event, deps, config);
 
     if (result.action === "skip") {
+      incrementCounter(COUNTER_NAMES.MENTIONS_SKIPPED_TOTAL);
       console.log(`[SKIP] ${mention.id}: ${result.skip_reason}`);
       markProcessed(state, mention.id);
       saveState(state);
@@ -291,11 +300,11 @@ export async function processCanonicalMention(
       return result;
     }
 
-    // Record that pipeline processing succeeded
     recordEventProcessed(mention.id);
 
     const postDecision = shouldPost(mention.authorUsername ?? undefined);
     if (postDecision.action !== "post") {
+      incrementCounter(COUNTER_NAMES.MENTIONS_BLOCKED_TOTAL);
       console.log(`[LAUNCH_GATE] ${mention.id}: ${postDecision.action} — ${(postDecision as { reason: string }).reason}`);
       markProcessed(state, mention.id);
       saveState(state);
@@ -306,27 +315,32 @@ export async function processCanonicalMention(
     if (dryRun) {
       console.log(`[DRY_RUN] Would reply to ${mention.id}: "${result.reply_text.substring(0, 80)}..."`);
     } else {
-      // Use retry logic for publishing
+      incrementCounter(COUNTER_NAMES.PUBLISH_ATTEMPT_TOTAL);
+      const publishStartMs = Date.now();
       const publishResult = await publishWithRetry(mention.id, async () => {
         const reply = await xClient.reply(result.reply_text, mention.id);
         return { tweetId: reply.id ?? mention.id };
       });
+      observabilityMetrics.observeHistogram(HISTOGRAM_NAMES.PUBLISH_DURATION_MS, Date.now() - publishStartMs);
 
       if (publishResult.success) {
+        incrementCounter(COUNTER_NAMES.PUBLISH_SUCCESS_TOTAL);
         console.log(`[POSTED] Reply to ${mention.id}: "${result.reply_text.substring(0, 80)}..." (tweet: ${publishResult.tweetId})`);
       } else {
+        incrementCounter(COUNTER_NAMES.PUBLISH_FAILURE_TOTAL);
         console.error(`[ERROR] Failed to publish reply to ${mention.id} after retries: ${publishResult.error}`);
         throw new Error(`Publish failed: ${publishResult.error}`);
       }
     }
 
+    incrementCounter(COUNTER_NAMES.MENTIONS_PROCESSED_TOTAL);
     markProcessed(state, mention.id);
     saveState(state);
     mentionErrorCounts.delete(mention.id);
     console.log(`[SAVED] Marked ${mention.id} as processed`);
     return result;
   } catch (error) {
-    // Increment error count for this mention
+    incrementCounter(COUNTER_NAMES.MENTIONS_FAILED_TOTAL);
     const currentErrors = mentionErrorCounts.get(mention.id) ?? 0;
     mentionErrorCounts.set(mention.id, currentErrors + 1);
     
@@ -385,6 +399,13 @@ export async function runWorkerLoop(): Promise<void> {
     botUserId: userId,
   };
 
+  setHealthDeps({
+    getAuditBufferSize,
+    loadCursor: () => Promise.resolve(loadCursorState()),
+  });
+  setGauge(GAUGE_NAMES.CURRENT_POLL_INTERVAL_MS, POLL_INTERVAL_MS);
+  incrementCounter(COUNTER_NAMES.RECOVERY_RESTART_TOTAL);
+
   const state = loadState();
   console.log(`[STATE] Loaded ${state.processed.length} processed mentions`);
   if (state.last_since_id) {
@@ -407,16 +428,19 @@ export async function runWorkerLoop(): Promise<void> {
       );
 
       consecutiveFailures = 0;
+      setGauge(GAUGE_NAMES.RECENT_FAILURE_STREAK, 0);
+      recordPollSuccess();
 
       console.log(`[POLL] Found ${mentions.length} new mention(s)`);
 
       for (const mention of mentions) {
+        const startMs = Date.now();
         try {
           await processCanonicalMention(pipelineDeps, xClient, mention, state, dryRun);
         } catch (error) {
-          // Error already logged in processCanonicalMention
-          // Continue to next mention - the error count is tracked
           console.warn(`[CONTINUE] Moving to next mention after error in ${mention.id}`);
+        } finally {
+          observabilityMetrics.observeHistogram(HISTOGRAM_NAMES.MENTION_PROCESSING_DURATION_MS, Date.now() - startMs);
         }
       }
 
@@ -434,6 +458,7 @@ export async function runWorkerLoop(): Promise<void> {
     } catch (err: unknown) {
       const e = err as { code?: number; status?: number; data?: unknown };
       consecutiveFailures++;
+      setGauge(GAUGE_NAMES.RECENT_FAILURE_STREAK, consecutiveFailures);
       logError("[ERROR] Poll iteration failed:", { error: e?.data ?? err, consecutiveFailures });
 
       if (e?.code === 401 || e?.status === 401) {

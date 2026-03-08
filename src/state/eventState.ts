@@ -6,6 +6,8 @@
  */
 
 import { logError, logInfo, logWarn } from "../ops/logger.js";
+import { incrementCounter } from "../observability/metrics.js";
+import { COUNTER_NAMES } from "../observability/metricTypes.js";
 
 // Event states
 export type EventState = 
@@ -151,6 +153,7 @@ export async function publishWithRetry(
   // Check idempotency first
   const existing = isPublished(eventId);
   if (existing.published) {
+    incrementCounter(COUNTER_NAMES.PUBLISH_DUPLICATE_PREVENTED_TOTAL);
     logInfo("[EVENT_STATE] Duplicate publish prevented", { eventId, tweetId: existing.tweetId });
     return { success: true, tweetId: existing.tweetId };
   }

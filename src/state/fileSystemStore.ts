@@ -9,6 +9,8 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import type { StateStore, EventTracking, CursorState } from "./stateStore.js";
 import { logInfo, logError } from "../ops/logger.js";
+import { incrementCounter } from "../observability/metrics.js";
+import { COUNTER_NAMES } from "../observability/metricTypes.js";
 
 const DEFAULT_DATA_DIR = join(process.cwd(), "data");
 
@@ -32,6 +34,7 @@ function saveJson(file: string, data: unknown, dir: string): void {
     ensureDir(dir);
     writeFileSync(file, JSON.stringify(data, null, 2), "utf-8");
   } catch (error) {
+    incrementCounter(COUNTER_NAMES.STATE_STORE_ERROR_TOTAL);
     logError("[FileSystemStore] Failed to save", { file, error });
   }
 }

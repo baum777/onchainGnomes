@@ -8,6 +8,8 @@
 import { logError, logInfo, logWarn } from "../ops/logger.js";
 import { getStateStore } from "./storeFactory.js";
 import type { EventTracking, EventState } from "./stateStore.js";
+import { incrementCounter } from "../observability/metrics.js";
+import { COUNTER_NAMES } from "../observability/metricTypes.js";
 
 // Retry configuration
 const RETRY_DELAYS_MS = [1000, 5000, 15000]; // 1s, 5s, 15s
@@ -210,6 +212,7 @@ export async function publishWithRetry(
   // Check idempotency first
   const existing = await isPublished(eventId);
   if (existing.published) {
+    incrementCounter(COUNTER_NAMES.PUBLISH_DUPLICATE_PREVENTED_TOTAL);
     logInfo("[EVENT_STATE] Duplicate publish prevented", { eventId, tweetId: existing.tweetId });
     return { success: true, tweetId: existing.tweetId };
   }

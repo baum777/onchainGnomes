@@ -6,6 +6,8 @@
 
 import { logWarn } from "../ops/logger.js";
 import { getStateStore } from "./storeFactory.js";
+import { incrementCounter, setGauge } from "../observability/metrics.js";
+import { COUNTER_NAMES, GAUGE_NAMES } from "../observability/metricTypes.js";
 
 // Configuration from environment
 const MAX_LLM_CALLS_PER_MINUTE = Number(process.env.MAX_LLM_CALLS_PER_MINUTE) || 30;
@@ -35,8 +37,11 @@ export async function checkLLMBudget(isThread: boolean = false): Promise<{
   const used = await store.getBudgetUsage(windowStart);
   const remaining = MAX_LLM_CALLS_PER_MINUTE - used;
   
-  // Check if this call would exceed budget
+  setGauge(GAUGE_NAMES.LLM_BUDGET_USED, used);
+  setGauge(GAUGE_NAMES.LLM_BUDGET_REMAINING, remaining);
+
   if (used + weight > MAX_LLM_CALLS_PER_MINUTE) {
+    incrementCounter(COUNTER_NAMES.LLM_BUDGET_BLOCK_TOTAL);
     const skipReason = `budget_exceeded: used=${used}, limit=${MAX_LLM_CALLS_PER_MINUTE}, requested_weight=${weight}`;
     logWarn("[BUDGET_GATE] LLM call blocked - budget exceeded", {
       used,
@@ -52,7 +57,7 @@ export async function checkLLMBudget(isThread: boolean = false): Promise<{
       skipReason,
     };
   }
-  
+
   return {
     allowed: true,
     remaining: remaining - weight,
@@ -85,11 +90,13 @@ export async function getBudgetStatus(): Promise<{
   
   const store = getStateStore();
   const used = await store.getBudgetUsage(windowStart);
-  
+  const remaining = MAX_LLM_CALLS_PER_MINUTE - used;
+  setGauge(GAUGE_NAMES.LLM_BUDGET_USED, used);
+  setGauge(GAUGE_NAMES.LLM_BUDGET_REMAINING, remaining);
   return {
     used,
     limit: MAX_LLM_CALLS_PER_MINUTE,
-    remaining: MAX_LLM_CALLS_PER_MINUTE - used,
+    remaining,
     windowSize: WINDOW_SIZE_MS,
   };
 }

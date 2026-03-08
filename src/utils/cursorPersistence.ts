@@ -10,6 +10,8 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { logInfo, logError, logWarn } from "../ops/logger.js";
+import { setGauge } from "../observability/metrics.js";
+import { GAUGE_NAMES } from "../observability/metricTypes.js";
 
 const CURSOR_FILE = join(process.cwd(), "data", "cursor_state.json");
 const CURSOR_BACKUP_FILE = join(process.cwd(), "data", "cursor_state.json.bak");
@@ -70,11 +72,12 @@ export function loadCursorState(): CursorState {
     // Update cache
     cachedCursor = state.since_id;
     
+    const ageSeconds = (Date.now() - new Date(state.last_fetch_at).getTime()) / 1000;
+    setGauge(GAUGE_NAMES.LAST_CURSOR_AGE_SECONDS, Math.max(0, ageSeconds));
     logInfo("[CURSOR] Loaded cursor state", {
       since_id: state.since_id,
       last_fetch_at: state.last_fetch_at,
     });
-    
     return state;
   } catch (error) {
     logError("[CURSOR] Failed to load cursor state", {
@@ -127,10 +130,9 @@ export function saveCursorState(state: CursorState): void {
     const { renameSync } = require("node:fs");
     renameSync(tempFile, CURSOR_FILE);
     
-    // Update cache
     cachedCursor = state.since_id;
     lastPersistedAt = Date.now();
-    
+    setGauge(GAUGE_NAMES.LAST_CURSOR_AGE_SECONDS, 0);
     logInfo("[CURSOR] Persisted cursor state", {
       since_id: state.since_id,
       fetched_count: state.fetched_count,

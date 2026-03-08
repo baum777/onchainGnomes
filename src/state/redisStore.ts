@@ -7,6 +7,8 @@
 
 import type { StateStore, EventTracking, CursorState } from "./stateStore.js";
 import { logInfo, logError, logWarn } from "../ops/logger.js";
+import { incrementCounter } from "../observability/metrics.js";
+import { COUNTER_NAMES } from "../observability/metricTypes.js";
 
 // Redis client type (we'll use dynamic import)
 type RedisClient = {
@@ -67,6 +69,7 @@ export class RedisStateStore implements StateStore {
       const data = await client.get(this.key(`event:${eventId}`));
       return data ? JSON.parse(data) : null;
     } catch (error) {
+      incrementCounter(COUNTER_NAMES.STATE_STORE_ERROR_TOTAL);
       logError("[RedisStore] getEventState failed", { eventId, error });
       return null;
     }
@@ -81,6 +84,7 @@ export class RedisStateStore implements StateStore {
         { ex: EVENT_TTL_SECONDS }
       );
     } catch (error) {
+      incrementCounter(COUNTER_NAMES.STATE_STORE_ERROR_TOTAL);
       logError("[RedisStore] setEventState failed", { eventId, error });
     }
   }
@@ -90,6 +94,7 @@ export class RedisStateStore implements StateStore {
       const client = await this.getClient();
       await client.del(this.key(`event:${eventId}`));
     } catch (error) {
+      incrementCounter(COUNTER_NAMES.STATE_STORE_ERROR_TOTAL);
       logError("[RedisStore] deleteEventState failed", { eventId, error });
     }
   }
@@ -98,15 +103,13 @@ export class RedisStateStore implements StateStore {
     try {
       const client = await this.getClient();
       const key = this.key(`lock:publish:${eventId}`);
-      
-      // Use NX (only if not exists) for atomic lock acquisition
       const result = await client.set(key, Date.now().toString(), {
         nx: true,
         ex: Math.ceil(ttlMs / 1000),
       });
-      
       return result === "OK";
     } catch (error) {
+      incrementCounter(COUNTER_NAMES.STATE_STORE_ERROR_TOTAL);
       logError("[RedisStore] acquirePublishLock failed", { eventId, error });
       return false;
     }
@@ -117,6 +120,7 @@ export class RedisStateStore implements StateStore {
       const client = await this.getClient();
       await client.del(this.key(`lock:publish:${eventId}`));
     } catch (error) {
+      incrementCounter(COUNTER_NAMES.STATE_STORE_ERROR_TOTAL);
       logError("[RedisStore] releasePublishLock failed", { eventId, error });
     }
   }
@@ -125,13 +129,10 @@ export class RedisStateStore implements StateStore {
     try {
       const client = await this.getClient();
       const data = await client.get(this.key(`published:${eventId}`));
-      
-      if (data) {
-        return { published: true, tweetId: data };
-      }
-      
+      if (data) return { published: true, tweetId: data };
       return { published: false };
     } catch (error) {
+      incrementCounter(COUNTER_NAMES.STATE_STORE_ERROR_TOTAL);
       logError("[RedisStore] isPublished failed", { eventId, error });
       return { published: false };
     }
@@ -145,9 +146,9 @@ export class RedisStateStore implements StateStore {
         tweetId,
         { ex: Math.ceil(ttlMs / 1000) }
       );
-      
       logInfo("[RedisStore] Marked published", { eventId, tweetId });
     } catch (error) {
+      incrementCounter(COUNTER_NAMES.STATE_STORE_ERROR_TOTAL);
       logError("[RedisStore] markPublished failed", { eventId, error });
     }
   }
@@ -157,9 +158,9 @@ export class RedisStateStore implements StateStore {
       const client = await this.getClient();
       const key = this.key(`budget:${windowStartMs}`);
       const data = await client.get(key);
-      
       return data ? parseInt(data, 10) : 0;
     } catch (error) {
+      incrementCounter(COUNTER_NAMES.STATE_STORE_ERROR_TOTAL);
       logError("[RedisStore] getBudgetUsage failed", { error });
       return 0;
     }
@@ -170,20 +171,17 @@ export class RedisStateStore implements StateStore {
       const client = await this.getClient();
       const windowStart = Math.floor(Date.now() / ttlMs) * ttlMs;
       const key = this.key(`budget:${windowStart}`);
-      
       const newValue = await client.incrby(key, weight);
-      
-      // Set expiry on first increment
       if (newValue === weight) {
-        await client.expire(key, Math.ceil(ttlMs / 1000) + 60); // +60s buffer
+        await client.expire(key, Math.ceil(ttlMs / 1000) + 60);
       }
     } catch (error) {
+      incrementCounter(COUNTER_NAMES.STATE_STORE_ERROR_TOTAL);
       logError("[RedisStore] incrementBudgetUsage failed", { error });
     }
   }
 
   async resetBudget(): Promise<void> {
-    // Redis budget is window-based, no manual reset needed
     logInfo("[RedisStore] Budget reset (no-op for Redis)");
   }
 
@@ -193,6 +191,7 @@ export class RedisStateStore implements StateStore {
       const data = await client.get(this.key("cursor"));
       return data ? JSON.parse(data) : null;
     } catch (error) {
+      incrementCounter(COUNTER_NAMES.STATE_STORE_ERROR_TOTAL);
       logError("[RedisStore] getCursor failed", { error });
       return null;
     }
@@ -204,9 +203,10 @@ export class RedisStateStore implements StateStore {
       await client.set(
         this.key("cursor"),
         JSON.stringify(cursor),
-        { ex: 30 * 24 * 60 * 60 } // 30 days
+        { ex: 30 * 24 * 60 * 60 }
       );
     } catch (error) {
+      incrementCounter(COUNTER_NAMES.STATE_STORE_ERROR_TOTAL);
       logError("[RedisStore] setCursor failed", { error });
     }
   }

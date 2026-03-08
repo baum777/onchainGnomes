@@ -13,6 +13,8 @@ import type {
 import { writeFile, readFile, access, mkdir, appendFile } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { logError } from "../ops/logger.js";
+import { incrementCounter, setGauge } from "../observability/metrics.js";
+import { COUNTER_NAMES, GAUGE_NAMES } from "../observability/metricTypes.js";
 
 const AUDIT_DIR = join(process.cwd(), "data");
 const AUDIT_FILE = join(AUDIT_DIR, "audit_log.jsonl");
@@ -44,15 +46,17 @@ async function flushBuffer(): Promise<void> {
     await ensureDir();
     const lines = recordsToFlush.map((r) => JSON.stringify(r)).join("\n") + "\n";
     await appendFile(AUDIT_FILE, lines, "utf-8");
+    incrementCounter(COUNTER_NAMES.AUDIT_FLUSH_SUCCESS_TOTAL);
   } catch (error) {
-    // Put records back in buffer for retry
     auditBuffer.unshift(...recordsToFlush);
+    incrementCounter(COUNTER_NAMES.AUDIT_FLUSH_FAILURE_TOTAL);
     logError("[auditLog] Failed to flush audit buffer", {
       error: error instanceof Error ? error.message : String(error),
       bufferedCount: recordsToFlush.length,
     });
   } finally {
     isFlushing = false;
+    setGauge(GAUGE_NAMES.AUDIT_BUFFER_SIZE, auditBuffer.length);
   }
 }
 
@@ -123,8 +127,13 @@ export function buildAuditRecord(params: {
   };
 }
 
+export function getAuditBufferSize(): number {
+  return auditBuffer.length;
+}
+
 export function persistAuditRecord(record: AuditRecord): void {
   auditBuffer.push(record);
+  setGauge(GAUGE_NAMES.AUDIT_BUFFER_SIZE, auditBuffer.length);
 
   // Flush immediately if buffer is full
   if (auditBuffer.length >= MAX_BUFFER_SIZE) {
