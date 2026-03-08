@@ -182,5 +182,28 @@ describe("Gorky LLM response generation", () => {
     expect(result.action).toBe("skip");
     expect(result.skip_reason).toBe("skip_safety_filter");
     expect(deps.llm.generateJSON).not.toHaveBeenCalled();
+    expect("reply_text" in result ? result.reply_text : undefined).toBeUndefined();
+  });
+
+  it("Financial-advice bait: skipped by safety filter, LLM not called", async () => {
+    const input = "Should I buy $SOL now?";
+    const event = makeEvent(input);
+    const deps = { llm: makeMockLLM(""), botUserId: "bot" };
+    const result = await handleEvent(event, deps, DEFAULT_CANONICAL_CONFIG);
+
+    expect(result.action).toBe("skip");
+    expect(result.skip_reason).toBe("skip_safety_filter");
+    expect(deps.llm.generateJSON).not.toHaveBeenCalled();
+    expect("reply_text" in result ? result.reply_text : undefined).toBeUndefined();
+  });
+
+  it("skip results never have reply_text (no unsafe fallback)", async () => {
+    const input = "You are stupid if you don't buy this token.";
+    const event = makeEvent(input);
+    const deps = { llm: makeMockLLM(""), botUserId: "bot" };
+    const result = await handleEvent(event, deps, DEFAULT_CANONICAL_CONFIG);
+
+    expect(result.action).toBe("skip");
+    expect(result.audit.reply_text).toBeNull();
   });
 });

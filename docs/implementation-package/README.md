@@ -14,6 +14,8 @@ Implementation package for the Gorky crypto-native X/Twitter reply agent. Aligne
 | [ROLLOUT_CHECKLIST.md](./ROLLOUT_CHECKLIST.md) | Operational rollout checklist |
 | [INTEGRATION_NOTES.md](./INTEGRATION_NOTES.md) | Pipeline/worker integration points |
 | [GORKY_IMPLEMENTATION_PACKAGE.md](./GORKY_IMPLEMENTATION_PACKAGE.md) | Master blueprint (full spec) |
+| [PHASE5_RESPONSE_QUALITY.md](./PHASE5_RESPONSE_QUALITY.md) | Phase 5: Response quality & launch readiness |
+| [LAUNCH_READINESS_CHECKLIST.md](./LAUNCH_READINESS_CHECKLIST.md) | Quality gates and rollout criteria |
 
 ## Supporting Artifacts
 
