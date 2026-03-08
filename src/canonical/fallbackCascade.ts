@@ -35,7 +35,7 @@ async function generate(
 ): Promise<GenerateResult | null> {
   // Check budget before making LLM call
   const isThread = mode === "analyst_meme_lite" || mode === "skeptical_breakdown";
-  const budgetCheck = checkLLMBudget(isThread);
+  const budgetCheck = await checkLLMBudget(isThread);
   
   if (!budgetCheck.allowed) {
     console.warn(`[BUDGET_GATE] Blocking LLM call for event ${event.event_id}: ${budgetCheck.skipReason}`);
