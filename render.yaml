@@ -56,6 +56,8 @@ services:
         sync: false
       - key: USE_ENHANCED_CONTEXT
         value: "true"
+      - key: KV_URL
+        sync: false
 
   # Optional: Health/Metrics Web Service
   - type: web

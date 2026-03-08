@@ -13,8 +13,10 @@ import { logInfo, logError, logWarn } from "../ops/logger.js";
 import { setGauge } from "../observability/metrics.js";
 import { GAUGE_NAMES } from "../observability/metricTypes.js";
 
-const CURSOR_FILE = join(process.cwd(), "data", "cursor_state.json");
-const CURSOR_BACKUP_FILE = join(process.cwd(), "data", "cursor_state.json.bak");
+import { DATA_DIR } from "../config/dataDir.js";
+
+const CURSOR_FILE = join(DATA_DIR, "cursor_state.json");
+const CURSOR_BACKUP_FILE = join(DATA_DIR, "cursor_state.json.bak");
 
 interface CursorState {
   since_id: string | null;

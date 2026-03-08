@@ -50,9 +50,11 @@ import {
 import { CursorManager } from "../utils/cursorPersistence.js";
 import { extractMentionsFromResponse } from "../utils/inputNormalizer.js";
 
+import { DATA_DIR } from "../config/dataDir.js";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DATA_FILE = path.resolve(process.cwd(), "data/processed_mentions.json");
+const DATA_FILE = path.resolve(DATA_DIR, "processed_mentions.json");
 
 import { isPostingDisabled, shouldPost } from "../ops/launchGate.js";
 import { withCircuitBreaker } from "../ops/llmCircuitBreaker.js";

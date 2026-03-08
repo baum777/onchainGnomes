@@ -18,3 +18,5 @@ export {
   extractAddressesFromText,
   type AddressGateSanitizeOptions,
 } from "./addressSanitizer.js";
+
+export { policyTool } from "./policyTool.js";

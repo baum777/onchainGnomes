@@ -1,72 +1,107 @@
-/**
- * Redis StateStore Adapter
- *
- * Production implementation using Redis.
- * Suitable for multi-worker deployments.
- */
-
+import Redis from "ioredis";
 import type { StateStore, EventTracking, CursorState } from "./stateStore.js";
 import { logInfo, logError, logWarn } from "../ops/logger.js";
 import { incrementCounter } from "../observability/metrics.js";
 import { COUNTER_NAMES } from "../observability/metricTypes.js";
 
-// Redis client type (we'll use dynamic import)
-type RedisClient = {
-  get: (key: string) => Promise<string | null>;
-  set: (key: string, value: string, options?: { ex?: number; nx?: boolean }) => Promise<string | null>;
-  del: (key: string) => Promise<number>;
-  incrby: (key: string, increment: number) => Promise<number>;
-  expire: (key: string, seconds: number) => Promise<number>;
-  ping: () => Promise<string>;
-  quit: () => Promise<void>;
-};
-
 const KEY_PREFIX = "gorkypf:";
-const EVENT_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
-const PUBLISHED_TTL_SECONDS = 30 * 24 * 60 * 60; // 30 days
+const EVENT_TTL_SECONDS = 7 * 24 * 60 * 60;
+const PUBLISHED_TTL_SECONDS = 30 * 24 * 60 * 60;
 
 export class RedisStateStore implements StateStore {
-  private client: RedisClient | null = null;
-  private connected = false;
+  private redis: Redis;
 
-  constructor() {
-    // Lazy connection
-  }
+  constructor(url: string) {
+    this.redis = new Redis(url, {
+      maxRetriesPerRequest: 3,
+      retryStrategy(times: number) {
+        if (times > 5) return null;
+        return Math.min(times * 200, 2000);
+      },
+      lazyConnect: true,
+    });
 
-  private async getClient(): Promise<RedisClient> {
-    if (this.client) return this.client;
-    
-    const redisUrl = process.env.REDIS_URL;
-    if (!redisUrl) {
-      throw new Error("REDIS_URL not configured");
-    }
-    
-    try {
-      // Dynamic import to avoid dependency if not using Redis
-      // @ts-ignore - redis is optional dependency
-      const { createClient } = await import("redis");
-      this.client = createClient({ url: redisUrl }) as RedisClient;
-      
-      // Wait for connection
-      await this.client.ping();
-      this.connected = true;
-      
-      logInfo("[RedisStore] Connected to Redis");
-      return this.client;
-    } catch (error) {
-      logError("[RedisStore] Failed to connect", { error });
-      throw error;
-    }
+    this.redis.on("error", (err) => {
+      logError("[RedisStore] Connection error", { error: err.message });
+    });
+
+    this.redis.on("connect", () => {
+      logInfo("[RedisStore] Connected");
+    });
   }
 
   private key(name: string): string {
     return `${KEY_PREFIX}${name}`;
   }
 
+  // ── Simple KV primitives ──────────────────────────────────────────────
+
+  async get(key: string): Promise<string | null> {
+    try {
+      return await this.redis.get(this.key(key));
+    } catch (error) {
+      incrementCounter(COUNTER_NAMES.STATE_STORE_ERROR_TOTAL);
+      logError("[RedisStore] get failed", { key, error });
+      return null;
+    }
+  }
+
+  async set(key: string, value: string, ttl?: number): Promise<void> {
+    try {
+      if (ttl) {
+        await this.redis.set(this.key(key), value, "EX", ttl);
+      } else {
+        await this.redis.set(this.key(key), value);
+      }
+    } catch (error) {
+      incrementCounter(COUNTER_NAMES.STATE_STORE_ERROR_TOTAL);
+      logError("[RedisStore] set failed", { key, error });
+    }
+  }
+
+  async exists(key: string): Promise<boolean> {
+    try {
+      return (await this.redis.exists(this.key(key))) === 1;
+    } catch (error) {
+      incrementCounter(COUNTER_NAMES.STATE_STORE_ERROR_TOTAL);
+      logError("[RedisStore] exists failed", { key, error });
+      return false;
+    }
+  }
+
+  async del(key: string): Promise<void> {
+    try {
+      await this.redis.del(this.key(key));
+    } catch (error) {
+      incrementCounter(COUNTER_NAMES.STATE_STORE_ERROR_TOTAL);
+      logError("[RedisStore] del failed", { key, error });
+    }
+  }
+
+  async incr(key: string): Promise<number> {
+    try {
+      return await this.redis.incr(this.key(key));
+    } catch (error) {
+      incrementCounter(COUNTER_NAMES.STATE_STORE_ERROR_TOTAL);
+      logError("[RedisStore] incr failed", { key, error });
+      return 0;
+    }
+  }
+
+  async expire(key: string, seconds: number): Promise<void> {
+    try {
+      await this.redis.expire(this.key(key), seconds);
+    } catch (error) {
+      incrementCounter(COUNTER_NAMES.STATE_STORE_ERROR_TOTAL);
+      logError("[RedisStore] expire failed", { key, error });
+    }
+  }
+
+  // ── Event State ───────────────────────────────────────────────────────
+
   async getEventState(eventId: string): Promise<EventTracking | null> {
     try {
-      const client = await this.getClient();
-      const data = await client.get(this.key(`event:${eventId}`));
+      const data = await this.redis.get(this.key(`event:${eventId}`));
       return data ? JSON.parse(data) : null;
     } catch (error) {
       incrementCounter(COUNTER_NAMES.STATE_STORE_ERROR_TOTAL);
@@ -77,11 +112,11 @@ export class RedisStateStore implements StateStore {
 
   async setEventState(eventId: string, state: EventTracking): Promise<void> {
     try {
-      const client = await this.getClient();
-      await client.set(
+      await this.redis.set(
         this.key(`event:${eventId}`),
         JSON.stringify(state),
-        { ex: EVENT_TTL_SECONDS }
+        "EX",
+        EVENT_TTL_SECONDS,
       );
     } catch (error) {
       incrementCounter(COUNTER_NAMES.STATE_STORE_ERROR_TOTAL);
@@ -91,22 +126,25 @@ export class RedisStateStore implements StateStore {
 
   async deleteEventState(eventId: string): Promise<void> {
     try {
-      const client = await this.getClient();
-      await client.del(this.key(`event:${eventId}`));
+      await this.redis.del(this.key(`event:${eventId}`));
     } catch (error) {
       incrementCounter(COUNTER_NAMES.STATE_STORE_ERROR_TOTAL);
       logError("[RedisStore] deleteEventState failed", { eventId, error });
     }
   }
 
+  // ── Publish Lock ──────────────────────────────────────────────────────
+
   async acquirePublishLock(eventId: string, ttlMs: number): Promise<boolean> {
     try {
-      const client = await this.getClient();
       const key = this.key(`lock:publish:${eventId}`);
-      const result = await client.set(key, Date.now().toString(), {
-        nx: true,
-        ex: Math.ceil(ttlMs / 1000),
-      });
+      const result = await this.redis.set(
+        key,
+        Date.now().toString(),
+        "PX",
+        ttlMs,
+        "NX",
+      );
       return result === "OK";
     } catch (error) {
       incrementCounter(COUNTER_NAMES.STATE_STORE_ERROR_TOTAL);
@@ -117,8 +155,7 @@ export class RedisStateStore implements StateStore {
 
   async releasePublishLock(eventId: string): Promise<void> {
     try {
-      const client = await this.getClient();
-      await client.del(this.key(`lock:publish:${eventId}`));
+      await this.redis.del(this.key(`lock:publish:${eventId}`));
     } catch (error) {
       incrementCounter(COUNTER_NAMES.STATE_STORE_ERROR_TOTAL);
       logError("[RedisStore] releasePublishLock failed", { eventId, error });
@@ -127,8 +164,7 @@ export class RedisStateStore implements StateStore {
 
   async isPublished(eventId: string): Promise<{ published: boolean; tweetId?: string }> {
     try {
-      const client = await this.getClient();
-      const data = await client.get(this.key(`published:${eventId}`));
+      const data = await this.redis.get(this.key(`published:${eventId}`));
       if (data) return { published: true, tweetId: data };
       return { published: false };
     } catch (error) {
@@ -140,11 +176,11 @@ export class RedisStateStore implements StateStore {
 
   async markPublished(eventId: string, tweetId: string, ttlMs: number): Promise<void> {
     try {
-      const client = await this.getClient();
-      await client.set(
+      await this.redis.set(
         this.key(`published:${eventId}`),
         tweetId,
-        { ex: Math.ceil(ttlMs / 1000) }
+        "EX",
+        Math.ceil(ttlMs / 1000),
       );
       logInfo("[RedisStore] Marked published", { eventId, tweetId });
     } catch (error) {
@@ -153,11 +189,11 @@ export class RedisStateStore implements StateStore {
     }
   }
 
+  // ── Budget ────────────────────────────────────────────────────────────
+
   async getBudgetUsage(windowStartMs: number): Promise<number> {
     try {
-      const client = await this.getClient();
-      const key = this.key(`budget:${windowStartMs}`);
-      const data = await client.get(key);
+      const data = await this.redis.get(this.key(`budget:${windowStartMs}`));
       return data ? parseInt(data, 10) : 0;
     } catch (error) {
       incrementCounter(COUNTER_NAMES.STATE_STORE_ERROR_TOTAL);
@@ -168,12 +204,11 @@ export class RedisStateStore implements StateStore {
 
   async incrementBudgetUsage(weight: number, ttlMs: number): Promise<void> {
     try {
-      const client = await this.getClient();
       const windowStart = Math.floor(Date.now() / ttlMs) * ttlMs;
       const key = this.key(`budget:${windowStart}`);
-      const newValue = await client.incrby(key, weight);
+      const newValue = await this.redis.incrby(key, weight);
       if (newValue === weight) {
-        await client.expire(key, Math.ceil(ttlMs / 1000) + 60);
+        await this.redis.expire(key, Math.ceil(ttlMs / 1000) + 60);
       }
     } catch (error) {
       incrementCounter(COUNTER_NAMES.STATE_STORE_ERROR_TOTAL);
@@ -182,13 +217,14 @@ export class RedisStateStore implements StateStore {
   }
 
   async resetBudget(): Promise<void> {
-    logInfo("[RedisStore] Budget reset (no-op for Redis)");
+    logInfo("[RedisStore] Budget reset (no-op for Redis, TTL handles expiry)");
   }
+
+  // ── Cursor ────────────────────────────────────────────────────────────
 
   async getCursor(): Promise<CursorState | null> {
     try {
-      const client = await this.getClient();
-      const data = await client.get(this.key("cursor"));
+      const data = await this.redis.get(this.key("cursor"));
       return data ? JSON.parse(data) : null;
     } catch (error) {
       incrementCounter(COUNTER_NAMES.STATE_STORE_ERROR_TOTAL);
@@ -199,11 +235,11 @@ export class RedisStateStore implements StateStore {
 
   async setCursor(cursor: CursorState): Promise<void> {
     try {
-      const client = await this.getClient();
-      await client.set(
+      await this.redis.set(
         this.key("cursor"),
         JSON.stringify(cursor),
-        { ex: 30 * 24 * 60 * 60 }
+        "EX",
+        30 * 24 * 60 * 60,
       );
     } catch (error) {
       incrementCounter(COUNTER_NAMES.STATE_STORE_ERROR_TOTAL);
@@ -211,10 +247,14 @@ export class RedisStateStore implements StateStore {
     }
   }
 
+  // ── Lifecycle ─────────────────────────────────────────────────────────
+
   async ping(): Promise<boolean> {
     try {
-      const client = await this.getClient();
-      const result = await client.ping();
+      if (this.redis.status !== "ready") {
+        await this.redis.connect();
+      }
+      const result = await this.redis.ping();
       return result === "PONG";
     } catch {
       return false;
@@ -222,21 +262,28 @@ export class RedisStateStore implements StateStore {
   }
 
   async close(): Promise<void> {
-    if (this.client) {
-      await this.client.quit();
-      this.client = null;
-      this.connected = false;
+    try {
+      await this.redis.quit();
       logInfo("[RedisStore] Connection closed");
+    } catch (error) {
+      logWarn("[RedisStore] Error closing connection", { error });
     }
   }
 }
 
-// Singleton instance
 let instance: RedisStateStore | null = null;
 
-export function getRedisStore(): RedisStateStore {
+export function getRedisStore(url?: string): RedisStateStore {
   if (!instance) {
-    instance = new RedisStateStore();
+    const redisUrl = url ?? process.env.KV_URL ?? process.env.REDIS_URL;
+    if (!redisUrl) {
+      throw new Error("KV_URL (or REDIS_URL) not configured");
+    }
+    instance = new RedisStateStore(redisUrl);
   }
   return instance;
+}
+
+export function resetRedisInstance(): void {
+  instance = null;
 }

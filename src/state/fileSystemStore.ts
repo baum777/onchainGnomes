@@ -12,7 +12,9 @@ import { logInfo, logError } from "../ops/logger.js";
 import { incrementCounter } from "../observability/metrics.js";
 import { COUNTER_NAMES } from "../observability/metricTypes.js";
 
-const DEFAULT_DATA_DIR = join(process.cwd(), "data");
+import { DATA_DIR } from "../config/dataDir.js";
+
+const DEFAULT_DATA_DIR = DATA_DIR;
 
 function ensureDir(dir: string): void {
   if (!existsSync(dir)) {
@@ -44,9 +46,54 @@ export class FileSystemStateStore implements StateStore {
   private readonly eventCache = new Map<string, EventTracking>();
   private readonly publishedCache = new Map<string, string>();
   private budgetCache: { used: number; windowStart: number } | null = null;
+  private readonly kvCache = new Map<string, { value: string; expiresAt?: number }>();
 
   constructor(dataDir?: string) {
     this.dataDir = dataDir ?? DEFAULT_DATA_DIR;
+  }
+
+  // ── Simple KV primitives (in-memory with TTL for filesystem mode) ─────
+
+  async get(key: string): Promise<string | null> {
+    const entry = this.kvCache.get(key);
+    if (!entry) return null;
+    if (entry.expiresAt && entry.expiresAt <= Date.now()) {
+      this.kvCache.delete(key);
+      return null;
+    }
+    return entry.value;
+  }
+
+  async set(key: string, value: string, ttl?: number): Promise<void> {
+    const expiresAt = ttl ? Date.now() + ttl * 1000 : undefined;
+    this.kvCache.set(key, { value, expiresAt });
+  }
+
+  async exists(key: string): Promise<boolean> {
+    const val = await this.get(key);
+    return val !== null;
+  }
+
+  async del(key: string): Promise<void> {
+    this.kvCache.delete(key);
+  }
+
+  async incr(key: string): Promise<number> {
+    const current = await this.get(key);
+    const next = (current ? parseInt(current, 10) : 0) + 1;
+    const entry = this.kvCache.get(key);
+    await this.set(key, String(next));
+    if (entry?.expiresAt) {
+      this.kvCache.set(key, { value: String(next), expiresAt: entry.expiresAt });
+    }
+    return next;
+  }
+
+  async expire(key: string, seconds: number): Promise<void> {
+    const entry = this.kvCache.get(key);
+    if (entry) {
+      entry.expiresAt = Date.now() + seconds * 1000;
+    }
   }
 
   private get eventStateFile(): string {

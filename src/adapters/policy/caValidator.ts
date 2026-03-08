@@ -20,13 +20,14 @@ const AMBIGUOUS_BASE58_CHARS = /[0OIl]/;
 
 /** Test patterns to reject */
 const TEST_PATTERNS = [
-  /1234/,
-  /abcd/i,
-  /test/i,
-  /fake/i,
-  /dummy/i,
+  /123456789/,
+  /abcdefghi/i,
+  /testtest/i,
+  /fakefake/i,
+  /dummyaddress/i,
   /placeholder/i,
-  /example/i,
+  /exampleaddress/i,
+  /deadbeef/i,
 ];
 
 export interface ValidateCAOptions {

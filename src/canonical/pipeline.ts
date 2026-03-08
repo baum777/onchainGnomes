@@ -25,6 +25,7 @@ import { selectPattern } from "../roast/patternEngine.js";
 import { formatDecision } from "../roast/formatDecision.js";
 import { detectCARequest, detectOwnTokenSentiment } from "../intent/detectIntent.js";
 import { buildCAResponse, buildOwnTokenSentimentResponse } from "./specialResponseBuilder.js";
+import { getStateStore } from "../state/storeFactory.js";
 
 export interface PipelineDeps {
   llm: LLMClient;
@@ -283,6 +284,14 @@ export async function handleEvent(
     response_mode: format.format,
   });
   persistAuditRecord(audit);
+
+  try {
+    const store = getStateStore();
+    await store.set(`event:${event.event_id}:seen`, "1", 86400);
+    await store.set(`event:${event.event_id}:processed`, "1", 86400);
+  } catch {
+    // KV state tracking is best-effort; never block publish
+  }
 
   return {
     action: "publish",

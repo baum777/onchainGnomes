@@ -16,7 +16,9 @@ import { logError } from "../ops/logger.js";
 import { incrementCounter, setGauge } from "../observability/metrics.js";
 import { COUNTER_NAMES, GAUGE_NAMES } from "../observability/metricTypes.js";
 
-const AUDIT_DIR = join(process.cwd(), "data");
+import { DATA_DIR } from "../config/dataDir.js";
+
+const AUDIT_DIR = DATA_DIR;
 const AUDIT_FILE = join(AUDIT_DIR, "audit_log.jsonl");
 
 // Buffer configuration

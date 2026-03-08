@@ -38,6 +38,8 @@ export const launchEnvSchema = z.object({
     .string()
     .optional()
     .transform((v) => v === "true" || v === "1"),
+  SOLANA_RPC_PRIMARY_URL: z.string().url().optional().default("https://api.mainnet-beta.solana.com"),
+  SOLANA_RPC_FALLBACK_URL: z.string().url().optional(),
 });
 
 export type LaunchEnv = z.infer<typeof launchEnvSchema>;
@@ -69,6 +71,8 @@ export function loadLaunchEnv(): LaunchEnv {
     XAI_API_KEY: process.env.XAI_API_KEY ?? "",
     ALLOWLIST_HANDLES: process.env.ALLOWLIST_HANDLES ?? "",
     DEBUG_ARTIFACTS: process.env.DEBUG_ARTIFACTS,
+    SOLANA_RPC_PRIMARY_URL: process.env.SOLANA_RPC_PRIMARY_URL,
+    SOLANA_RPC_FALLBACK_URL: process.env.SOLANA_RPC_FALLBACK_URL,
   });
 
   if (!result.success) {

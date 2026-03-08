@@ -1,34 +1,38 @@
-/**
- * Duplicate Mention Guard — TTL-based deduplication
- *
- * Prevents double-reply on repeated poll, race conditions, or API jitter.
- */
-
-import { cacheGet, cacheSet } from "./memoryCache.js";
+import type { StateStore } from "../state/stateStore.js";
+import { getStateStore } from "../state/storeFactory.js";
+import { logInfo } from "./logger.js";
 
 export type DedupeDecision =
   | { ok: true }
   | { ok: false; reason: "already_processed" };
 
-const DEFAULT_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
+const DEFAULT_TTL_SECONDS = 86400; // 24h
 
-function keyFor(tweetId: string): string {
-  return `dedupe:mention:${tweetId}`;
+export async function isDuplicate(
+  store: StateStore,
+  eventId: string,
+): Promise<boolean> {
+  const key = `event:${eventId}`;
+  if (await store.exists(key)) {
+    return true;
+  }
+  await store.set(key, "processed", DEFAULT_TTL_SECONDS);
+  return false;
 }
 
-/**
- * Returns ok=false if this mention was already processed (within TTL).
- * Marks the mention as processed when ok=true.
- * Atomic enough for a single worker.
- */
 export async function dedupeCheckAndMark(
   tweetId: string,
-  ttlSeconds: number = DEFAULT_TTL_SECONDS
+  ttlSeconds: number = DEFAULT_TTL_SECONDS,
+  store?: StateStore,
 ): Promise<DedupeDecision> {
-  const key = keyFor(tweetId);
-  const existing = await cacheGet(key);
-  if (existing) return { ok: false, reason: "already_processed" };
+  const kv = store ?? getStateStore();
+  const key = `dedupe:mention:${tweetId}`;
 
-  await cacheSet(key, "1", ttlSeconds);
+  if (await kv.exists(key)) {
+    return { ok: false, reason: "already_processed" };
+  }
+
+  await kv.set(key, "1", ttlSeconds);
+  logInfo("[DEDUPE] Marked new event", { tweetId });
   return { ok: true };
 }

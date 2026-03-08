@@ -16,7 +16,7 @@ import {
 } from "./promptBuilder.js";
 import { validateResponse } from "./validator.js";
 import { attemptRepair } from "../validation/repairLayer.js";
-import { checkLLMBudget, recordLLMCall } from "../safety/budgetGate.js";
+import { checkLLMBudget, recordLLMCall } from "../state/sharedBudgetGate.js";
 
 interface GenerateResult {
   reply_text: string;
@@ -43,7 +43,7 @@ async function generate(
   }
   
   // Record the call before making it
-  recordLLMCall(isThread);
+  await recordLLMCall(isThread);
   
   const prompt = buildPrompt(event, mode, thesis, scores, config, promptContext);
   const llmInput = promptToLLMInput(prompt);

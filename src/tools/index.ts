@@ -44,6 +44,15 @@ export type {
   PipelineContext,
 } from "../types/tools.js";
 
+// Tool interfaces
+export { onchainToolInterface } from "./onchainTool.js";
+export { marketToolInterface } from "./marketTool.js";
+export { policyToolInterface } from "./policyTool.js";
+
+// Registry & Orchestrator
+export { toolRegistry } from "./registry.js";
+export { createOrchestrator, createPipelineContext } from "./orchestrator.js";
+
 // Export schemas for runtime validation
 export {
   EvidenceSchema,
@@ -61,3 +70,12 @@ export {
   createErrorResult,
   createSuccessResult,
 } from "../types/tools.js";
+
+// Tool interfaces
+export { onchainToolInterface } from "./onchainTool.js";
+export { marketToolInterface } from "./marketTool.js";
+export { policyToolInterface } from "./policyTool.js";
+
+// Registry & Orchestrator
+export { toolRegistry } from "./registry.js";
+export { createOrchestrator, createPipelineContext } from "./orchestrator.js";
