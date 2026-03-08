@@ -1,5 +1,10 @@
-# Render Ignore — Prevent Python detection
+# Render Ignore — Prevent Python/Docker detection
 # This is a Node.js/TypeScript project
+
+# Docker files (legacy)
+Dockerfile*
+docker-compose*
+.dockerignore
 
 # Python files (legacy)
 *.py
@@ -15,8 +20,8 @@ llm-terminal-test-bundle/
 tools/behavior_fingerprint/
 
 # Python config (legacy)
-requirements.txt.legacy
-pyproject.toml.legacy
+requirements*.txt
+pyproject.toml*
 requirements-dev.txt
 
 # Node modules (handled by buildCommand)
