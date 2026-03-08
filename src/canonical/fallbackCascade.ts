@@ -16,6 +16,7 @@ import {
 } from "./promptBuilder.js";
 import { validateResponse } from "./validator.js";
 import { attemptRepair } from "../validation/repairLayer.js";
+import { checkLLMBudget, recordLLMCall } from "../safety/budgetGate.js";
 
 interface GenerateResult {
   reply_text: string;
@@ -31,7 +32,19 @@ async function generate(
   scores: ScoreBundle,
   config: CanonicalConfig,
   promptContext?: PromptBuilderContext,
-): Promise<GenerateResult> {
+): Promise<GenerateResult | null> {
+  // Check budget before making LLM call
+  const isThread = mode === "analyst_meme_lite" || mode === "skeptical_breakdown";
+  const budgetCheck = checkLLMBudget(isThread);
+  
+  if (!budgetCheck.allowed) {
+    console.warn(`[BUDGET_GATE] Blocking LLM call for event ${event.event_id}: ${budgetCheck.skipReason}`);
+    return null;
+  }
+  
+  // Record the call before making it
+  recordLLMCall(isThread);
+  
   const prompt = buildPrompt(event, mode, thesis, scores, config, promptContext);
   const llmInput = promptToLLMInput(prompt);
 
@@ -91,6 +104,20 @@ export async function fallbackCascade(
     config,
     promptContext,
   );
+  
+  // Budget gate blocked the call
+  if (gen1 === null) {
+    return {
+      success: false,
+      reply_text: null,
+      final_mode: currentMode,
+      model_id: config.model_id,
+      prompt_hash: null,
+      validation: null,
+      attempts,
+    };
+  }
+  
   attempts++;
   const val1 = validateResponse(gen1.reply_text, currentMode, cls, config);
   if (val1.ok) {
@@ -137,6 +164,20 @@ export async function fallbackCascade(
       config,
       promptContext,
     );
+    
+    // Budget gate blocked the call
+    if (gen2 === null) {
+      return {
+        success: false,
+        reply_text: null,
+        final_mode: currentMode,
+        model_id: gen1.model_id,
+        prompt_hash: null,
+        validation: null,
+        attempts,
+      };
+    }
+    
     attempts++;
     const val2 = validateResponse(gen2.reply_text, currentMode, cls, config);
     if (val2.ok) {
@@ -195,6 +236,20 @@ export async function fallbackCascade(
     config,
     promptContext,
   );
+  
+  // Budget gate blocked the call
+  if (gen3 === null) {
+    return {
+      success: false,
+      reply_text: null,
+      final_mode: currentMode,
+      model_id: gen1.model_id,
+      prompt_hash: null,
+      validation: null,
+      attempts,
+    };
+  }
+  
   attempts++;
   const val3 = validateResponse(gen3.reply_text, currentMode, cls, config);
   if (val3.ok) {

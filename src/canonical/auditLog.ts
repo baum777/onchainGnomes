@@ -10,16 +10,68 @@ import type {
   ValidationResult,
 } from "./types.js";
 
-import { writeFileSync, readFileSync, existsSync, mkdirSync } from "node:fs";
+import { writeFile, readFile, access, mkdir, appendFile } from "node:fs/promises";
 import { join, dirname } from "node:path";
+import { logError } from "../ops/logger.js";
 
 const AUDIT_DIR = join(process.cwd(), "data");
 const AUDIT_FILE = join(AUDIT_DIR, "audit_log.jsonl");
 
-function ensureDir(): void {
-  if (!existsSync(AUDIT_DIR)) {
-    mkdirSync(AUDIT_DIR, { recursive: true });
+// Buffer configuration
+const FLUSH_INTERVAL_MS = 5000; // Flush every 5 seconds
+const MAX_BUFFER_SIZE = 100; // Or when buffer reaches 100 entries
+
+// In-memory buffer
+const auditBuffer: AuditRecord[] = [];
+let flushTimer: NodeJS.Timeout | null = null;
+let isFlushing = false;
+
+async function ensureDir(): Promise<void> {
+  try {
+    await access(AUDIT_DIR);
+  } catch {
+    await mkdir(AUDIT_DIR, { recursive: true });
   }
+}
+
+async function flushBuffer(): Promise<void> {
+  if (isFlushing || auditBuffer.length === 0) return;
+
+  isFlushing = true;
+  const recordsToFlush = auditBuffer.splice(0, auditBuffer.length);
+
+  try {
+    await ensureDir();
+    const lines = recordsToFlush.map((r) => JSON.stringify(r)).join("\n") + "\n";
+    await appendFile(AUDIT_FILE, lines, "utf-8");
+  } catch (error) {
+    // Put records back in buffer for retry
+    auditBuffer.unshift(...recordsToFlush);
+    logError("[auditLog] Failed to flush audit buffer", {
+      error: error instanceof Error ? error.message : String(error),
+      bufferedCount: recordsToFlush.length,
+    });
+  } finally {
+    isFlushing = false;
+  }
+}
+
+function scheduleFlush(): void {
+  if (flushTimer) return;
+  flushTimer = setTimeout(() => {
+    flushTimer = null;
+    flushBuffer().catch(() => {
+      // Error already logged in flushBuffer
+    });
+  }, FLUSH_INTERVAL_MS);
+}
+
+export async function shutdownAuditLog(): Promise<void> {
+  if (flushTimer) {
+    clearTimeout(flushTimer);
+    flushTimer = null;
+  }
+  await flushBuffer();
 }
 
 export function buildAuditRecord(params: {
@@ -72,20 +124,37 @@ export function buildAuditRecord(params: {
 }
 
 export function persistAuditRecord(record: AuditRecord): void {
-  try {
-    ensureDir();
-    const line = JSON.stringify(record) + "\n";
-    writeFileSync(AUDIT_FILE, line, { flag: "a" });
-  } catch {
-    console.error("[auditLog] Failed to persist audit record for event:", record.event_id);
+  auditBuffer.push(record);
+
+  // Flush immediately if buffer is full
+  if (auditBuffer.length >= MAX_BUFFER_SIZE) {
+    flushBuffer().catch(() => {
+      // Error already logged in flushBuffer
+    });
+  } else {
+    scheduleFlush();
   }
 }
 
-export function readAuditLog(): AuditRecord[] {
-  if (!existsSync(AUDIT_FILE)) return [];
-  const content = readFileSync(AUDIT_FILE, "utf-8");
+export async function readAuditLog(): Promise<AuditRecord[]> {
+  try {
+    await access(AUDIT_FILE);
+  } catch {
+    return [];
+  }
+
+  const content = await readFile(AUDIT_FILE, "utf-8");
   return content
     .split("\n")
     .filter((l) => l.trim())
     .map((l) => JSON.parse(l) as AuditRecord);
 }
+
+// Graceful shutdown handler
+process.on("SIGTERM", async () => {
+  await shutdownAuditLog();
+});
+
+process.on("SIGINT", async () => {
+  await shutdownAuditLog();
+});
