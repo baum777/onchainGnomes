@@ -1,15 +1,72 @@
 {
-  "test_event_1": {
-    "eventId": "test_event_1",
+  "int2_1772946944893_i2vgke": {
     "state": "publish_succeeded",
-    "attempts": 1,
-    "tweetId": "tweet_123",
-    "lastAttemptAt": 1772928023526
+    "eventId": "int2_1772946944893_i2vgke",
+    "attempts": 0,
+    "tweetId": "tweet_int2",
+    "lastAttemptAt": 1772946944897
   },
-  "test_event_2": {
-    "eventId": "test_event_2",
+  "success_1772946944740_kd6vv3": {
     "state": "publish_succeeded",
+    "eventId": "success_1772946944740_kd6vv3",
     "attempts": 1,
+    "lastAttemptAt": 1772946945041,
     "tweetId": "tweet_456"
+  },
+  "fail_1772946945061_98dscs": {
+    "eventId": "fail_1772946945061_98dscs",
+    "attempts": 1,
+    "state": "publish_attempted",
+    "lastAttemptAt": 1772946945084,
+    "error": "Network timeout"
+  },
+  "idem_1772946945114_tmo6sc": {
+    "state": "publish_succeeded",
+    "eventId": "idem_1772946945114_tmo6sc",
+    "attempts": 0,
+    "tweetId": "tweet_idem",
+    "lastAttemptAt": 1772946945138
+  },
+  "dup_1772946945164_2cmm07": {
+    "eventId": "dup_1772946945164_2cmm07",
+    "attempts": 1,
+    "state": "publish_succeeded",
+    "lastAttemptAt": 1772946945230,
+    "tweetId": "tweet_dup"
+  },
+  "persist_1772946945255_tdl64d": {
+    "state": "publish_succeeded",
+    "eventId": "persist_1772946945255_tdl64d",
+    "attempts": 0,
+    "tweetId": "tweet_persist",
+    "lastAttemptAt": 1772946945281
+  },
+  "restart_1772946945322_6wnfvt": {
+    "state": "event_seen",
+    "eventId": "restart_1772946945322_6wnfvt",
+    "attempts": 0
+  },
+  "reload_1772946945323_lbzluy": {
+    "state": "processed_ok",
+    "eventId": "reload_1772946945323_lbzluy",
+    "attempts": 0
+  },
+  "dup_1772946945424_h25u3f": {
+    "state": "publish_succeeded",
+    "eventId": "dup_1772946945424_h25u3f",
+    "attempts": 0,
+    "tweetId": "tweet_existing",
+    "lastAttemptAt": 1772946945487
+  },
+  "retry_done_1772946945426_tbb5p0": {
+    "state": "event_seen",
+    "eventId": "retry_done_1772946945426_tbb5p0",
+    "attempts": 0
+  },
+  "retry_attempted_1772946945540_j1elfd": {
+    "eventId": "retry_attempted_1772946945540_j1elfd",
+    "attempts": 1,
+    "state": "publish_attempted",
+    "lastAttemptAt": 1772946945574
   }
 }
