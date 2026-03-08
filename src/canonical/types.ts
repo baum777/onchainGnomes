@@ -17,6 +17,8 @@ export const IntentClassSchema = z.enum([
   "spam",
   "meme_only",
   "irrelevant",
+  "ca_request",
+  "own_token_sentiment",
 ]);
 export type IntentClass = z.infer<typeof IntentClassSchema>;
 

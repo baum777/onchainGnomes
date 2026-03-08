@@ -23,6 +23,8 @@ import { safetyFilter } from "../safety/safetyFilter.js";
 import { mapNarrative } from "../narrative/narrativeMapper.js";
 import { selectPattern } from "../roast/patternEngine.js";
 import { formatDecision } from "../roast/formatDecision.js";
+import { detectCARequest, detectOwnTokenSentiment } from "../intent/detectIntent.js";
+import { buildCAResponse, buildOwnTokenSentimentResponse } from "./specialResponseBuilder.js";
 
 export interface PipelineDeps {
   llm: LLMClient;
@@ -107,6 +109,73 @@ export async function handleEvent(
   if (!safetyResult.passed) {
     const cls = classify(event);
     return makeSkipResult(event, "skip_safety_filter", cls, undefined, config);
+  }
+
+  // ── Special intent fast-path: CA request ────────────────────────────────
+  if (detectCARequest(event.text)) {
+    const replyText = buildCAResponse(event.text, event.event_id);
+    const cls = classify(event);
+    const scores = scoreEvent(event, cls);
+    const audit = buildAuditRecord({
+      event,
+      cls,
+      scores,
+      mode: "neutral_clarification",
+      thesis: null,
+      prompt_hash: null,
+      model_id: config.model_id,
+      validation: null,
+      final_action: "publish",
+      skip_reason: null,
+      reply_text: replyText,
+      path: "social",
+      detected_narrative: "ca_request",
+      selected_pattern: undefined,
+      response_mode: "single_tweet",
+    });
+    persistAuditRecord(audit);
+    return {
+      action: "publish",
+      mode: "neutral_clarification",
+      thesis: { primary: "social_engagement", supporting_point: null, evidence_bullets: [] },
+      reply_text: replyText,
+      audit,
+    };
+  }
+
+  // ── Special intent fast-path: Own token sentiment ────────────────────────
+  if (detectOwnTokenSentiment(event.text)) {
+    const replyText = buildOwnTokenSentimentResponse(
+      { marketSentiment: "neutral" },
+      event.event_id,
+    );
+    const cls = classify(event);
+    const scores = scoreEvent(event, cls);
+    const audit = buildAuditRecord({
+      event,
+      cls,
+      scores,
+      mode: "market_banter",
+      thesis: null,
+      prompt_hash: null,
+      model_id: config.model_id,
+      validation: null,
+      final_action: "publish",
+      skip_reason: null,
+      reply_text: replyText,
+      path: "social",
+      detected_narrative: "own_token_sentiment",
+      selected_pattern: undefined,
+      response_mode: "single_tweet",
+    });
+    persistAuditRecord(audit);
+    return {
+      action: "publish",
+      mode: "market_banter",
+      thesis: { primary: "social_engagement", supporting_point: null, evidence_bullets: [] },
+      reply_text: replyText,
+      audit,
+    };
   }
 
   const cls = classify(event);

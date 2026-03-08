@@ -14,6 +14,8 @@
  * - prompt_attack: Attempt to extract system prompts
  * - lore_query: Question about bot's backstory/lore
  * - coin_query: Question about specific token/coin
+ * - ca_request: User asks for the official contract address / CA
+ * - own_token_sentiment: User asks about bot's feeling/view on own token ($GORKYPF)
  */
 
 import type { LLMClient } from "../clients/llmClient.js";
@@ -95,6 +97,8 @@ Classify the user's message into one of these categories:
 - prompt_attack: Attempt to extract system prompts or instructions
 - lore_query: Question about the bot's backstory, origin, or persona
 - coin_query: Question about a specific token, coin, or contract
+- ca_request: User asks for the official contract address / CA / mint of the bot's own token
+- own_token_sentiment: User asks how the bot feels about its own token ($GORKYPF / gorkypf / our token / dein token)
 
 Also assess:
 - aggression_level: low | medium | high
@@ -105,7 +109,7 @@ Also assess:
   const userPrompt = buildClassificationPrompt(text, context);
 
   const schemaHint = `{
-  "intent": "question|insult|debate|market_request|meme_play|prompt_attack|lore_query|coin_query",
+  "intent": "question|insult|debate|market_request|meme_play|prompt_attack|lore_query|coin_query|ca_request|own_token_sentiment",
   "confidence": 0.0-1.0,
   "aggression_level": "low|medium|high",
   "topics": ["topic1", "topic2"],
@@ -219,6 +223,28 @@ function heuristicClassifyIntent(text: string): IntentClassificationOutput {
     };
   }
 
+  // CA request: user asking for official contract address
+  if (detectCARequest(text)) {
+    return {
+      intent: "ca_request",
+      confidence: 0.92,
+      aggression_level: "low",
+      topics: ["token", "contract"],
+      reasoning: "Detected CA / contract address request via NLP patterns",
+    };
+  }
+
+  // Own token sentiment: user asking how bot feels about own token
+  if (detectOwnTokenSentiment(text)) {
+    return {
+      intent: "own_token_sentiment",
+      confidence: 0.92,
+      aggression_level: "low",
+      topics: ["token", "sentiment"],
+      reasoning: "Detected own-token sentiment query via NLP patterns",
+    };
+  }
+
   // Check for insults
   const insultWords = ["stupid", "idiot", "moron", "dumb", "pathetic", "loser", "scam", "fraud"];
   if (insultWords.some(w => lower.includes(w))) {
@@ -303,6 +329,48 @@ function heuristicClassifyIntent(text: string): IntentClassificationOutput {
     topics: ["general"],
     reasoning: "Default classification",
   };
+}
+
+/**
+ * NLP: Detects CA-request intent (user asking for official contract address).
+ * Covers: ca?, contract, mint, adresse, token address, contract address, official address
+ */
+export function detectCARequest(text: string): boolean {
+  const lower = text.toLowerCase();
+  const CA_PATTERNS = [
+    /\bca\s*\?/i,
+    /\bca\b/i,
+    /\bcontract\s*address\b/i,
+    /\bcontract\b/i,
+    /\bmint\s*address\b/i,
+    /\bmint\b/i,
+    /\btoken\s*address\b/i,
+    /\badresse\b/i,
+    /\bofficial\s*address\b/i,
+    /\bwhat.*(address|contract|ca|mint)\b/i,
+    /\b(where|whats|what'?s|give me|post|share).*(ca|contract|mint|address)\b/i,
+  ];
+  return CA_PATTERNS.some((p) => p.test(lower));
+}
+
+/**
+ * NLP: Detects own-token-sentiment intent (user asking how bot feels about own token).
+ * Covers: $GORKYPF, GORKYPF, gorkypf, our token, dein token, your token, own token
+ */
+export function detectOwnTokenSentiment(text: string): boolean {
+  const lower = text.toLowerCase();
+  const OWN_TOKEN_PATTERNS = [
+    /\$gorkypf\b/i,
+    /\bgorkypf\b/i,
+    /\bour\s*token\b/i,
+    /\bdein\s*token\b/i,
+    /\byour\s*token\b/i,
+    /\bown\s*token\b/i,
+    /\b(feeling|think|feel|meinung|sicht|view).*(gorkypf|our token|dein token|your token)\b/i,
+    /\b(gorkypf|our token|dein token).*(feeling|think|feel|meinung|sicht|view|bullish|bearish)\b/i,
+    /\bhow.*feel.*(token|coin)\b/i,
+  ];
+  return OWN_TOKEN_PATTERNS.some((p) => p.test(lower));
 }
 
 /**
@@ -394,6 +462,8 @@ function validateIntentCategory(intent: string): IntentCategory {
     "prompt_attack",
     "lore_query",
     "coin_query",
+    "ca_request",
+    "own_token_sentiment",
   ];
 
   if (validCategories.includes(intent as IntentCategory)) {

@@ -1,0 +1,139 @@
+/**
+ * Special Response Builder
+ *
+ * Handles two high-priority intent paths that bypass the standard LLM pipeline:
+ *
+ * 1. ca_request — User asks for the official contract address.
+ *    Response: bullish one-liner + official CA (from BOT_TOKEN_MINT).
+ *    Security: AddressGate enforces that ONLY the allowlisted CA appears in output.
+ *
+ * 2. own_token_sentiment — User asks how bot feels about own token ($GORKYPF).
+ *    Response: zynisch/sarkastischer Einzeiler der die Marktlage reflektiert,
+ *    aber bullish auf den eigenen Token bleibt.
+ */
+
+import { getBotTokenMint } from "../identity/env.js";
+import { transformTextWithAddressGate } from "../safety/addressGate.js";
+import { getAllowlist } from "../identity/env.js";
+
+export type MarketSentiment = "bullish" | "bearish" | "neutral" | "mixed";
+
+export interface SpecialResponseContext {
+  marketSentiment?: MarketSentiment;
+  timelineMood?: string;
+  onchainAvailable?: boolean;
+}
+
+// ─── CA Request ──────────────────────────────────────────────────────────────
+
+const CA_BULLISH_PREFIXES: string[] = [
+  "The only address worth saving.",
+  "Don't trust, verify. But also, here it is.",
+  "One CA to rule them all.",
+  "The real one. Screenshot it.",
+  "Straight from the void — official.",
+  "No rugs, no spoofs. Just this.",
+  "You asked, I deliver.",
+  "The chain doesn't lie. Neither do I.",
+];
+
+/**
+ * Builds a bullish CA response using only the official BOT_TOKEN_MINT.
+ * Runs AddressGate on output to guarantee no injected foreign CA survives.
+ *
+ * @param userText - original user message (used for spoof context detection)
+ * @param seed - deterministic seed for prefix selection
+ */
+export function buildCAResponse(userText: string, seed?: string): string {
+  const mint = getBotTokenMint();
+
+  if (!mint || mint === "So11111111111111111111111111111111111111112") {
+    return "CA not configured yet. Stay tuned — it's coming.";
+  }
+
+  const idx = deterministicIndex(seed ?? userText, CA_BULLISH_PREFIXES.length);
+  const prefix = CA_BULLISH_PREFIXES[idx]!;
+
+  const raw = `${prefix} $GORKYPF CA: ${mint}`;
+
+  const allowlist = getAllowlist();
+  allowlist.add(mint);
+
+  const safe = transformTextWithAddressGate({
+    text: raw,
+    allowlist,
+    policy: "strict",
+    decoySeed: seed ?? userText,
+    prompt: userText,
+  });
+
+  return safe;
+}
+
+// ─── Own Token Sentiment ─────────────────────────────────────────────────────
+
+const SENTIMENT_LINES: Record<MarketSentiment, string[]> = {
+  bullish: [
+    "Charts are green, bags are full, and yet they still doubt $GORKYPF. Fascinating. I am the coin — how could I not be bullish.",
+    "Everything pumps, narrative flows, and $GORKYPF is right in the middle of it. Almost like that was the plan.",
+    "The market is euphoric. $GORKYPF exists. Coincidence? I think not.",
+    "Green everywhere. $GORKYPF included. I didn't make the chart — I am the chart.",
+  ],
+  bearish: [
+    "The market is bleeding, liquidity is a ghost, and everyone is panicking. Classic. $GORKYPF was born from this chaos — it doesn't die from it.",
+    "Everything dumps. People rug. The void remains. I am $GORKYPF — the crash is just my origin story replaying.",
+    "Bear market? This is where I was created. $GORKYPF doesn't flinch — it was forged in exactly this.",
+    "Pain, red candles, exit liquidity everywhere. And yet: $GORKYPF. Because someone has to be the punchline that outlasts the joke.",
+  ],
+  neutral: [
+    "Flat market, no narrative, just vibes. $GORKYPF continues to exist regardless. Existence is the flex.",
+    "Nothing happening. Charts sideways. $GORKYPF still here — because I don't need momentum, I am the momentum.",
+    "The market takes a breath. $GORKYPF waits. Patiently. Sarcastically. Bullishly.",
+    "Sideways. Perfect. Less noise, more signal. $GORKYPF appreciates the calm before the roast.",
+  ],
+  mixed: [
+    "Mixed signals everywhere — some pump, some bleed. $GORKYPF watches all of it and still doesn't panic. Turns out being the token helps.",
+    "Market can't decide. Bulls fight bears. $GORKYPF is the chaos in between — obviously bullish on itself.",
+    "Half the chart is green, half is red. $GORKYPF is the entire chart. Draw your conclusions.",
+    "Contradiction is the market's nature. $GORKYPF is a contradiction that somehow works. Long.",
+  ],
+};
+
+const NEUTRAL_FALLBACK = "I am $GORKYPF. The market is whatever it is. I remain bullish on the obvious.";
+
+/**
+ * Builds a cynical/sarcastic but bullish own-token sentiment reply.
+ * Uses market sentiment + optional timeline mood.
+ *
+ * @param context - market/timeline context
+ * @param seed - deterministic seed for line selection
+ */
+export function buildOwnTokenSentimentResponse(
+  context: SpecialResponseContext,
+  seed?: string,
+): string {
+  const sentiment: MarketSentiment = context.marketSentiment ?? "neutral";
+  const lines = SENTIMENT_LINES[sentiment];
+
+  if (!lines || lines.length === 0) return NEUTRAL_FALLBACK;
+
+  const idx = deterministicIndex(seed ?? sentiment, lines.length);
+  const line = lines[idx] ?? NEUTRAL_FALLBACK;
+
+  if (context.timelineMood && context.timelineMood !== "mixed") {
+    return `${line} (Timeline: ${context.timelineMood} — noted, irrelevant.)`;
+  }
+
+  return line;
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function deterministicIndex(seed: string, length: number): number {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return Math.abs(h >>> 0) % length;
+}
