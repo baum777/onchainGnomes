@@ -1,0 +1,48 @@
+# Render Ignore — Prevent Python detection
+# This is a Node.js/TypeScript project
+
+# Python files (legacy)
+*.py
+*.pyc
+__pycache__/
+.pytest_cache/
+.venv/
+venv/
+
+# Legacy Python project
+legacy/python/
+llm-terminal-test-bundle/
+tools/behavior_fingerprint/
+
+# Python config (legacy)
+requirements.txt.legacy
+pyproject.toml.legacy
+requirements-dev.txt
+
+# Node modules (handled by buildCommand)
+node_modules/
+
+# Build output (generated)
+dist/
+
+# Data files (runtime)
+data/
+state/
+
+# Logs
+logs/
+*.log
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
