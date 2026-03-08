@@ -132,6 +132,8 @@ export const IntentSchema = z.enum([
   "prompt_attack",
   "lore_query",
   "coin_query",
+  "ca_request",
+  "own_token_sentiment",
 ]);
 export type Intent = z.infer<typeof IntentSchema>;
 
