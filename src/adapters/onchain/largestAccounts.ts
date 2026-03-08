@@ -59,25 +59,23 @@ export async function getLargestAccounts(
 
     for (let i = 0; i < accountPubkeys.length; i++) {
       const info = accountsData[i];
-      const largest = largestAccounts[i];
+      const largest = largestAccounts[i]!;
+      const pubkey = accountPubkeys[i]!;
       
       if (info && info.data.length === 165) {
         try {
-          // Use the decimals from the largest account result
           const parsed = parseTokenAccountData(
-            accountPubkeys[i],
+            pubkey,
             info.data,
             largest.decimals
           );
           accounts.push(parsed);
         } catch (e) {
-          // Skip if parsing fails for some reason
           continue;
         }
       } else {
-        // Fallback if account info is missing or invalid (unlikely for largest accounts)
         accounts.push({
-          address: accountPubkeys[i].toBase58(),
+          address: pubkey.toBase58(),
           mint: mintAddress,
           owner: "unknown",
           amount: largest.amount,

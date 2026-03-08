@@ -56,7 +56,7 @@ export class DexScreenerAdapter implements BaseAdapter {
     try {
       const url = `${this.config.baseUrl}/${mint}`;
       const response = await fetch(url, {
-        signal: AbortSignal.timeout(this.config.timeoutMs),
+        signal: AbortSignal.timeout(this.config.timeoutMs ?? 10000),
       });
 
       if (!response.ok) {
@@ -121,6 +121,26 @@ export class DexScreenerAdapter implements BaseAdapter {
         error instanceof Error ? error.message : String(error),
         latencyMs
       ) as MarketResult<MarketQuote>;
+    }
+  }
+
+  async healthCheck(): Promise<{ healthy: boolean; latencyMs: number; message?: string }> {
+    const start = Date.now();
+    try {
+      const response = await fetch(`${this.config.baseUrl}/So11111111111111111111111111111111111111112`, {
+        signal: AbortSignal.timeout(5000),
+      });
+      return {
+        healthy: response.ok,
+        latencyMs: Date.now() - start,
+        message: response.ok ? "DexScreener reachable" : `HTTP ${response.status}`,
+      };
+    } catch (error) {
+      return {
+        healthy: false,
+        latencyMs: Date.now() - start,
+        message: error instanceof Error ? error.message : "Unknown error",
+      };
     }
   }
 

@@ -28,7 +28,7 @@ export function parseMintData(mint: PublicKey, data: Buffer): TokenMintInfo {
     : new PublicKey(data.slice(4, 36)).toBase58();
 
   const supply = data.readBigUInt64LE(36).toString();
-  const decimals = data[44];
+  const decimals = data[44]!;
   const isInitialized = data[45] !== 0;
 
   const freezeAuthorityOption = data.readUInt32LE(46);

@@ -56,7 +56,7 @@ export const marketToolInterface = {
     }
 
     if (results.length === 1) {
-      return results[0];
+      return results[0]!;
     }
 
     return mergeMarketQuotes(results, {

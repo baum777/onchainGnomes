@@ -21,7 +21,7 @@ export function mergeMarketQuotes(
   const latencyMs = Math.max(...results.map(r => r.latencyMs));
 
   if (successfulResults.length === 0) {
-    return results[0];
+    return results[0]!;
   }
 
   if (options?.requireAllSources && successfulResults.length < results.length) {
@@ -42,7 +42,7 @@ export function mergeMarketQuotes(
   }
 
   if (successfulResults.length === 1) {
-    return successfulResults[0];
+    return successfulResults[0]!;
   }
 
   const quotes = successfulResults.map(r => r.data!);
@@ -67,18 +67,18 @@ export function mergeMarketQuotes(
   }
 
   const mergedQuote: MarketQuote = {
-    mint: quotes[0].mint,
+    mint: quotes[0]!.mint,
     priceUsd: avgPriceUsd,
     liquidityUsd: averageMetric(quotes.map(q => q.liquidityUsd)),
     volume24hUsd: averageMetric(quotes.map(q => q.volume24hUsd)),
     marketCap: averageMetric(quotes.map(q => q.marketCap)),
     priceChange24h: averageMetric(quotes.map(q => q.priceChange24h)),
-    pairAddress: quotes[0].pairAddress,
-    dexId: quotes[0].dexId,
+    pairAddress: quotes[0]!.pairAddress,
+    dexId: quotes[0]!.dexId,
     timestamp: new Date().toISOString(),
   };
 
-  const firstEvidence = successfulResults[0].evidence!;
+  const firstEvidence = successfulResults[0]!.evidence!;
   const combinedEvidence = {
     ...firstEvidence,
     notes: `Merged from ${successfulResults.length} sources. ${discrepancyDetails}`.trim(),
