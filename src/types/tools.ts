@@ -215,6 +215,44 @@ export interface ToolRegistry {
 }
 
 // =============================================================================
+// Tool Orchestrator Types
+// =============================================================================
+
+export type ToolExecutionPhase = "pre-validation" | "validation" | "fetch" | "post-processing";
+
+export interface ToolCall {
+  tool: ToolName;
+  phase: ToolExecutionPhase;
+  input: unknown;
+  priority: number;
+}
+
+export interface OrchestratorConfig {
+  enableParallelExecution: boolean;
+  maxConcurrentCalls: number;
+  defaultTimeoutMs: number;
+  enableCaching: boolean;
+  cacheTtlMs: number;
+}
+
+export interface ToolOrchestrator {
+  execute<T>(call: ToolCall): Promise<ToolResult<T>>;
+  executeSequential<T>(calls: ToolCall[]): Promise<ToolResult<T>[]>;
+  executeParallel<T>(calls: ToolCall[]): Promise<ToolResult<T>[]>;
+  getConfig(): OrchestratorConfig;
+  setConfig(config: Partial<OrchestratorConfig>): void;
+}
+
+export interface PipelineContext {
+  requestId: string;
+  timestamp: string;
+  validatedAddress: string | null;
+  toolResults: Map<ToolName, ToolResult<unknown>>;
+  evidence: Evidence[];
+  errors: string[];
+}
+
+// =============================================================================
 // Helper Functions
 // =============================================================================
 

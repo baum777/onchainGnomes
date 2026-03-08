@@ -20,7 +20,7 @@ import { getHardMax } from "../../src/canonical/modeBudgets.js";
 import { stableHash } from "../../src/utils/hash.js";
 import { assertPublicTextSafe } from "../../src/boundary/publicTextGuard.js";
 import * as auditLog from "../../src/canonical/auditLog.js";
-import { kvClear } from "../../src/ops/kvLite.js";
+import { cacheClear } from "../../src/ops/memoryCache.js";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -71,7 +71,7 @@ describe("pipeline postability integration", () => {
   let persistSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(async () => {
-    await kvClear();
+    await cacheClear();
     if (fs.existsSync(AUDIT_FILE)) fs.unlinkSync(AUDIT_FILE);
     if (fs.existsSync(DATA_FILE)) fs.unlinkSync(DATA_FILE);
 

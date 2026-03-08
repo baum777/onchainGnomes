@@ -33,7 +33,6 @@ export const launchEnvSchema = z.object({
   LLM_PROVIDER: LLMProviderSchema.default("xai"),
   LLM_API_KEY: z.string().optional().default(""),
   XAI_API_KEY: z.string().optional().default(""),
-  KV_URL: z.string().url().optional(),
   ALLOWLIST_HANDLES: allowlistSchema,
   DEBUG_ARTIFACTS: z
     .string()
@@ -68,7 +67,6 @@ export function loadLaunchEnv(): LaunchEnv {
     LLM_PROVIDER: (process.env.LLM_PROVIDER ?? "xai").toLowerCase(),
     LLM_API_KEY: process.env.LLM_API_KEY ?? process.env.XAI_API_KEY ?? "",
     XAI_API_KEY: process.env.XAI_API_KEY ?? "",
-    KV_URL: process.env.KV_URL ?? process.env.DATABASE_URL,
     ALLOWLIST_HANDLES: process.env.ALLOWLIST_HANDLES ?? "",
     DEBUG_ARTIFACTS: process.env.DEBUG_ARTIFACTS,
   });

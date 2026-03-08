@@ -2,10 +2,9 @@
  * Duplicate Mention Guard — TTL-based deduplication
  *
  * Prevents double-reply on repeated poll, race conditions, or API jitter.
- * For multi-worker: replace kvLite with Redis for cross-instance dedupe.
  */
 
-import { kvGet, kvSet } from "./kvLite.js";
+import { cacheGet, cacheSet } from "./memoryCache.js";
 
 export type DedupeDecision =
   | { ok: true }
@@ -27,9 +26,9 @@ export async function dedupeCheckAndMark(
   ttlSeconds: number = DEFAULT_TTL_SECONDS
 ): Promise<DedupeDecision> {
   const key = keyFor(tweetId);
-  const existing = await kvGet(key);
+  const existing = await cacheGet(key);
   if (existing) return { ok: false, reason: "already_processed" };
 
-  await kvSet(key, "1", ttlSeconds);
+  await cacheSet(key, "1", ttlSeconds);
   return { ok: true };
 }

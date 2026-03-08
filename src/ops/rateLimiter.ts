@@ -5,7 +5,7 @@
  * Consume in all modes (incl. dry_run) for realistic behavior.
  */
 
-import { kvGet, kvSet } from "./kvLite.js";
+import { cacheGet, cacheSet } from "./memoryCache.js";
 
 export type RateLimitDecision =
   | { ok: true }
@@ -25,7 +25,7 @@ function stateKey(scope: string, id: string): string {
 }
 
 async function loadState(key: string, capacity: number): Promise<BucketState> {
-  const raw = await kvGet(key);
+  const raw = await cacheGet(key);
   if (!raw)
     return { tokens: capacity, lastRefillMs: now() };
   try {
@@ -47,7 +47,7 @@ async function saveState(
   s: BucketState,
   ttlSeconds = 24 * 60 * 60
 ): Promise<void> {
-  await kvSet(key, JSON.stringify(s), ttlSeconds);
+  await cacheSet(key, JSON.stringify(s), ttlSeconds);
 }
 
 /**

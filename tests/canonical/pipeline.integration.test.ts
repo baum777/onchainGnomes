@@ -3,7 +3,7 @@ import { handleEvent, type PipelineDeps } from "../../src/canonical/pipeline.js"
 import { DEFAULT_CANONICAL_CONFIG } from "../../src/canonical/types.js";
 import type { CanonicalEvent } from "../../src/canonical/types.js";
 import type { LLMClient } from "../../src/clients/llmClient.js";
-import { kvClear } from "../../src/ops/kvLite.js";
+import { cacheClear } from "../../src/ops/memoryCache.js";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -43,7 +43,7 @@ function makeDeps(reply?: string): PipelineDeps {
 
 describe("pipeline integration", () => {
   beforeEach(async () => {
-    await kvClear();
+    await cacheClear();
     if (fs.existsSync(AUDIT_FILE)) fs.unlinkSync(AUDIT_FILE);
   });
   afterEach(() => {
