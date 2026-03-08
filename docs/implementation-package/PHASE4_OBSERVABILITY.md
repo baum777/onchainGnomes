@@ -41,7 +41,7 @@ Phase 4 adds an observability layer on top of the existing Gorky pipeline (Phase
 - **Gauges**: current value (audit_buffer_size, current_poll_interval_ms, llm_budget_used, recent_failure_streak, last_cursor_age_seconds).
 - **Histograms**: samples for duration (fetch_duration_ms, publish_duration_ms, mention_processing_duration_ms). state_store_operation_duration_ms and llm_generation_duration_ms are defined; callers can record when those operations occur.
 
-All names live in `metricTypes.ts`. No external metrics system is required; the layer is in-process and testable.
+All names live in `metricTypes.ts`. No external metrics system is required; the layer is in-process and testable. In multi-worker deployments, metrics are per-process; aggregate at scrape/ingestion time if needed. The histograms `state_store_operation_duration_ms` and `llm_generation_duration_ms` have no built-in emission sites; callers should observe them when performing those operations.
 
 ## 5. Health Design
 

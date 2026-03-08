@@ -51,4 +51,19 @@ describe("observability health", () => {
     const alive = report.checks.find((c) => c.name === "process_alive");
     expect(alive?.status).toBe("healthy");
   });
+
+  it("returns degraded for audit and cursor when health deps not set", async () => {
+    setHealthDeps(null);
+    const report = await runHealthChecks();
+    const audit = report.checks.find((c) => c.name === "audit_logger_healthy");
+    const cursor = report.checks.find((c) => c.name === "cursor_state_loadable");
+    expect(audit?.status).toBe("degraded");
+    expect(audit?.message).toContain("not set");
+    expect(cursor?.status).toBe("degraded");
+    expect(cursor?.message).toContain("not set");
+    setHealthDeps({
+      getAuditBufferSize: () => 0,
+      loadCursor: () => Promise.resolve({ since_id: null, last_fetch_at: "", fetched_count: 0, version: 1 }),
+    });
+  });
 });

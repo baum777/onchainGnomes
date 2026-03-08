@@ -21,7 +21,6 @@ export interface HealthReport {
   timestamp: string;
 }
 
-const RECENT_POLL_SUCCESS_GAUGE = "recent_poll_success_timestamp_ms";
 let lastPollSuccessMs: number = 0;
 const STALE_POLL_MS = 5 * 60 * 1000; // 5 minutes
 const AUDIT_BUFFER_DEGRADED = 80;
@@ -134,7 +133,7 @@ export type HealthDeps = {
 
 let healthDeps: HealthDeps | null = null;
 
-export function setHealthDeps(deps: HealthDeps): void {
+export function setHealthDeps(deps: HealthDeps | null): void {
   healthDeps = deps;
 }
 
