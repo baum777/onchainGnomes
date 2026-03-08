@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 import { TwitterApi } from "twitter-api-v2";
 import { createXClient } from "../clients/xClient.js";
 import { createXReadClient } from "../clients/xReadClient.js";
+import { checkXConfigHealth } from "../clients/xClientConfig.js";
 import { createXAILLMClient } from "../clients/llmClient.xai.js";
 import {
   mapMentionsResponse,
@@ -377,15 +378,40 @@ export async function runWorkerLoop(): Promise<void> {
   const dryRun = process.env.LAUNCH_MODE ? isPostingDisabled() : DRY_RUN;
   const xClient = createXClient(dryRun);
 
+  const health = checkXConfigHealth();
+  console.log(`[AUTH] Credential presence: ${JSON.stringify({ present: health.present, missing: health.missing })}`);
+  if (health.warnings.length > 0) {
+    console.warn(`[AUTH] Credential warnings: ${health.warnings.join("; ")}`);
+  }
+  if (!health.ready) {
+    console.error(`[AUTH] Missing required credentials: ${health.missing.join(", ")}. Cannot start.`);
+    process.exit(1);
+  }
+
   const rawClient = new TwitterApi({
-    appKey: process.env.X_API_KEY || "",
-    appSecret: process.env.X_API_SECRET || "",
-    accessToken: process.env.X_ACCESS_TOKEN || "",
-    accessSecret: process.env.X_ACCESS_SECRET || "",
+    appKey: (process.env.X_API_KEY || "").trim(),
+    appSecret: (process.env.X_API_SECRET || "").trim(),
+    accessToken: (process.env.X_ACCESS_TOKEN || "").trim(),
+    accessSecret: (process.env.X_ACCESS_SECRET || "").trim(),
   });
 
-  const userId = await getUserId(rawClient);
-  console.log(`[AUTH] Authenticated as user: ${userId}`);
+  let userId: string;
+  try {
+    console.log("[AUTH] Verifying credentials via v2.me()...");
+    userId = await getUserId(rawClient);
+    console.log(`[AUTH] Verified. Authenticated as user: ${userId}`);
+  } catch (err: unknown) {
+    const e = err as { code?: number; data?: unknown };
+    if (e?.code === 401) {
+      console.error("[AUTH] 401 Unauthorized from v2.me(). Your X_API_KEY / X_API_SECRET / X_ACCESS_TOKEN / X_ACCESS_SECRET are invalid or revoked.");
+      console.error("[AUTH] Ensure you are using OAuth 1.0a Consumer Keys + Access Tokens (NOT OAuth 2.0 Client ID/Secret).");
+    } else if (e?.code === 403) {
+      console.error("[AUTH] 403 Forbidden from v2.me(). App permissions may be insufficient (need Read+Write). Regenerate Access Token after changing permissions.");
+    } else {
+      console.error("[AUTH] Unexpected error during auth verification:", e?.data ?? err);
+    }
+    process.exit(1);
+  }
 
   const llmClient = process.env.XAI_API_KEY
     ? withCircuitBreaker(createXAILLMClient())
