@@ -18,7 +18,7 @@ const EVM_REGEX = /^0x[a-fA-F0-9]{40}$/;
 /** Detects if string contains ambiguous base58 chars */
 const AMBIGUOUS_BASE58_CHARS = /[0OIl]/;
 
-/** Test patterns to reject */
+/** Test patterns to reject - expanded with additional patterns (NEW) */
 const TEST_PATTERNS = [
   /123456789/,
   /abcdefghi/i,
@@ -28,6 +28,11 @@ const TEST_PATTERNS = [
   /placeholder/i,
   /exampleaddress/i,
   /deadbeef/i,
+  /aaaaaaaaaa/i,  // Repeated chars
+  /xxxxxxxxxx/i,  // Repeated x
+  /nulladdress/i, // Common placeholder
+  /mintaddress/i, // Generic placeholder
+  /tokenaddress/i, // Generic placeholder
 ];
 
 export interface ValidateCAOptions {
@@ -296,17 +301,57 @@ export function detectChainType(address: string): ChainType {
 
 /**
  * Strict address gate - combines validation with test pattern rejection
+ * This is the primary function for pipeline use (NEW)
  */
 export function strictAddressGate(
   address: string,
   options?: {
     allowTestPatterns?: boolean;
     requireOnchainPrefix?: boolean;
+    allowedChains?: ChainType[];
   }
 ): boolean {
   const result = validateCA(address, {
     rejectTestPatterns: !options?.allowTestPatterns,
+    allowedChains: options?.allowedChains,
   });
 
   return result.valid;
+}
+
+/**
+ * Extract and validate all addresses from text
+ * Returns only valid addresses (NEW)
+ */
+export function extractAndValidateAddresses(
+  text: string,
+  options?: ValidateCAOptions
+): {
+  valid: Array<{ address: string; chain: ChainType; normalized: string }>;
+  invalid: Array<{ address: string; reason: string }>;
+} {
+  const base58Candidates = text.match(/\b[1-9A-HJ-NP-Za-km-z]{32,44}\b/g) || [];
+  const evmCandidates = text.match(/\b0x[a-fA-F0-9]{40}\b/g) || [];
+  const allCandidates = [...new Set([...base58Candidates, ...evmCandidates])];
+
+  const valid: Array<{ address: string; chain: ChainType; normalized: string }> = [];
+  const invalid: Array<{ address: string; reason: string }> = [];
+
+  for (const candidate of allCandidates) {
+    const result = validateCA(candidate, options);
+    if (result.valid && result.normalized) {
+      valid.push({
+        address: candidate,
+        chain: result.chain,
+        normalized: result.normalized,
+      });
+    } else {
+      invalid.push({
+        address: candidate,
+        reason: result.reason || "validation_failed",
+      });
+    }
+  }
+
+  return { valid, invalid };
 }

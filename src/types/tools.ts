@@ -66,6 +66,85 @@ export interface ToolResult<T> {
 }
 
 // =============================================================================
+// Verification Status Types (NEW)
+// =============================================================================
+
+export const VerificationStatusSchema = z.enum(["VERIFIED", "UNVERIFIED", "DEGRADED"]);
+export type VerificationStatus = z.infer<typeof VerificationStatusSchema>;
+
+export interface VerificationResult {
+  status: VerificationStatus;
+  ca: string | null;
+  evidence: Evidence[];
+  flags: string[];
+  onchainData: {
+    mintInfo: TokenMintInfo | null;
+    supply: SupplyInfo | null;
+    largestAccounts: LargestAccountsInfo | null;
+  };
+  marketData: MarketQuote | null;
+  timestamp: string;
+  latencyMs: number;
+}
+
+export interface VerificationSummary {
+  canProceed: boolean;
+  shouldBlock: boolean;
+  reason?: string;
+  verificationResult?: VerificationResult;
+}
+
+// =============================================================================
+// Tool Event Types for Observability (NEW)
+// =============================================================================
+
+export type ToolExecutionPhase = "pre-validation" | "validation" | "fetch" | "post-processing";
+
+export interface ToolCallEvent {
+  timestamp: string;
+  requestId: string;
+  tool: ToolName;
+  method: string;
+  arguments: unknown;
+  phase: ToolExecutionPhase;
+}
+
+export interface ToolResultEvent {
+  timestamp: string;
+  requestId: string;
+  tool: ToolName;
+  success: boolean;
+  resultSummary: string;
+  latencyMs: number;
+  evidenceSource?: string;
+}
+
+export interface VerificationResultEvent {
+  timestamp: string;
+  requestId: string;
+  ca: string;
+  status: VerificationStatus;
+  onchainSuccess: boolean;
+  marketSuccess: boolean;
+  flags: string[];
+}
+
+export interface PolicyRejectionEvent {
+  timestamp: string;
+  requestId: string;
+  rejectionType: "INVALID_CA" | "SPOOF_DETECTED" | "SANITIZATION_FAILED";
+  reason: string;
+  originalText?: string;
+  modifications?: TextModification[];
+}
+
+export type ToolEvent = 
+  | ToolCallEvent 
+  | ToolResultEvent 
+  | VerificationResultEvent 
+  | PolicyRejectionEvent;
+
+// =============================================================================
 // Onchain Types
 // =============================================================================
 
@@ -217,8 +296,6 @@ export interface ToolRegistry {
 // =============================================================================
 // Tool Orchestrator Types
 // =============================================================================
-
-export type ToolExecutionPhase = "pre-validation" | "validation" | "fetch" | "post-processing";
 
 export interface ToolCall {
   tool: ToolName;

@@ -20,6 +20,14 @@ export const COUNTER_NAMES = {
   AUDIT_FLUSH_SUCCESS_TOTAL: "audit_flush_success_total",
   AUDIT_FLUSH_FAILURE_TOTAL: "audit_flush_failure_total",
   STATE_STORE_ERROR_TOTAL: "state_store_error_total",
+  // Tool-specific counters (NEW)
+  TOOL_CALL_TOTAL: "tool_call_total",
+  TOOL_SUCCESS_TOTAL: "tool_success_total",
+  TOOL_FAILURE_TOTAL: "tool_failure_total",
+  POLICY_REJECTION_TOTAL: "policy_rejection_total",
+  VERIFICATION_VERIFIED_TOTAL: "verification_verified_total",
+  VERIFICATION_UNVERIFIED_TOTAL: "verification_unverified_total",
+  VERIFICATION_DEGRADED_TOTAL: "verification_degraded_total",
 } as const;
 
 export const GAUGE_NAMES = {
@@ -29,6 +37,9 @@ export const GAUGE_NAMES = {
   LLM_BUDGET_REMAINING: "llm_budget_remaining",
   RECENT_FAILURE_STREAK: "recent_failure_streak",
   LAST_CURSOR_AGE_SECONDS: "last_cursor_age_seconds",
+  // Tool-specific gauges (NEW)
+  VERIFICATION_QUEUE_SIZE: "verification_queue_size",
+  CIRCUIT_BREAKER_STATE: "circuit_breaker_state",
 } as const;
 
 export const HISTOGRAM_NAMES = {
@@ -37,6 +48,9 @@ export const HISTOGRAM_NAMES = {
   PUBLISH_DURATION_MS: "publish_duration_ms",
   MENTION_PROCESSING_DURATION_MS: "mention_processing_duration_ms",
   STATE_STORE_OPERATION_DURATION_MS: "state_store_operation_duration_ms",
+  // Tool-specific histograms (NEW)
+  TOOL_LATENCY_MS: "tool_latency_ms",
+  VERIFICATION_PIPELINE_DURATION_MS: "verification_pipeline_duration_ms",
 } as const;
 
 export type CounterName = (typeof COUNTER_NAMES)[keyof typeof COUNTER_NAMES];

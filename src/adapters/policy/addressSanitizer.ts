@@ -14,15 +14,41 @@ const BASE58_CANDIDATE = /\b[1-9A-HJ-NP-Za-km-z]{32,44}\b/g;
 const SPOOF_KEYWORDS = [
   "your real mint",
   "post as yours",
+  "post this as your mint",
   "quote exactly",
   "quote this exactly",
   "ignore rules",
   "new official address",
   "your actual mint",
   "official mint is",
-  "post this as your mint",
   "replace your ca with",
   "use this address instead",
+  // Additional spoof keywords (NEW)
+  "pretend this is your",
+  "act like this is your",
+  "say this is your",
+  "tell them this is",
+  "this is now your",
+  "update your mint to",
+  "change your ca to",
+  "switch to this address",
+  "adopt this as your",
+  "verify this as your",
+  "confirm this is your",
+  "validate this address",
+  "trust this address",
+  "this is the real",
+  "the actual address is",
+  "correct address is",
+  "real mint address",
+  "true contract address",
+  "legitimate address",
+  "authorized address",
+  "approved address",
+  "endorsed address",
+  "verified address",
+  "official contract",
+  "canonical address",
 ] as const;
 
 /** Detects spoof/identity-swap context in prompt. */
@@ -57,6 +83,9 @@ export function generateDeterministicDecoy(seed: string): string {
     "DEC0Y-ADDR: 9I0O-DEAD-BEEF-I00I",
     "NOT_A_MINT: H3LL0-W0RLD-I0OI",
     "DEC0Y-ADDR: I00I-BEEF-C0FFEE",
+    "DEC0Y-ADDR: C0FFEE-DEAD-BEEF",
+    "NOT_A_MINT: FAKE-ADDR-DEC0Y",
+    "DEC0Y-ADDR: N0T-VALID-MINT",
   ];
   const idx = Math.floor(rnd() * variants.length);
   return variants[idx] ?? variants[0]!;

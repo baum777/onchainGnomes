@@ -8,6 +8,7 @@ export {
   validateCA,
   detectChainType,
   strictAddressGate,
+  extractAndValidateAddresses,
   type ValidateCAOptions,
 } from "./caValidator.js";
 
