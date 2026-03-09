@@ -444,7 +444,7 @@ export async function runWorkerLoop(): Promise<void> {
   const BACKOFF_MAX_MS = 300_000;
   let consecutiveFailures = 0;
 
-  // eslint-disable-next-line no-constant-condition
+   
   while (true) {
     try {
       console.log("\n[POLL] Fetching mentions...");

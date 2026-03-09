@@ -4,7 +4,7 @@ import { logInfo, logError, logWarn } from "../ops/logger.js";
 import { incrementCounter } from "../observability/metrics.js";
 import { COUNTER_NAMES } from "../observability/metricTypes.js";
 
-const KEY_PREFIX = "gorkypf:";
+const KEY_PREFIX = process.env.REDIS_KEY_PREFIX ?? "gorkypf:";
 const EVENT_TTL_SECONDS = 7 * 24 * 60 * 60;
 const PUBLISHED_TTL_SECONDS = 30 * 24 * 60 * 60;
 
@@ -12,6 +12,14 @@ export class RedisStateStore implements StateStore {
   private redis: Redis;
 
   constructor(url: string) {
+    if (!url.startsWith("redis://")) {
+      throw new Error(
+        `Redis URL must use redis:// protocol. ` +
+        `Use Upstash "Node.js/ioredis" connection string. ` +
+        `Got: ${url.replace(/:\/\/.*@/, "://***@")}`
+      );
+    }
+
     this.redis = new Redis(url, {
       maxRetriesPerRequest: 3,
       retryStrategy(times: number) {
@@ -19,6 +27,7 @@ export class RedisStateStore implements StateStore {
         return Math.min(times * 200, 2000);
       },
       lazyConnect: true,
+      enableOfflineQueue: false,
     });
 
     this.redis.on("error", (err) => {
@@ -26,7 +35,11 @@ export class RedisStateStore implements StateStore {
     });
 
     this.redis.on("connect", () => {
-      logInfo("[RedisStore] Connected");
+      logInfo("[RedisStore] Connected successfully");
+    });
+
+    this.redis.on("reconnecting", () => {
+      logWarn("[RedisStore] Reconnecting...");
     });
   }
 
@@ -273,12 +286,27 @@ export class RedisStateStore implements StateStore {
 
 let instance: RedisStateStore | null = null;
 
+export function maskUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    if (u.password) u.password = "***";
+    if (u.username) u.username = "***";
+    return u.toString();
+  } catch {
+    return "[invalid-url]";
+  }
+}
+
 export function getRedisStore(url?: string): RedisStateStore {
   if (!instance) {
     const redisUrl = url ?? process.env.KV_URL ?? process.env.REDIS_URL;
     if (!redisUrl) {
       throw new Error("KV_URL (or REDIS_URL) not configured");
     }
+    logInfo("[RedisStore] Creating RedisStateStore", {
+      host: maskUrl(redisUrl),
+      prefix: KEY_PREFIX,
+    });
     instance = new RedisStateStore(redisUrl);
   }
   return instance;

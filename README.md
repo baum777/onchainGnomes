@@ -154,12 +154,17 @@ Requires the LLM terminal test harness (`llm-terminal-test-bundle`) or `--result
 | XAI_API_KEY | No | xAI API key (degrades to canned reply if empty) |
 | XAI_MODEL_PRIMARY | No | Primary model (default: grok-3) |
 | XAI_MODEL_FALLBACKS | No | CSV fallbacks (e.g. grok-3-mini) |
+| **USE_REDIS** | No | `true` to use Redis for state storage (default: `false`) |
+| **KV_URL** | When USE_REDIS=true | Redis connection URL: `redis://default:PASS@HOST.upstash.io:6379` |
+| **REDIS_KEY_PREFIX** | No | Prefix for Redis keys (default: `gorkypf:`) |
 | POLL_INTERVAL_MS | No | Poll interval in ms (default: 30000) |
 | DRY_RUN | No | `true` = no posting |
 | MENTIONS_SOURCE | No | `mentions` or `search` |
 | BOT_USERNAME | No | For search mode (default: serGorky) |
 | LAUNCH_MODE | No | `off`, `dry_run`, `staging`, `prod` |
 | REPLICATE_API_KEY | No | For image generation |
+
+**Note:** When `USE_REDIS=true`, you must provide a valid `KV_URL` with the `redis://` protocol. Get this from your Upstash Console: Connect > Node.js > ioredis. The legacy `UPSTASH_REDIS_REST_URL` (HTTPS) is not compatible with the ioredis library.
 
 Full list: `docs/var.README.md`.
 
@@ -169,7 +174,12 @@ Full list: `docs/var.README.md`.
 
 1. Connect repo to [Render](https://render.com)
 2. Use Blueprint (`render.yaml`) for one-click deploy
-3. Add secrets: `XAI_API_KEY`, `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_SECRET`, `REPLICATE_API_KEY` (optional)
+3. Add secrets in Render Dashboard:
+   - `XAI_API_KEY`, `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_SECRET`
+   - `REPLICATE_API_KEY` (optional)
+   - `KV_URL` (required when `USE_REDIS=true`): Get from Upstash Console → Connect → Node.js → ioredis
+
+**Important:** The `KV_URL` must use the `redis://` protocol, not `https://`. Upstash provides both REST and TCP connections; this bot requires the TCP (ioredis) connection.
 
 ### Blueprint Services
 

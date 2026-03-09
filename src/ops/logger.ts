@@ -15,6 +15,15 @@ const LEVEL_ORDER: Record<LogLevel, number> = {
   error: 3,
 };
 
+// Keys that should never be logged (case-insensitive)
+const SENSITIVE_KEYS = [
+  "api_key", "apikey", "api-key",
+  "secret", "token", "password", "auth",
+  "x_api", "x_access", "xai_api", "openai_api",
+  "replicate_api", "llm_api", "kv_url", "redis_url",
+  "bearer_token", "access_token", "refresh_token"
+];
+
 export type ReplyLogFields = {
   run_id?: string;
   tweet_id?: string;
@@ -26,6 +35,40 @@ export type ReplyLogFields = {
   duration_ms?: number;
   [key: string]: unknown;
 };
+
+/**
+ * Sanitize an object for logging by redacting sensitive values.
+ */
+export function sanitizeForLog(obj: unknown): unknown {
+  if (!obj || typeof obj !== "object") return obj;
+
+  const sanitized: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    const lowerKey = key.toLowerCase();
+    if (SENSITIVE_KEYS.some(sk => lowerKey.includes(sk))) {
+      sanitized[key] = "[REDACTED]";
+    } else if (typeof value === "object" && value !== null) {
+      sanitized[key] = sanitizeForLog(value);
+    } else if (typeof value === "string") {
+      // Redact URLs that might contain credentials
+      sanitized[key] = redactSensitiveUrls(value);
+    } else {
+      sanitized[key] = value;
+    }
+  }
+  return sanitized;
+}
+
+/**
+ * Redact sensitive URLs from strings.
+ */
+function redactSensitiveUrls(str: string): string {
+  // Redact redis:// URLs with credentials
+  return str.replace(
+    /redis:\/\/[^\s]+/g,
+    "[redis-url-redacted]"
+  );
+}
 
 function shouldLog(level: LogLevel): boolean {
   const env = loadLaunchEnv();
@@ -50,7 +93,11 @@ export function logReply(
   fields?: ReplyLogFields
 ): void {
   if (!shouldLog(level)) return;
-  const line = formatLog(level, message, fields);
+
+  // Sanitize fields before logging
+  const safeFields = sanitizeForLog(fields) as ReplyLogFields | undefined;
+
+  const line = formatLog(level, message, safeFields);
   if (level === "error") {
     console.error(line);
   } else if (level === "warn") {

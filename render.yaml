@@ -22,22 +22,21 @@ services:
       mountPath: /data
       sizeGB: 1
     envVars:
-      - key: DATA_DIR
-        value: /data
+      # Infrastructure
       - key: NODE_ENV
         value: production
-      - key: XAI_API_KEY
-        sync: false
-      - key: XAI_BASE_URL
-        value: https://api.x.ai/v1
-      - key: XAI_MODEL_PRIMARY
-        value: grok-3
-      - key: XAI_MODEL_FALLBACKS
-        value: grok-3-mini
-      - key: POLL_INTERVAL_MS
-        value: "30000"
-      - key: LOG_LEVEL
-        value: INFO
+      - key: DATA_DIR
+        value: /data
+
+      # State Storage (Redis)
+      - key: USE_REDIS
+        value: "true"
+      - key: KV_URL
+        sync: false  # Set in Render dashboard: redis://default:PASS@HOST.upstash.io:6379
+      - key: REDIS_KEY_PREFIX
+        value: "gorkypf:"
+
+      # X/Twitter API (sensitive - set in dashboard)
       - key: X_API_KEY
         sync: false
       - key: X_API_SECRET
@@ -46,23 +45,43 @@ services:
         sync: false
       - key: X_ACCESS_SECRET
         sync: false
+
+      # LLM Provider (xAI)
+      - key: XAI_API_KEY
+        sync: false
+      - key: XAI_BASE_URL
+        value: https://api.x.ai/v1
+      - key: XAI_MODEL_PRIMARY
+        value: grok-3
+      - key: XAI_MODEL_FALLBACKS
+        value: grok-3-mini
+
+      # Bot Configuration
       - key: BOT_USERNAME
-        value: GORKYPF
-      - key: MENTIONS_SOURCE
-        value: search
-      - key: BOT_ACTIVATION_MODE
-        value: global
-      - key: BOT_DENY_REPLY_MODE
-        value: silent
-      - key: DRY_RUN
-        value: "false"
+        value: Gorkypf_on_sol
       - key: LAUNCH_MODE
         value: prod
-      - key: REPLICATE_API_KEY
-        sync: false
+      - key: BOT_ACTIVATION_MODE
+        value: global
+
+      # Polling
+      - key: POLL_INTERVAL_MS
+        value: "30000"
+      - key: MENTIONS_SOURCE
+        value: search
+      - key: ADAPTIVE_POLLING_ENABLED
+        value: "true"
+
+      # Context Engine
       - key: USE_ENHANCED_CONTEXT
         value: "true"
-      - key: KV_URL
+
+      # Logging
+      - key: LOG_LEVEL
+        value: INFO
+
+      # Optional Services
+      - key: REPLICATE_API_KEY
         sync: false
 
   # Optional: Health/Metrics Web Service
@@ -80,3 +99,7 @@ services:
         value: "10000"
       - key: LOG_LEVEL
         value: INFO
+      - key: USE_REDIS
+        value: "true"
+      - key: KV_URL
+        sync: false

@@ -86,7 +86,7 @@ export function normalizeUsername(username: unknown): string | null {
   }
   
   // Remove @ prefix if present
-  let normalized = username.trim().replace(/^@/, "");
+  const normalized = username.trim().replace(/^@/, "");
   
   // Validate length
   if (normalized.length === 0 || normalized.length > MAX_USERNAME_LENGTH) {

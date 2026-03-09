@@ -37,9 +37,32 @@ export const envSchema = z.object({
   XAI_MODEL_PRIMARY: z.string().optional().default("grok-3"),
   XAI_MODEL_FALLBACKS: modelListSchema,
 
+  // Redis configuration
+  USE_REDIS: z
+    .string()
+    .optional()
+    .default("false")
+    .transform((v: string | undefined) => v === "true"),
+
+  KV_URL: z
+    .string()
+    .optional()
+    .refine(
+      (val) => !val || val.startsWith("redis://"),
+      "KV_URL must use redis:// protocol"
+    ),
+
+  REDIS_KEY_PREFIX: z.string().optional().default("gorkypf:"),
+
   // Poll config
   POLL_INTERVAL_MS: pollIntervalSchema,
-  LOG_LEVEL: z.enum(["DEBUG", "INFO", "WARN", "ERROR"]).optional().default("INFO"),
+
+  // FIXED: LOG_LEVEL enum (removed DEBUGGING)
+  LOG_LEVEL: z
+    .enum(["DEBUG", "INFO", "WARN", "ERROR"])
+    .optional()
+    .default("INFO"),
+
   DRY_RUN: z
     .string()
     .optional()
@@ -63,6 +86,9 @@ export function validateEnv(): EnvConfig {
     XAI_BASE_URL: process.env.XAI_BASE_URL,
     XAI_MODEL_PRIMARY: process.env.XAI_MODEL_PRIMARY ?? process.env.XAI_MODEL,
     XAI_MODEL_FALLBACKS: process.env.XAI_MODEL_FALLBACKS,
+    USE_REDIS: process.env.USE_REDIS,
+    KV_URL: process.env.KV_URL,
+    REDIS_KEY_PREFIX: process.env.REDIS_KEY_PREFIX,
     POLL_INTERVAL_MS: process.env.POLL_INTERVAL_MS,
     LOG_LEVEL: process.env.LOG_LEVEL,
     DRY_RUN: process.env.DRY_RUN,

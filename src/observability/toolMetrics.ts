@@ -165,7 +165,7 @@ export function logToolCallEvent(params: {
   // In production, this would go to a structured logger
   // For now, we just ensure the event structure is correct
   if (process.env.NODE_ENV === "development") {
-    // eslint-disable-next-line no-console
+     
     console.log(JSON.stringify(event));
   }
 }
@@ -188,7 +188,7 @@ export function logToolResultEvent(params: {
     ...params,
   };
   if (process.env.NODE_ENV === "development") {
-    // eslint-disable-next-line no-console
+     
     console.log(JSON.stringify(event));
   }
 }
@@ -211,7 +211,7 @@ export function logVerificationResultEvent(params: {
     ...params,
   };
   if (process.env.NODE_ENV === "development") {
-    // eslint-disable-next-line no-console
+     
     console.log(JSON.stringify(event));
   }
 }
@@ -232,7 +232,7 @@ export function logPolicyRejectionEvent(params: {
     ...params,
   };
   if (process.env.NODE_ENV === "development") {
-    // eslint-disable-next-line no-console
+     
     console.log(JSON.stringify(event));
   }
 }
