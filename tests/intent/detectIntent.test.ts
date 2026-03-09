@@ -61,7 +61,7 @@ describe("Intent Detection", () => {
         "What is the token supply and contract address?"
       );
 
-      expect(["question", "coin_query"]).toContain(result.intent);
+      expect(["question", "coin_query", "ca_request"]).toContain(result.intent);
     });
 
     it("should detect meme_play via heuristics", async () => {
@@ -139,7 +139,7 @@ describe("Intent Detection", () => {
       // Invalid category should fallback to question
       const validIntents: IntentCategory[] = [
         "question", "insult", "debate", "market_request",
-        "meme_play", "prompt_attack", "lore_query", "coin_query",
+        "meme_play", "prompt_attack", "lore_query", "coin_query", "ca_request", "own_token_sentiment",
       ];
       expect(validIntents).toContain(result.intent);
     });

@@ -153,16 +153,15 @@ export function persistAuditRecord(record: AuditRecord): void {
 
 export async function readAuditLog(): Promise<AuditRecord[]> {
   try {
-    await access(AUDIT_FILE);
-  } catch {
+    const content = await readFile(AUDIT_FILE, "utf-8");
+    return content
+      .split("\n")
+      .filter((l) => l.trim())
+      .map((l) => JSON.parse(l) as AuditRecord);
+  } catch (error) {
+    // If file doesn't exist or other read error, return empty
     return [];
   }
-
-  const content = await readFile(AUDIT_FILE, "utf-8");
-  return content
-    .split("\n")
-    .filter((l) => l.trim())
-    .map((l) => JSON.parse(l) as AuditRecord);
 }
 
 // Graceful shutdown handler

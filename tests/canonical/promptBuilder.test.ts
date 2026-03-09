@@ -52,7 +52,7 @@ describe("promptBuilder", () => {
       DEFAULT_CANONICAL_CONFIG,
     );
 
-    expect(prompt.persona).toBe("Gorky");
+    expect(prompt.persona).toBe("Gorkypf");
     expect(prompt.mode).toBe("analyst_meme_lite");
     expect(prompt.thesis).toBe("claim_exceeds_evidence");
     expect(prompt.supporting_point).toBe("no concrete product proof");
@@ -94,7 +94,7 @@ describe("promptBuilder", () => {
     );
     const llmInput = promptToLLMInput(prompt);
 
-    expect(llmInput.system).toContain("Gorky");
+    expect(llmInput.system).toContain("Gorkypf");
     expect(llmInput.system).toContain("dry_one_liner");
     expect(llmInput.system).toContain("claim_exceeds_evidence");
     expect(llmInput.developer).toContain("JSON");

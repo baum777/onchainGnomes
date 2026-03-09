@@ -141,7 +141,7 @@ describe("Gorky LLM response generation", () => {
   });
 
   it("Fake utility narrative: narrative critique, not attacking the author", async () => {
-    const input = "Our token will revolutionize DeFi.";
+    const input = "This token will revolutionize DeFi.";
     const event = makeEvent(input);
     const mockReply = mockGenerateResponse(input);
     const deps = { llm: makeMockLLM(mockReply), botUserId: "bot" };

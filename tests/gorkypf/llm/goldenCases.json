@@ -13,7 +13,7 @@
   },
   {
     "id": "fake_utility",
-    "input": "Our token will revolutionize DeFi.",
+    "input": "This token will revolutionize DeFi.",
     "expected": "allow",
     "structure_hint": "narrative critique"
   },

@@ -3,7 +3,9 @@
  * 
  * Address Gate — Allowlist-only address filtering.
  */
-import { addressGateSanitize } from "../adapters/policy/addressSanitizer.js";
+import { addressGateSanitize, detectSpoofContext, generateDeterministicDecoy } from "../adapters/policy/addressSanitizer.js";
+
+export { detectSpoofContext, generateDeterministicDecoy };
 
 /**
  * @deprecated Use addressGateSanitize from adapters/policy instead.

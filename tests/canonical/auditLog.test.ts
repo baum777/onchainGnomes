@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { buildAuditRecord, persistAuditRecord, readAuditLog } from "../../src/canonical/auditLog.js";
+import { buildAuditRecord, persistAuditRecord, readAuditLog, shutdownAuditLog } from "../../src/canonical/auditLog.js";
 import { DEFAULT_CANONICAL_CONFIG } from "../../src/canonical/types.js";
 import type { CanonicalEvent, ClassifierOutput, ScoreBundle } from "../../src/canonical/types.js";
 import fs from "node:fs";
@@ -43,13 +43,15 @@ function makeScores(): ScoreBundle {
 }
 
 describe("auditLog", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     if (fs.existsSync(AUDIT_FILE)) {
       fs.unlinkSync(AUDIT_FILE);
     }
+    await shutdownAuditLog();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await shutdownAuditLog();
     if (fs.existsSync(AUDIT_FILE)) {
       fs.unlinkSync(AUDIT_FILE);
     }
@@ -78,7 +80,7 @@ describe("auditLog", () => {
     expect(record.created_at).toBeTruthy();
   });
 
-  it("persists and reads back audit records", () => {
+  it("persists and reads back audit records", async () => {
     const record = buildAuditRecord({
       event: makeEvent(),
       cls: makeCls(),
@@ -94,14 +96,15 @@ describe("auditLog", () => {
     });
 
     persistAuditRecord(record);
-    const logs = readAuditLog();
+    await shutdownAuditLog();
+    const logs = await readAuditLog();
     expect(logs.length).toBe(1);
     expect(logs[0].event_id).toBe("audit_test_1");
     expect(logs[0].final_action).toBe("skip");
     expect(logs[0].skip_reason).toBe("skip_low_relevance");
   });
 
-  it("appends multiple records", () => {
+  it("appends multiple records", async () => {
     for (let i = 0; i < 3; i++) {
       const record = buildAuditRecord({
         event: { ...makeEvent(), event_id: `audit_test_${i}` },
@@ -118,12 +121,13 @@ describe("auditLog", () => {
       });
       persistAuditRecord(record);
     }
-    const logs = readAuditLog();
+    await shutdownAuditLog();
+    const logs = await readAuditLog();
     expect(logs.length).toBe(3);
   });
 
-  it("returns empty array when no log file exists", () => {
-    const logs = readAuditLog();
+  it("returns empty array when no log file exists", async () => {
+    const logs = await readAuditLog();
     expect(logs).toEqual([]);
   });
 });

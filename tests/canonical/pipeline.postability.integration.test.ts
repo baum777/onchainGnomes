@@ -71,6 +71,7 @@ describe("pipeline postability integration", () => {
   let persistSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(async () => {
+    process.env.USE_REDIS = "false";
     await cacheClear();
     if (fs.existsSync(AUDIT_FILE)) fs.unlinkSync(AUDIT_FILE);
     if (fs.existsSync(DATA_FILE)) fs.unlinkSync(DATA_FILE);

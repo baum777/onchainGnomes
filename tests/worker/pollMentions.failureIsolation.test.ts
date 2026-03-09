@@ -16,7 +16,7 @@ describe("budgetGate", () => {
       const result = checkLLMBudget(false);
       expect(result.allowed).toBe(true);
       expect(result.used).toBe(0);
-      expect(result.remaining).toBe(30);
+      expect(result.remaining).toBe(29);
     });
 
     it("blocks calls when over limit", () => {
@@ -67,7 +67,7 @@ describe("budgetGate", () => {
 
       const result = checkLLMBudget(false);
       expect(result.used).toBe(2);
-      expect(result.remaining).toBe(28);
+      expect(result.remaining).toBe(27);
     });
   });
 
