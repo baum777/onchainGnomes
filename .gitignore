@@ -173,6 +173,8 @@ vite.config.ts.timestamp-*
 
 # === GORKY Onchain Integration (local dev / secrets) ===
 *.local
+pin_oauth.py
+get_access_token.py
 
 # RPC logs / dumps
 rpc_logs/
@@ -183,6 +185,7 @@ onchain_dumps/
 # Cache / KV (local)
 kv.local.json
 onchain-cache/
+state/
 
 # Optional: generated snapshots (keep canonical snapshots in repo)
 snapshots-generated/
