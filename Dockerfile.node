@@ -22,7 +22,6 @@ ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build /app/package.json /app/pnpm-lock.yaml* ./
 COPY --from=build /app/dist ./dist
-COPY --from=build /app/data ./data
 COPY --from=build /app/memes ./memes
 COPY --from=build /app/prompts ./prompts
 COPY --from=build /app/config ./config
