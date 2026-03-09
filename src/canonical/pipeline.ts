@@ -26,6 +26,8 @@ import { formatDecision } from "../roast/formatDecision.js";
 import { detectCARequest, detectOwnTokenSentiment } from "../intent/detectIntent.js";
 import { buildCAResponse, buildOwnTokenSentimentResponse } from "./specialResponseBuilder.js";
 import { getStateStore } from "../state/storeFactory.js";
+import { calculateMarketEnergy, extractEnergySignals } from "../style/energyDetector.js";
+import { resolveStyle } from "../style/styleResolver.js";
 
 export interface PipelineDeps {
   llm: LLMClient;
@@ -202,6 +204,11 @@ export async function handleEvent(
     return makeSkipResult(event, "skip_low_confidence", cls, scores, config);
   }
 
+  // Calculate market energy and resolve style
+  const energySignals = extractEnergySignals(event, cls, scores);
+  const energyLevel = calculateMarketEnergy(energySignals);
+  const styleContext = resolveStyle(mode, energyLevel);
+
   const narrative = mapNarrative(event, cls);
   const pattern = selectPattern(
     thesis,
@@ -229,6 +236,7 @@ export async function handleEvent(
     pattern_id: pattern.pattern_id,
     narrative_label: narrative?.label ?? undefined,
     format_target: format.format,
+    style: styleContext,
   };
 
   const result = await fallbackCascade(
@@ -282,6 +290,8 @@ export async function handleEvent(
     detected_narrative: narrative?.label,
     selected_pattern: pattern.pattern_id,
     response_mode: format.format,
+    energy_level: energyLevel,
+    slang_applied: styleContext.slangEnabled,
   });
   persistAuditRecord(audit);
 

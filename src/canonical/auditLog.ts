@@ -98,6 +98,8 @@ export function buildAuditRecord(params: {
   detected_narrative?: string;
   selected_pattern?: string;
   response_mode?: string;
+  energy_level?: import("./types.js").MarketEnergyLevel;
+  slang_applied?: boolean;
 }): AuditRecord {
   const eventSnapshot = JSON.stringify({
     event_id: params.event.event_id,
@@ -126,6 +128,8 @@ export function buildAuditRecord(params: {
     detected_narrative: params.detected_narrative,
     selected_pattern: params.selected_pattern,
     response_mode: params.response_mode,
+    energy_level: params.energy_level,
+    slang_applied: params.slang_applied,
   };
 }
 

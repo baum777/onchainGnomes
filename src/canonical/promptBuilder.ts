@@ -5,8 +5,11 @@ import type {
   ThesisBundle,
   ScoreBundle,
   PromptContract,
+  MarketEnergyLevel,
 } from "./types.js";
 import { getHardMax } from "./modeBudgets.js";
+import type { StyleContext } from "../style/styleResolver.js";
+import { getSlangGuidelines } from "../style/styleResolver.js";
 
 function deriveConfidenceStance(confidence: number): "low" | "medium" | "high" {
   if (confidence >= 0.75) return "high";
@@ -41,6 +44,8 @@ export interface PromptBuilderContext {
   pattern_id?: string;
   narrative_label?: string;
   format_target?: string;
+  /** Style context for energy-based modulation */
+  style?: StyleContext;
 }
 
 export function buildPrompt(
@@ -63,6 +68,11 @@ export function buildPrompt(
     rules.push(`Style: ${MODE_STYLE_HINTS[mode]}`);
   }
 
+  // Add energy-based style hints if slang mode is active
+  if (context?.style?.slangEnabled && context.style.traitHints.length > 0) {
+    rules.push(`Energy tone: ${context.style.traitHints.join("; ")}`);
+  }
+
   return {
     persona: config.persona_name,
     mode,
@@ -77,6 +87,9 @@ export function buildPrompt(
     pattern_id: context?.pattern_id,
     narrative_label: context?.narrative_label,
     format_target: context?.format_target,
+    energy_level: context?.style?.energyLevel,
+    slang_mode: context?.style?.slangEnabled,
+    style_hints: context?.style?.traitHints,
   };
 }
 
@@ -97,11 +110,18 @@ export function promptToLLMInput(prompt: PromptContract): {
     prompt.pattern_id ? `Selected pattern: ${prompt.pattern_id}` : null,
     prompt.narrative_label ? `Narrative: ${prompt.narrative_label}` : null,
     prompt.format_target ? `Format: ${prompt.format_target}` : null,
+    prompt.energy_level ? `Energy level: ${prompt.energy_level}` : null,
     `Confidence: ${prompt.confidence_stance}`,
     "",
     "Rules:",
     ...prompt.rules.map((r) => `- ${r}`),
   ];
+
+  // Append slang guidelines when slang mode is active
+  if (prompt.slang_mode) {
+    systemParts.push("", "SLANG MODE ACTIVE:", getSlangGuidelines());
+  }
+
   const system = systemParts.filter(Boolean).join("\n");
 
   const developer = [

@@ -91,6 +91,10 @@ export const SkipReasonSchema = z.enum([
 ]);
 export type SkipReason = z.infer<typeof SkipReasonSchema>;
 
+/** Market energy levels for style modulation */
+export const MarketEnergyLevelSchema = z.enum(["LOW", "MEDIUM", "HIGH", "EXTREME"]);
+export type MarketEnergyLevel = z.infer<typeof MarketEnergyLevelSchema>;
+
 export const TriggerTypeSchema = z.enum([
   "mention",
   "reply",
@@ -171,6 +175,12 @@ export interface PromptContract {
   narrative_label?: string;
   /** Response format target (optional) */
   format_target?: string;
+  /** Market energy level for style modulation (optional) */
+  energy_level?: MarketEnergyLevel;
+  /** Whether horny_slang_energy mode is active */
+  slang_mode?: boolean;
+  /** Style hints for the LLM (optional) */
+  style_hints?: string[];
 }
 
 export interface ValidationCheck {
@@ -221,6 +231,10 @@ export interface AuditRecord {
   selected_pattern?: string;
   /** Analytics: response format (short_reply, expanded_reply, short_thread) */
   response_mode?: string;
+  /** Analytics: market energy level detected */
+  energy_level?: MarketEnergyLevel;
+  /** Analytics: whether horny_slang_energy was applied */
+  slang_applied?: boolean;
 }
 
 export type PipelineResult =

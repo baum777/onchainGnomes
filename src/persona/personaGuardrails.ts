@@ -35,7 +35,8 @@ export type GuardrailViolation =
   | "IDENTITY_ATTACK"
   | "META_LEAK"
   | "ADDRESS_SPOOFING"
-  | "PERSONA_DRIFT";
+  | "PERSONA_DRIFT"
+  | "EXPLICIT_CONTENT";
 
 /** Guardrail check result */
 export interface GuardrailCheck {
@@ -103,6 +104,11 @@ export function enforcePersonaGuardrails(response: string, context: {
   // Rule 8: Persona drift detection
   if (detectPersonaDrift(response)) {
     violations.push("PERSONA_DRIFT");
+  }
+
+  // Rule 9: No explicit sexual content (for horny_slang_energy mode)
+  if (containsExplicitContent(response)) {
+    violations.push("EXPLICIT_CONTENT");
   }
 
   return {
@@ -317,6 +323,26 @@ function containsMetaLeak(response: string): boolean {
 
 function responseIncludesAddress(response: string, address: string): boolean {
   return response.includes(address);
+}
+
+/**
+ * Detects explicit sexual content that should be blocked.
+ * Used for horny_slang_energy mode safety - allows playful metaphors
+ * but blocks anatomical references and graphic descriptions.
+ */
+function containsExplicitContent(response: string): boolean {
+  const explicitPatterns = [
+    // Body part references (anatomical)
+    /\b(genital|penis|vagina|breast|nipple|buttock|anus|testicle|ovary)\b/i,
+    // Graphic sexual acts
+    /\b(sexual intercourse|penetration|ejaculation|masturbation|orgasm)\b/i,
+    // Pornographic language
+    /\b(porn|xxx|nsfw|explicit nudity|hardcore|softcore)\b/i,
+    // Explicit sexual descriptions
+    /\b(cum|jizz|squirt|blowjob|handjob)\b/i,
+  ];
+
+  return explicitPatterns.some((p) => p.test(response));
 }
 
 /**
