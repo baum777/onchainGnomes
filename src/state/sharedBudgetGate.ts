@@ -24,20 +24,12 @@ export async function checkLLMBudget(
 }> {
   const kv = store ?? getStateStore();
   const weight = isThread ? COST_WEIGHT_THREAD : COST_WEIGHT_REPLY;
-
-  const current = await kv.incr(BUDGET_KEY);
-
-  if (current === 1) {
-    await kv.expire(BUDGET_KEY, WINDOW_TTL_SECONDS);
-  }
-
-  const used = current;
+  
+  const status = await getBudgetStatus(kv);
+  const used = status.used;
   const remaining = MAX_LLM_CALLS_PER_MINUTE - used;
 
-  setGauge(GAUGE_NAMES.LLM_BUDGET_USED, used);
-  setGauge(GAUGE_NAMES.LLM_BUDGET_REMAINING, Math.max(remaining, 0));
-
-  if (used > MAX_LLM_CALLS_PER_MINUTE) {
+  if (used + weight > MAX_LLM_CALLS_PER_MINUTE) {
     incrementCounter(COUNTER_NAMES.LLM_BUDGET_BLOCK_TOTAL);
     const skipReason = `budget_exceeded: used=${used}, limit=${MAX_LLM_CALLS_PER_MINUTE}, requested_weight=${weight}`;
     logWarn("[BUDGET_GATE] LLM call blocked \u2014 budget exceeded", {
@@ -59,13 +51,10 @@ export async function recordLLMCall(
   const kv = store ?? getStateStore();
   const weight = isThread ? COST_WEIGHT_THREAD : COST_WEIGHT_REPLY;
 
-  if (weight > 1) {
+  for (let i = 0; i < weight; i++) {
     const current = await kv.incr(BUDGET_KEY);
     if (current === 1) {
       await kv.expire(BUDGET_KEY, WINDOW_TTL_SECONDS);
-    }
-    for (let i = 1; i < weight; i++) {
-      await kv.incr(BUDGET_KEY);
     }
   }
 }

@@ -1,6 +1,6 @@
 import type { StateStore } from "./stateStore.js";
-import { getFileSystemStore, FileSystemStateStore } from "./fileSystemStore.js";
-import { getRedisStore, maskUrl, RedisStateStore } from "./redisStore.js";
+import { getFileSystemStore, FileSystemStateStore, resetFileSystemInstance } from "./fileSystemStore.js";
+import { getRedisStore, maskUrl, RedisStateStore, resetRedisInstance } from "./redisStore.js";
 import { logInfo } from "../ops/logger.js";
 
 let cachedStore: StateStore | null = null;
@@ -43,6 +43,8 @@ export function getStateStore(): StateStore {
 
 export function resetStoreCache(): void {
   cachedStore = null;
+  resetFileSystemInstance();
+  resetRedisInstance();
 }
 
 export async function isRedisAvailable(): Promise<boolean> {

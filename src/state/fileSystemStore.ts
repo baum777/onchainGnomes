@@ -239,3 +239,7 @@ export function getFileSystemStore(dataDir?: string): FileSystemStateStore {
   if (!defaultInstance) defaultInstance = new FileSystemStateStore();
   return defaultInstance;
 }
+
+export function resetFileSystemInstance(): void {
+  defaultInstance = null;
+}

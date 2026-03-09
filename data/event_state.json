@@ -302,5 +302,245 @@
     "attempts": 1,
     "state": "publish_attempted",
     "lastAttemptAt": 1773059287426
+  },
+  "trans_1773059417864_kxavr0": {
+    "state": "publish_succeeded",
+    "eventId": "trans_1773059417864_kxavr0",
+    "attempts": 1,
+    "lastAttemptAt": 1773059417982,
+    "tweetId": "tweet_123"
+  },
+  "success_1773059418035_tr92m7": {
+    "state": "publish_succeeded",
+    "eventId": "success_1773059418035_tr92m7",
+    "attempts": 1,
+    "lastAttemptAt": 1773059418162,
+    "tweetId": "tweet_456"
+  },
+  "fail_1773059418197_74yqay": {
+    "eventId": "fail_1773059418197_74yqay",
+    "attempts": 1,
+    "state": "publish_attempted",
+    "lastAttemptAt": 1773059418237,
+    "error": "Network timeout"
+  },
+  "idem_1773059418270_9hdkxe": {
+    "state": "publish_succeeded",
+    "eventId": "idem_1773059418270_9hdkxe",
+    "attempts": 0,
+    "tweetId": "tweet_idem",
+    "lastAttemptAt": 1773059418332
+  },
+  "dup_1773059418393_cakqr8": {
+    "eventId": "dup_1773059418393_cakqr8",
+    "attempts": 1,
+    "state": "publish_succeeded",
+    "lastAttemptAt": 1773059418462,
+    "tweetId": "tweet_dup"
+  },
+  "persist_1773059418526_x3dno7": {
+    "state": "publish_succeeded",
+    "eventId": "persist_1773059418526_x3dno7",
+    "attempts": 0,
+    "tweetId": "tweet_persist",
+    "lastAttemptAt": 1773059418562
+  },
+  "reload_1773059418598_wzgzff": {
+    "state": "processed_ok",
+    "eventId": "reload_1773059418598_wzgzff",
+    "attempts": 0
+  },
+  "retry_done_1773059418701_xnrrv7": {
+    "state": "publish_succeeded",
+    "eventId": "retry_done_1773059418701_xnrrv7",
+    "attempts": 0,
+    "tweetId": "tweet_done",
+    "lastAttemptAt": 1773059418731
+  },
+  "retry_attempted_1773059418787_zfn81m": {
+    "eventId": "retry_attempted_1773059418787_zfn81m",
+    "attempts": 1,
+    "state": "publish_attempted",
+    "lastAttemptAt": 1773059418821
+  },
+  "trans_1773059607562_a03cxp": {
+    "state": "publish_succeeded",
+    "eventId": "trans_1773059607562_a03cxp",
+    "attempts": 1,
+    "lastAttemptAt": 1773059607749,
+    "tweetId": "tweet_123"
+  },
+  "success_1773059607836_yognrq": {
+    "state": "publish_succeeded",
+    "eventId": "success_1773059607836_yognrq",
+    "attempts": 1,
+    "lastAttemptAt": 1773059608004,
+    "tweetId": "tweet_456"
+  },
+  "fail_1773059608054_im5bm6": {
+    "eventId": "fail_1773059608054_im5bm6",
+    "attempts": 1,
+    "state": "publish_attempted",
+    "lastAttemptAt": 1773059608107,
+    "error": "Network timeout"
+  },
+  "idem_1773059608201_htbbfq": {
+    "state": "publish_succeeded",
+    "eventId": "idem_1773059608201_htbbfq",
+    "attempts": 0,
+    "tweetId": "tweet_idem",
+    "lastAttemptAt": 1773059608235
+  },
+  "dup_1773059608259_8yixlk": {
+    "eventId": "dup_1773059608259_8yixlk",
+    "attempts": 1,
+    "state": "publish_succeeded",
+    "lastAttemptAt": 1773059608287,
+    "tweetId": "tweet_dup"
+  },
+  "persist_1773059608343_76zyh3": {
+    "state": "publish_succeeded",
+    "eventId": "persist_1773059608343_76zyh3",
+    "attempts": 0,
+    "tweetId": "tweet_persist",
+    "lastAttemptAt": 1773059608348
+  },
+  "reload_1773059608393_rat8d6": {
+    "state": "processed_ok",
+    "eventId": "reload_1773059608393_rat8d6",
+    "attempts": 0
+  },
+  "retry_done_1773059608479_vu37aa": {
+    "state": "publish_succeeded",
+    "eventId": "retry_done_1773059608479_vu37aa",
+    "attempts": 0,
+    "tweetId": "tweet_done",
+    "lastAttemptAt": 1773059608538
+  },
+  "retry_attempted_1773059608605_5jwhep": {
+    "eventId": "retry_attempted_1773059608605_5jwhep",
+    "attempts": 1,
+    "state": "publish_attempted",
+    "lastAttemptAt": 1773059608639
+  },
+  "trans_1773059680682_oieew3": {
+    "state": "publish_succeeded",
+    "eventId": "trans_1773059680682_oieew3",
+    "attempts": 1,
+    "lastAttemptAt": 1773059680871,
+    "tweetId": "tweet_123"
+  },
+  "success_1773059680984_e2lvmb": {
+    "state": "publish_succeeded",
+    "eventId": "success_1773059680984_e2lvmb",
+    "attempts": 1,
+    "lastAttemptAt": 1773059681109,
+    "tweetId": "tweet_456"
+  },
+  "fail_1773059681166_jpci4l": {
+    "eventId": "fail_1773059681166_jpci4l",
+    "attempts": 1,
+    "state": "publish_attempted",
+    "lastAttemptAt": 1773059681206,
+    "error": "Network timeout"
+  },
+  "idem_1773059681327_7xvs1n": {
+    "state": "publish_succeeded",
+    "eventId": "idem_1773059681327_7xvs1n",
+    "attempts": 0,
+    "tweetId": "tweet_idem",
+    "lastAttemptAt": 1773059681361
+  },
+  "dup_1773059681400_vabu9p": {
+    "eventId": "dup_1773059681400_vabu9p",
+    "attempts": 1,
+    "state": "publish_succeeded",
+    "lastAttemptAt": 1773059681499,
+    "tweetId": "tweet_dup"
+  },
+  "persist_1773059681534_le2kj7": {
+    "state": "publish_succeeded",
+    "eventId": "persist_1773059681534_le2kj7",
+    "attempts": 0,
+    "tweetId": "tweet_persist",
+    "lastAttemptAt": 1773059681578
+  },
+  "reload_1773059681626_wldxwe": {
+    "state": "processed_ok",
+    "eventId": "reload_1773059681626_wldxwe",
+    "attempts": 0
+  },
+  "retry_done_1773059681682_z35l3e": {
+    "state": "publish_succeeded",
+    "eventId": "retry_done_1773059681682_z35l3e",
+    "attempts": 0,
+    "tweetId": "tweet_done",
+    "lastAttemptAt": 1773059681734
+  },
+  "retry_attempted_1773059681835_y6noo8": {
+    "eventId": "retry_attempted_1773059681835_y6noo8",
+    "attempts": 1,
+    "state": "publish_attempted",
+    "lastAttemptAt": 1773059681836
+  },
+  "trans_1773059740276_zxus5h": {
+    "state": "publish_succeeded",
+    "eventId": "trans_1773059740276_zxus5h",
+    "attempts": 1,
+    "lastAttemptAt": 1773059740446,
+    "tweetId": "tweet_123"
+  },
+  "success_1773059740528_g0wdt8": {
+    "state": "publish_succeeded",
+    "eventId": "success_1773059740528_g0wdt8",
+    "attempts": 1,
+    "lastAttemptAt": 1773059740723,
+    "tweetId": "tweet_456"
+  },
+  "fail_1773059740761_jpfw0g": {
+    "eventId": "fail_1773059740761_jpfw0g",
+    "attempts": 1,
+    "state": "publish_attempted",
+    "lastAttemptAt": 1773059740784,
+    "error": "Network timeout"
+  },
+  "idem_1773059740901_g6b0hg": {
+    "state": "publish_succeeded",
+    "eventId": "idem_1773059740901_g6b0hg",
+    "attempts": 0,
+    "tweetId": "tweet_idem",
+    "lastAttemptAt": 1773059741119
+  },
+  "dup_1773059741223_muxbyt": {
+    "eventId": "dup_1773059741223_muxbyt",
+    "attempts": 1,
+    "state": "publish_succeeded",
+    "lastAttemptAt": 1773059741310,
+    "tweetId": "tweet_dup"
+  },
+  "persist_1773059741455_d4v1wn": {
+    "state": "publish_succeeded",
+    "eventId": "persist_1773059741455_d4v1wn",
+    "attempts": 0,
+    "tweetId": "tweet_persist",
+    "lastAttemptAt": 1773059741485
+  },
+  "reload_1773059741552_aq34hs": {
+    "state": "processed_ok",
+    "eventId": "reload_1773059741552_aq34hs",
+    "attempts": 0
+  },
+  "retry_done_1773059741711_p4h07y": {
+    "state": "publish_succeeded",
+    "eventId": "retry_done_1773059741711_p4h07y",
+    "attempts": 0,
+    "tweetId": "tweet_done",
+    "lastAttemptAt": 1773059741771
+  },
+  "retry_attempted_1773059741819_fop95j": {
+    "eventId": "retry_attempted_1773059741819_fop95j",
+    "attempts": 1,
+    "state": "publish_attempted",
+    "lastAttemptAt": 1773059741853
   }
 }
