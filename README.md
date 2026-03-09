@@ -1,4 +1,4 @@
-# xAi Bot (serGorkypf)
+# xAi Bot (GORKYPF)
 
 Autonomous X (Twitter) AI Agent — TypeScript/Node worker that polls @mentions, processes via the **canonical pipeline**, and replies with AI-generated responses under the GORKYPF persona.
 
@@ -101,7 +101,7 @@ pnpm start
 pnpm dev
 
 # Dry run (no posting)
-DRY_RUN=true pnpm start
+LAUNCH_MODE=dry_run pnpm start
 ```
 
 ---
@@ -160,7 +160,7 @@ Requires the LLM terminal test harness (`llm-terminal-test-bundle`) or `--result
 | POLL_INTERVAL_MS | No | Poll interval in ms (default: 30000) |
 | DRY_RUN | No | `true` = no posting |
 | MENTIONS_SOURCE | No | `mentions` or `search` |
-| BOT_USERNAME | No | For search mode (default: serGorky) |
+| BOT_USERNAME | No | For search mode (default: Gorkypf_on_sol) |
 | LAUNCH_MODE | No | `off`, `dry_run`, `staging`, `prod` |
 | REPLICATE_API_KEY | No | For image generation |
 
@@ -179,7 +179,7 @@ Full list: `docs/var.README.md`.
    - `REPLICATE_API_KEY` (optional)
    - `KV_URL` (required when `USE_REDIS=true`): Get from Upstash Console → Connect → Node.js → ioredis
 
-**Important:** The `KV_URL` must use the `redis://` protocol, not `https://`. Upstash provides both REST and TCP connections; this bot requires the TCP (ioredis) connection.
+**Important:** The `KV_URL` must use the `redis://` protocol, not `https://`. Upstash provides both REST and TCP connections; this bot requires the TCP (ioredis) connection. The legacy `UPSTASH_REDIS_REST_URL` (HTTPS) is not compatible.
 
 ### Blueprint Services
 
