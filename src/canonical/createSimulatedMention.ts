@@ -1,12 +1,12 @@
 /**
  * Creates a CanonicalEvent from terminal input for X mention simulation.
  * Used by the CLI bridge to simulate production mention events.
- * Auto-prefixes @gorkypf (or BOT_USERNAME) when missing.
+ * Auto-prefixes @Gorky_on_sol (or BOT_USERNAME) when missing.
  */
 
 import type { CanonicalEvent } from "./types.js";
 
-const BOT_HANDLE = (process.env.BOT_USERNAME ?? "gorkypf").replace(/^@/, "");
+const BOT_HANDLE = (process.env.BOT_USERNAME ?? "Gorky_on_sol").replace(/^@/, "");
 const MENTION_PREFIX = `@${BOT_HANDLE}`;
 const MENTION_PREFIX_REGEX = new RegExp(`^@${BOT_HANDLE}\\s+`, "i");
 
@@ -25,7 +25,7 @@ function extractUrls(text: string): string[] {
   return matches ?? [];
 }
 
-/** Ensures text starts with @gorkypf (or BOT_USERNAME) to simulate a real mention. */
+/** Ensures text starts with @Gorky_on_sol (or BOT_USERNAME) to simulate a real mention. */
 function ensureMentionPrefix(text: string): string {
   const trimmed = text.trim();
   if (MENTION_PREFIX_REGEX.test(trimmed)) {

@@ -1,6 +1,6 @@
 # Environment Variablen Dokumentation
 
-Vollständige Übersicht aller verfügbaren Environment Variablen für den GORKYPF Bot.
+Vollständige Übersicht aller verfügbaren Environment Variablen für den Gorky_on_sol Bot.
 
 ---
 
@@ -65,7 +65,7 @@ Vollständige Übersicht aller verfügbaren Environment Variablen für den GORKY
 | `BOT_WHITELIST_USERNAMES` | Erlaubte User (bei whitelist) | `user1,user2,user3` | - |
 | `BOT_WHITELIST_USER_IDS` | Optional: User IDs statt Handles | `123456,789012` | - |
 | `BOT_DENY_REPLY_MODE` | Reaktion bei nicht erlaubten | `silent` (ignorieren), `tease` (spöttische Antwort) | `silent` |
-| `BOT_USERNAME` | Bot's X Handle | `Gorkypf_on_sol` | `Gorkypf_on_sol` |
+| `BOT_USERNAME` | Bot's X Handle | `Gorky_on_sol_on_sol` | `Gorky_on_sol_on_sol` |
 | `ALLOWLIST_HANDLES` | Erlaubte Handles in staging | `alice,bob` | - |
 
 > **Hinweis:** `DRY_RUN` ist veraltet, verwende `LAUNCH_MODE=dry_run`.
@@ -174,7 +174,7 @@ Vollständige Übersicht aller verfügbaren Environment Variablen für den GORKY
 |----------|-------------|----------------|---------|
 | `USE_REDIS` | Redis statt Filesystem verwenden | `true`, `false` | `false` |
 | `KV_URL` | Redis Connection URL | `redis://default:PASS@HOST.upstash.io:6379` | - |
-| `REDIS_KEY_PREFIX` | Prefix für Redis Keys | `gorkypf:` | `gorkypf:` |
+| `REDIS_KEY_PREFIX` | Prefix für Redis Keys | `Gorky_on_sol:` | `Gorky_on_sol:` |
 | `DATA_DIR` | Pfad für Filesystem Store | `./data`, `/data` | `./data` |
 
 ### TTL Configuration
@@ -204,7 +204,7 @@ Vollständige Übersicht aller verfügbaren Environment Variablen für den GORKY
 | `SOLANA_RPC_FALLBACK_URL` | Fallback Solana RPC Endpoint | `https://solana-api.projectserum.com` | - |
 | `BOT_TOKEN_MINT` | Bot Token Mint Address | `So11111111111111111111111111111111111111112` | `So11111111111111111111111111111111111111112` |
 | `BOT_TREASURY_WALLET` | Treasury Wallet Address | `...` | - |
-| `BOT_TICKER` | Bot Token Ticker | `GORKYPF` | `GORKYPF` |
+| `BOT_TICKER` | Bot Token Ticker | `Gorky_on_sol` | `Gorky_on_sol` |
 | `BOT_PROGRAM_ID` | Bot Program ID | `...` | - |
 
 ---

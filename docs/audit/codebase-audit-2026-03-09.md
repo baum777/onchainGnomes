@@ -10,14 +10,14 @@
 
 ## 1. Executive Summary
 
-Das Repository `xAi_Bot-App` ist ein **TypeScript/Node.js-basierter X (Twitter) Bot** mit dem Namen `gorkypf-bot`. Die Architektur ist ein Single-App Monolith mit klarer Schichtentrennung. Die Codebasis ist überwiegend sauber, jedoch gibt es **signifikante Inkonsistenzen zwischen Dokumentation und Code**, veraltete Root-Dateien und eine nicht vollständig synchronisierte `.env.example`.
+Das Repository `xAi_Bot-App` ist ein **TypeScript/Node.js-basierter X (Twitter) Bot** mit dem Namen `Gorky_on_sol-bot`. Die Architektur ist ein Single-App Monolith mit klarer Schichtentrennung. Die Codebasis ist überwiegend sauber, jedoch gibt es **signifikante Inkonsistenzen zwischen Dokumentation und Code**, veraltete Root-Dateien und eine nicht vollständig synchronisierte `.env.example`.
 
 **Kritische Funde:**
 1. `docs/var.README.md` ist veraltet (referenziert `XAI_MODEL=grok-2`, Code nutzt `XAI_MODEL_PRIMARY=grok-3`)
 2. Root-Level Dokumente `LLM_TESTING_HOWTO.md` und `docs/RUN.md` (deprecated) sind redundant
 3. `.env.example` enthält nicht alle tatsächlich genutzten Variablen (z.B. `SOLANA_RPC_*` fehlt)
 4. Mehrere `.legacy` und `.incoming` Dateien im Root sind tote Artefakte
-5. `README.md` hat inkonsistente Default-Werte (BOT_USERNAME: `serGorky` vs `Gorkypf_on_sol`)
+5. `README.md` hat inkonsistente Default-Werte (BOT_USERNAME: `serGorky` vs `Gorky_on_sol_on_sol`)
 
 ---
 
@@ -143,7 +143,7 @@ Das Repository `xAi_Bot-App` ist ein **TypeScript/Node.js-basierter X (Twitter) 
 
 | Aspekt | README.md | Realität im Code |
 |--------|-----------|------------------|
-| `BOT_USERNAME` Default | `serGorky` | `Gorkypf_on_sol` |
+| `BOT_USERNAME` Default | `serGorky` | `Gorky_on_sol_on_sol` |
 | `MENTIONS_SOURCE` Default | `mentions` | `search` (in `render.yaml`) |
 | `USE_REDIS` Default | nicht erwähnt | `false` (lokal), `true` (Render) |
 
@@ -328,10 +328,10 @@ xAi_Bot-App/
 
 | Zeile | Problem | Korrektur |
 |-------|---------|-----------|
-| 3 | `serGorkypf` → korrekt ist `Gorkypf_on_sol` | Aktualisieren |
+| 3 | `serGorky_on_sol` → korrekt ist `Gorky_on_sol_on_sol` | Aktualisieren |
 | 88-89 | `cp .env.example .env` → pnpm verwenden | `pnpm` erwähnen |
 | 104 | `DRY_RUN=true pnpm start` → Veraltet | `LAUNCH_MODE=dry_run pnpm start` |
-| 163 | `BOT_USERNAME` Default `serGorky` | `Gorkypf_on_sol` |
+| 163 | `BOT_USERNAME` Default `serGorky` | `Gorky_on_sol_on_sol` |
 | 167 | `UPSTASH_REDIS_REST_URL` erwähnt | Entfernen, nicht kompatibel |
 
 ---

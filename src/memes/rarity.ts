@@ -1,9 +1,9 @@
 export type TemplateKey =
-  | "gorkypf_courtroom"
-  | "gorkypf_chart_autopsy"
-  | "gorkypf_ghost"
-  | "gorkypf_certificate"
-  | "gorkypf_trade_screen";
+  | "Gorky_on_sol_courtroom"
+  | "Gorky_on_sol_chart_autopsy"
+  | "Gorky_on_sol_ghost"
+  | "Gorky_on_sol_certificate"
+  | "Gorky_on_sol_trade_screen";
 
 export type Rarity = "COMMON" | "UNCOMMON" | "RARE" | "EPIC" | "MYTHIC" | "COMBO";
 
@@ -15,11 +15,11 @@ export type RarityConfig = {
 
 // Backward compatibility aliases (legacy → current)
 export const TEMPLATE_KEY_ALIASES: Record<string, TemplateKey> = {
-  horny_courtroom: "gorkypf_courtroom",
-  horny_chart_autopsy: "gorkypf_chart_autopsy",
-  horny_ghost: "gorkypf_ghost",
-  horny_certificate: "gorkypf_certificate",
-  horny_trade_screen: "gorkypf_trade_screen",
+  horny_courtroom: "Gorky_on_sol_courtroom",
+  horny_chart_autopsy: "Gorky_on_sol_chart_autopsy",
+  horny_ghost: "Gorky_on_sol_ghost",
+  horny_certificate: "Gorky_on_sol_certificate",
+  horny_trade_screen: "Gorky_on_sol_trade_screen",
 };
 
 export function resolveTemplateKey(key: string): TemplateKey {
@@ -29,11 +29,11 @@ export function resolveTemplateKey(key: string): TemplateKey {
 export const DEFAULT_RARITY_CONFIG: RarityConfig = {
   weights: { COMMON: 70, UNCOMMON: 20, RARE: 7, EPIC: 2.5, MYTHIC: 0.5 },
   templatePools: {
-    COMMON: ["gorkypf_trade_screen"],
-    UNCOMMON: ["gorkypf_courtroom"],
-    RARE: ["gorkypf_chart_autopsy"],
-    EPIC: ["gorkypf_certificate"],
-    MYTHIC: ["gorkypf_ghost"]
+    COMMON: ["Gorky_on_sol_trade_screen"],
+    UNCOMMON: ["Gorky_on_sol_courtroom"],
+    RARE: ["Gorky_on_sol_chart_autopsy"],
+    EPIC: ["Gorky_on_sol_certificate"],
+    MYTHIC: ["Gorky_on_sol_ghost"]
   },
   caps: { EPIC: 1, MYTHIC: 1 }
 };

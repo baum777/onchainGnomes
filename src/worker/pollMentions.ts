@@ -1,5 +1,5 @@
 /**
- * serGorkypf Mention Poller
+ * serGorky_on_sol Mention Poller
  *
  * Fetches mentions, processes via canonical pipeline.
  * Uses file-based storage for idempotency.
@@ -69,7 +69,7 @@ const MENTIONS_SOURCE = (process.env.MENTIONS_SOURCE ?? "mentions").toLowerCase(
   | "mentions"
   | "search";
 
-const BOT_USERNAME = (process.env.BOT_USERNAME ?? "Gorkypf_on_sol").replace(/^@/, "");
+const BOT_USERNAME = (process.env.BOT_USERNAME ?? "Gorky_on_sol_on_sol").replace(/^@/, "");
 
 interface ProcessedMentionsState {
   last_since_id: string | null;

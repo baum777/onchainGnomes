@@ -1,4 +1,4 @@
-# Render Blueprint — xAi Bot / GORKYPF
+# Render Blueprint — xAi Bot / Gorky_on_sol
 # Background Worker + optional Health Web Service
 # Node.js/TypeScript project — Python files are legacy and ignored
 
@@ -34,7 +34,7 @@ services:
       - key: KV_URL
         sync: false  # Set in Render dashboard: redis://default:PASS@HOST.upstash.io:6379
       - key: REDIS_KEY_PREFIX
-        value: "gorkypf:"
+        value: "Gorky_on_sol:"
 
       # X/Twitter API (sensitive - set in dashboard)
       - key: X_API_KEY
@@ -58,7 +58,7 @@ services:
 
       # Bot Configuration
       - key: BOT_USERNAME
-        value: Gorkypf_on_sol
+        value: Gorky_on_sol_on_sol
       - key: LAUNCH_MODE
         value: prod
       - key: BOT_ACTIVATION_MODE

@@ -15,7 +15,7 @@
  * - lore_query: Question about bot's backstory/lore
  * - coin_query: Question about specific token/coin
  * - ca_request: User asks for the official contract address / CA
- * - own_token_sentiment: User asks about bot's feeling/view on own token ($GORKYPF)
+ * - own_token_sentiment: User asks about bot's feeling/view on own token ($Gorky_on_sol)
  */
 
 import type { LLMClient } from "../clients/llmClient.js";
@@ -98,7 +98,7 @@ Classify the user's message into one of these categories:
 - lore_query: Question about the bot's backstory, origin, or persona
 - coin_query: Question about a specific token, coin, or contract
 - ca_request: User asks for the official contract address / CA / mint of the bot's own token
-- own_token_sentiment: User asks how the bot feels about its own token ($GORKYPF / gorkypf / our token / dein token)
+- own_token_sentiment: User asks how the bot feels about its own token ($Gorky_on_sol / Gorky_on_sol / our token / dein token)
 
 Also assess:
 - aggression_level: low | medium | high
@@ -355,19 +355,19 @@ export function detectCARequest(text: string): boolean {
 
 /**
  * NLP: Detects own-token-sentiment intent (user asking how bot feels about own token).
- * Covers: $GORKYPF, GORKYPF, gorkypf, our token, dein token, your token, own token
+ * Covers: $Gorky_on_sol, Gorky_on_sol, Gorky_on_sol, our token, dein token, your token, own token
  */
 export function detectOwnTokenSentiment(text: string): boolean {
   const lower = text.toLowerCase();
   const OWN_TOKEN_PATTERNS = [
-    /\$gorkypf\b/i,
-    /\bgorkypf\b/i,
+    /\$Gorky_on_sol\b/i,
+    /\bGorky_on_sol\b/i,
     /\bour\s*token\b/i,
     /\bdein\s*token\b/i,
     /\byour\s*token\b/i,
     /\bown\s*token\b/i,
-    /\b(feeling|think|feel|meinung|sicht|view).*(gorkypf|our token|dein token|your token)\b/i,
-    /\b(gorkypf|our token|dein token).*(feeling|think|feel|meinung|sicht|view|bullish|bearish)\b/i,
+    /\b(feeling|think|feel|meinung|sicht|view).*(Gorky_on_sol|our token|dein token|your token)\b/i,
+    /\b(Gorky_on_sol|our token|dein token).*(feeling|think|feel|meinung|sicht|view|bullish|bearish)\b/i,
     /\bhow.*feel.*(token|coin)\b/i,
   ];
   return OWN_TOKEN_PATTERNS.some((p) => p.test(lower));

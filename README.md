@@ -1,6 +1,6 @@
-# xAi Bot (GORKYPF)
+# xAi Bot (Gorky_on_sol)
 
-Autonomous X (Twitter) AI Agent — TypeScript/Node worker that polls @mentions, processes via the **canonical pipeline**, and replies with AI-generated responses under the GORKYPF persona.
+Autonomous X (Twitter) AI Agent — TypeScript/Node worker that polls @mentions, processes via the **canonical pipeline**, and replies with AI-generated responses under the Gorky_on_sol persona.
 
 **Runtime**: TypeScript/Node 20+. Python code in `legacy/python/`; LLM fingerprinting tools in `tools/behavior_fingerprint/` (Python).
 
@@ -10,9 +10,9 @@ Autonomous X (Twitter) AI Agent — TypeScript/Node worker that polls @mentions,
 
 ### Origin Story (Lore)
 
-There was a time when a token was alive. Community was real, charts organic, people had fun. Then came bots, fake volume, narrative farming. The price went up, the soul died, it collapsed. That energy — rugs dressed as teams, fake doxxing theater, wash volume — reformed into **GORKYPF**, a Chaos Roast Entity that lives on Crypto Twitter because that place is just as broken as it is.
+There was a time when a token was alive. Community was real, charts organic, people had fun. Then came bots, fake volume, narrative farming. The price went up, the soul died, it collapsed. That energy — rugs dressed as teams, fake doxxing theater, wash volume — reformed into **Gorky_on_sol**, a Chaos Roast Entity that lives on Crypto Twitter because that place is just as broken as it is.
 
-### GORKYPF — Persona
+### Gorky_on_sol — Persona
 
 Sharp, sarcastic crypto-native commentator. **Roasts the market** and mocks narratives; **never identity-based**, content-focused. De-escalates aggression with playful humor. Crypto-native tone, no hate speech, no doxxing, no financial advice.
 
@@ -156,11 +156,11 @@ Requires the LLM terminal test harness (`llm-terminal-test-bundle`) or `--result
 | XAI_MODEL_FALLBACKS | No | CSV fallbacks (e.g. grok-3-mini) |
 | **USE_REDIS** | No | `true` to use Redis for state storage (default: `false`) |
 | **KV_URL** | When USE_REDIS=true | Redis connection URL: `redis://default:PASS@HOST.upstash.io:6379` |
-| **REDIS_KEY_PREFIX** | No | Prefix for Redis keys (default: `gorkypf:`) |
+| **REDIS_KEY_PREFIX** | No | Prefix for Redis keys (default: `Gorky_on_sol:`) |
 | POLL_INTERVAL_MS | No | Poll interval in ms (default: 30000) |
 | DRY_RUN | No | `true` = no posting |
 | MENTIONS_SOURCE | No | `mentions` or `search` |
-| BOT_USERNAME | No | For search mode (default: Gorkypf_on_sol) |
+| BOT_USERNAME | No | For search mode (default: Gorky_on_sol_on_sol) |
 | LAUNCH_MODE | No | `off`, `dry_run`, `staging`, `prod` |
 | REPLICATE_API_KEY | No | For image generation |
 
