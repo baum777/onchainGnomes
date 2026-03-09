@@ -42,6 +42,10 @@ export type ReplyLogFields = {
 export function sanitizeForLog(obj: unknown): unknown {
   if (!obj || typeof obj !== "object") return obj;
 
+  if (Array.isArray(obj)) {
+    return obj.map(item => sanitizeForLog(item));
+  }
+
   const sanitized: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(obj)) {
     const lowerKey = key.toLowerCase();

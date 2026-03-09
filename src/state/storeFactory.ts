@@ -1,6 +1,6 @@
 import type { StateStore } from "./stateStore.js";
-import { getFileSystemStore } from "./fileSystemStore.js";
-import { getRedisStore, maskUrl } from "./redisStore.js";
+import { getFileSystemStore, FileSystemStateStore } from "./fileSystemStore.js";
+import { getRedisStore, maskUrl, RedisStateStore } from "./redisStore.js";
 import { logInfo } from "../ops/logger.js";
 
 let cachedStore: StateStore | null = null;
@@ -61,5 +61,7 @@ export async function isRedisAvailable(): Promise<boolean> {
 
 export function getStoreType(): "redis" | "filesystem" | "unknown" {
   if (!cachedStore) return "unknown";
-  return "ping" in cachedStore ? "redis" : "filesystem";
+  if (cachedStore instanceof RedisStateStore) return "redis";
+  if (cachedStore instanceof FileSystemStateStore) return "filesystem";
+  return "unknown";
 }

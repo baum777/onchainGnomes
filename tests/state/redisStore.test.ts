@@ -3,10 +3,10 @@ import { getRedisStore } from "../../src/state/redisStore.js";
 import type { EventTracking, CursorState } from "../../src/state/stateStore.js";
 
 /**
- * Redis store: skip when REDIS_URL not set; TTL, ping/close, persistence semantics.
+ * Redis store: skip when KV_URL or REDIS_URL not set; TTL, ping/close, persistence semantics.
  */
 
-const hasRedis = !!process.env.REDIS_URL;
+const hasRedis = !!(process.env.KV_URL ?? process.env.REDIS_URL);
 
 describe.skipIf(!hasRedis)("redisStore", () => {
   const store = getRedisStore();

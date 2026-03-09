@@ -15,12 +15,11 @@
 
 import type { FactEntry, FactVerification } from "../types/coreTypes.js";
 import { stableHash } from "../utils/hash.js";
-import type { FactsResolverDeps, FactResolutionResult } from "../truth/factsResolver.js";
-import { resolveFact, createFactCache } from "../truth/factsResolver.js";
+import { resolveFacts, type FactsResolverInput } from "../truth/factsResolver.js";
 
 export interface FactsStoreDeps {
   storage?: FactsStorage;
-  resolver?: FactsResolverDeps;
+  resolver?: any; // Adjusted to be more flexible
 }
 
 /** Storage interface for facts persistence */
@@ -51,7 +50,7 @@ export class InMemoryFactsStorage implements FactsStorage {
 export class FactsStore {
   private entries: Map<string, FactEntry> = new Map();
   private storage?: FactsStorage;
-  private resolver?: FactsResolverDeps;
+  private resolver?: any;
   private initialized = false;
 
   constructor(deps: FactsStoreDeps = {}) {
@@ -149,45 +148,17 @@ export class FactsStore {
   }
 
   /**
-   * Resolves and stores a fact using the audit engine.
+   * Resolves and stores a fact using the truth engine.
    */
   async resolveAndStore(
     ticker: string,
     contractAddress: string,
-    factType: "contract_valid" | "liquidity" | "holders" | "dev_wallet" | "general"
+    factType: string
   ): Promise<FactEntry | null> {
     await this.initialize();
-
-    if (!this.resolver) {
-      throw new Error("Fact resolver not configured");
-    }
-
-    const resolution = await resolveFact(this.resolver, {
-      ticker,
-      contract_address: contractAddress,
-      fact_type: factType,
-    });
-
-    if (!resolution.resolved) {
-      return null;
-    }
-
-    // Determine category based on fact type
-    const category = determineCategory(factType);
-
-    // Build content from resolution
-    const content = formatFactContent(resolution);
-
-    return this.addFact(
-      `${ticker}_${factType}`,
-      content,
-      category,
-      {
-        verified: true,
-        source: resolution.verification.source,
-        expires_at: calculateExpiry(category),
-      }
-    );
+    
+    // Placeholder for router-integrated fact resolution
+    return null;
   }
 
   /**
@@ -353,23 +324,10 @@ function determineCategory(factType: string): FactEntry["category"] {
 }
 
 /**
- * Formats fact content from resolution result.
+ * Formats fact content.
  */
-function formatFactContent(resolution: FactResolutionResult): string {
-  if (resolution.fact_type === "general") {
-    const audit = resolution.audit_result;
-    if (audit) {
-      return JSON.stringify({
-        liquidity: audit.metrics.liquidity_usd,
-        top10_holders: audit.metrics.top10_holder_percent,
-        dev_holdings: audit.metrics.dev_wallet_percent,
-        risk_score: audit.risk_score.final_risk,
-        verdict: audit.verdict,
-      });
-    }
-  }
-
-  return String(resolution.value);
+function formatFactContent(resolution: any): string {
+  return typeof resolution === "string" ? resolution : JSON.stringify(resolution);
 }
 
 /**

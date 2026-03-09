@@ -4,23 +4,30 @@ import { logInfo, logError, logWarn } from "../ops/logger.js";
 import { incrementCounter } from "../observability/metrics.js";
 import { COUNTER_NAMES } from "../observability/metricTypes.js";
 
-const KEY_PREFIX = process.env.REDIS_KEY_PREFIX ?? "gorkypf:";
 const EVENT_TTL_SECONDS = 7 * 24 * 60 * 60;
 const PUBLISHED_TTL_SECONDS = 30 * 24 * 60 * 60;
 
+function normalizeRedisUrl(url: string): string {
+  const trimmed = url.trim();
+  if (!trimmed.startsWith("redis://")) {
+    throw new Error(
+      `Redis URL must use redis:// protocol. ` +
+      `Use Upstash "Node.js/ioredis" connection string. ` +
+      `Got: ${maskUrl(trimmed)}`
+    );
+  }
+  return trimmed;
+}
+
 export class RedisStateStore implements StateStore {
   private redis: Redis;
+  private keyPrefix: string;
 
   constructor(url: string) {
-    if (!url.startsWith("redis://")) {
-      throw new Error(
-        `Redis URL must use redis:// protocol. ` +
-        `Use Upstash "Node.js/ioredis" connection string. ` +
-        `Got: ${url.replace(/:\/\/.*@/, "://***@")}`
-      );
-    }
+    const normalizedUrl = normalizeRedisUrl(url);
+    this.keyPrefix = process.env.REDIS_KEY_PREFIX ?? "gorkypf:";
 
-    this.redis = new Redis(url, {
+    this.redis = new Redis(normalizedUrl, {
       maxRetriesPerRequest: 3,
       retryStrategy(times: number) {
         if (times > 5) return null;
@@ -44,7 +51,7 @@ export class RedisStateStore implements StateStore {
   }
 
   private key(name: string): string {
-    return `${KEY_PREFIX}${name}`;
+    return `${this.keyPrefix}${name}`;
   }
 
   // ── Simple KV primitives ──────────────────────────────────────────────
@@ -229,8 +236,17 @@ export class RedisStateStore implements StateStore {
     }
   }
 
-  async resetBudget(): Promise<void> {
-    logInfo("[RedisStore] Budget reset (no-op for Redis, TTL handles expiry)");
+  async resetBudget(ttlMs: number = 60000): Promise<void> {
+    try {
+      const windowStart = Math.floor(Date.now() / ttlMs) * ttlMs;
+      const key = this.key(`budget:${windowStart}`);
+      await this.redis.del(key);
+      logInfo("[RedisStore] Budget reset", { windowStart });
+    } catch (error) {
+      incrementCounter(COUNTER_NAMES.STATE_STORE_ERROR_TOTAL);
+      logError("[RedisStore] resetBudget failed", { error });
+      throw error;
+    }
   }
 
   // ── Cursor ────────────────────────────────────────────────────────────
@@ -305,7 +321,7 @@ export function getRedisStore(url?: string): RedisStateStore {
     }
     logInfo("[RedisStore] Creating RedisStateStore", {
       host: maskUrl(redisUrl),
-      prefix: KEY_PREFIX,
+      prefix: process.env.REDIS_KEY_PREFIX ?? "gorkypf:",
     });
     instance = new RedisStateStore(redisUrl);
   }

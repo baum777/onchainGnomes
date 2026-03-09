@@ -15,7 +15,7 @@ export interface StateStore {
 
   getBudgetUsage(windowStartMs: number): Promise<number>;
   incrementBudgetUsage(weight: number, ttlMs: number): Promise<void>;
-  resetBudget(): Promise<void>;
+  resetBudget(ttlMs?: number): Promise<void>;
 
   getCursor(): Promise<CursorState | null>;
   setCursor(cursor: CursorState): Promise<void>;

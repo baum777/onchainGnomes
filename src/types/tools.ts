@@ -50,6 +50,7 @@ export const ToolErrorCodeSchema = z.enum([
   "DISCREPANCY",
   "NO_DATA",
   "UNEXPECTED",
+  "PERMISSION_DENIED",
 ]);
 
 export type ToolErrorCode = z.infer<typeof ToolErrorCodeSchema>;
