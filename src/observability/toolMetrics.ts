@@ -10,14 +10,14 @@ import {
   observeHistogram,
   setGauge,
   recordDuration,
-  type CounterName,
-  type GaugeName,
-  type HistogramName,
 } from "./metrics.js";
 import {
   COUNTER_NAMES,
   GAUGE_NAMES,
   HISTOGRAM_NAMES,
+  type CounterName,
+  type GaugeName,
+  type HistogramName,
 } from "./metricTypes.js";
 import type { ToolName, VerificationStatus, ToolErrorCode } from "../types/tools.js";
 
