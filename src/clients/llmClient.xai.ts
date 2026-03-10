@@ -11,6 +11,7 @@ type LLMInput = {
   user: string;
   schemaHint?: string;
   temperature?: number;
+  max_tokens?: number;
 };
 
 const XAI_API = process.env.XAI_BASE_URL ?? "https://api.x.ai/v1";
@@ -124,8 +125,8 @@ async function tryGenerateJSON<T>(
           { role: "system", content: system },
           { role: "user", content: input.user },
         ],
-        max_tokens: 350,
-        temperature: 0.7,
+        max_tokens: input.max_tokens ?? 350,
+        temperature: input.temperature ?? 0.7,
       }),
     });
 
@@ -158,7 +159,7 @@ export function createXAILLMClient(opts?: {
   const overrideModel = opts?.model;
 
   return {
-    async generateJSON<T>(input: LLMInput & { temperature?: number }): Promise<T> {
+    async generateJSON<T>(input: LLMInput & { temperature?: number; max_tokens?: number }): Promise<T> {
       const allModels = overrideModel ? [overrideModel] : getModelPriority();
       const models = allModels.filter(isAvailable);
       let lastError: unknown;

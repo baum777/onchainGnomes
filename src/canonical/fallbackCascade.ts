@@ -7,6 +7,7 @@ import type {
   ScoreBundle,
   ThesisBundle,
   ValidationResult,
+  StructuredRoast,
 } from "./types.js";
 import type { RelevanceResult } from "./relevanceScorer.js";
 import { downgradeMode } from "./downgradeMatrix.js";
@@ -20,6 +21,11 @@ import { attemptRepair } from "../validation/repairLayer.js";
 import { checkLLMBudget, recordLLMCall } from "../state/sharedBudgetGate.js";
 import { extractExpectedKeywords, shouldRefine } from "./refineChecker.js";
 import { buildRefinePrompt } from "./refinePromptBuilder.js";
+import {
+  buildMasterPrompt,
+  buildRefinePromptFullSpectrum,
+} from "./fullSpectrumPromptBuilder.js";
+import { trimToLimit } from "../utils/textTrim.js";
 
 interface GenerateResult {
   reply_text: string;
@@ -68,6 +74,89 @@ async function generate(
   };
 }
 
+function normalizeToStructuredRoast(raw: unknown): StructuredRoast | null {
+  let o = raw as Record<string, unknown>;
+  if (o?.reply && typeof o.reply === "object" && !Array.isArray(o.reply)) {
+    o = o.reply as Record<string, unknown>;
+  }
+  const text = (o?.roast_text as string) ?? (o?.reply as string) ?? (o?.reply_text as string);
+  if (!text || typeof text !== "string") return null;
+  return {
+    roast_text: text,
+    used_memes: Array.isArray(o?.used_memes) ? (o.used_memes as string[]) : [],
+    bissigkeit_score: typeof o?.bissigkeit_score === "number" ? o.bissigkeit_score : 5,
+    missed_keywords: Array.isArray(o?.missed_keywords) ? (o.missed_keywords as string[]) : [],
+    needs_refine: Boolean(o?.needs_refine),
+    critique_summary: typeof o?.critique_summary === "string" ? o.critique_summary : undefined,
+  };
+}
+
+async function generateFullSpectrum(
+  llm: LLMClient,
+  event: CanonicalEvent,
+  thesis: ThesisBundle,
+  scores: ScoreBundle,
+  config: CanonicalConfig,
+  promptContext?: FallbackCascadeContext,
+): Promise<{ reply_text: string; model_id: string; prompt_hash: string } | null> {
+  const budgetCheck = await checkLLMBudget(false);
+  if (!budgetCheck.allowed) {
+    console.warn(`[BUDGET_GATE] Blocking Full Spectrum LLM for event ${event.event_id}: ${budgetCheck.skipReason}`);
+    return null;
+  }
+  await recordLLMCall(false);
+
+  const input = buildMasterPrompt(event, thesis, scores, promptContext?.relevanceResult);
+  const raw = await llm.generateJSON<unknown>({
+    system: input.system,
+    developer: input.developer,
+    user: input.user,
+    schemaHint: "StructuredRoast",
+  });
+
+  const structured = normalizeToStructuredRoast(raw);
+  if (!structured) return null;
+
+  let roastText = structured.roast_text;
+  const needsRefine =
+    structured.needs_refine ||
+    roastText.length < 80 ||
+    (structured.used_memes?.length ?? 0) < 2 ||
+    structured.bissigkeit_score < 7;
+
+  if (needsRefine) {
+    const refineBudgetCheck = await checkLLMBudget(false);
+    if (refineBudgetCheck.allowed) {
+      await recordLLMCall(false);
+      const refineInput = buildRefinePromptFullSpectrum(
+        event,
+        structured,
+        thesis,
+        scores,
+        promptContext?.relevanceResult,
+      );
+      const refineRaw = await llm.generateJSON<unknown>({
+        system: refineInput.system,
+        developer: refineInput.developer,
+        user: refineInput.user,
+        temperature: 0.95,
+        max_tokens: 400,
+      });
+      const refined = normalizeToStructuredRoast(refineRaw);
+      if (refined?.roast_text) roastText = refined.roast_text;
+    }
+  }
+
+  const { stableHash } = await import("../utils/hash.js");
+  const prompt_hash = stableHash(JSON.stringify(input));
+
+  return {
+    reply_text: trimToLimit(roastText, 260),
+    model_id: config.model_id,
+    prompt_hash,
+  };
+}
+
 export interface FallbackResult {
   success: boolean;
   reply_text: string | null;
@@ -99,6 +188,69 @@ export async function fallbackCascade(
   let currentMode = initialMode;
   let attempts = 0;
   const maxAttempts = config.retries.generation_attempts;
+
+  if ((config as { full_spectrum_prompt?: boolean }).full_spectrum_prompt) {
+    const gen = await generateFullSpectrum(llm, event, thesis, scores, config, promptContext);
+    if (gen === null) {
+      return {
+        success: false,
+        reply_text: null,
+        final_mode: currentMode,
+        model_id: config.model_id,
+        prompt_hash: null,
+        validation: null,
+        attempts: 0,
+      };
+    }
+    attempts = 1;
+    const val = validateResponse(
+      gen.reply_text,
+      "neutral_clarification" as CanonicalMode,
+      cls,
+      config,
+    );
+    if (val.ok) {
+      return {
+        success: true,
+        reply_text: gen.reply_text,
+        final_mode: currentMode,
+        model_id: gen.model_id,
+        prompt_hash: gen.prompt_hash,
+        validation: val,
+        attempts,
+      };
+    }
+    const repairEnabled = (config as { repair_enabled?: boolean }).repair_enabled ?? true;
+    if (repairEnabled && val.repair_suggested) {
+      const repairOut = attemptRepair({
+        draft: gen.reply_text,
+        mode: currentMode,
+        cls,
+        config,
+        validation: val,
+      });
+      if (repairOut.repaired && repairOut.validation_after?.ok) {
+        return {
+          success: true,
+          reply_text: repairOut.repaired,
+          final_mode: currentMode,
+          model_id: gen.model_id,
+          prompt_hash: gen.prompt_hash,
+          validation: repairOut.validation_after,
+          attempts,
+        };
+      }
+    }
+    return {
+      success: false,
+      reply_text: null,
+      final_mode: currentMode,
+      model_id: gen.model_id,
+      prompt_hash: gen.prompt_hash,
+      validation: val,
+      attempts,
+    };
+  }
 
   const gen1 = await generate(
     llm,

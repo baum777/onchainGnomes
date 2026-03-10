@@ -184,4 +184,92 @@ describe("fallbackCascade", () => {
     expect(result.success).toBe(false);
     expect(result.reply_text).toBeNull();
   });
+
+  describe("full_spectrum_prompt", () => {
+    const configFullSpectrum = {
+      ...DEFAULT_CANONICAL_CONFIG,
+      full_spectrum_prompt: true,
+    };
+
+    it("succeeds with valid StructuredRoast (no refine)", async () => {
+      const roast =
+        "Your sloppy nothing-burger launch with inorganic volume? Cope. Ngmi.";
+      const llm = createMockLLM([
+        {
+          roast_text: roast,
+          used_memes: ["cope", "ngmi"],
+          bissigkeit_score: 8,
+          needs_refine: false,
+        },
+      ]);
+      const result = await fallbackCascade(
+        llm,
+        makeEvent(),
+        "dry_one_liner",
+        makeThesis(),
+        makeScores(),
+        makeCls(),
+        configFullSpectrum,
+      );
+      expect(result.success).toBe(true);
+      expect(result.reply_text).toBe(roast);
+      expect(result.attempts).toBe(1);
+    });
+
+    it("triggers refine when needs_refine true and returns refined reply", async () => {
+      const weakRoast = "Weak.";
+      const strongRoast =
+        "Concentrated nothing-burger with sloppy liquidity and inorganic volume. Exit liquidity. Cope.";
+      const llm = createMockLLM([
+        {
+          roast_text: weakRoast,
+          used_memes: [],
+          bissigkeit_score: 4,
+          needs_refine: true,
+          critique_summary: "too short, no memes",
+        },
+        {
+          roast_text: strongRoast,
+          used_memes: ["cope", "nothing-burger", "exit liquidity"],
+          bissigkeit_score: 9,
+          needs_refine: false,
+        },
+      ]);
+      const result = await fallbackCascade(
+        llm,
+        makeEvent(),
+        "dry_one_liner",
+        makeThesis(),
+        makeScores(),
+        makeCls(),
+        configFullSpectrum,
+      );
+      expect(result.success).toBe(true);
+      expect(result.reply_text).toBe(strongRoast);
+      expect(result.attempts).toBe(1);
+    });
+
+    it("trims roast_text to 260 chars", async () => {
+      const longRoast = "x".repeat(300);
+      const llm = createMockLLM([
+        {
+          roast_text: longRoast,
+          used_memes: ["cope", "ngmi"],
+          bissigkeit_score: 8,
+          needs_refine: false,
+        },
+      ]);
+      const result = await fallbackCascade(
+        llm,
+        makeEvent(),
+        "dry_one_liner",
+        makeThesis(),
+        makeScores(),
+        makeCls(),
+        configFullSpectrum,
+      );
+      expect(result.success).toBe(true);
+      expect(result.reply_text!.length).toBeLessThanOrEqual(260);
+    });
+  });
 });

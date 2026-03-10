@@ -119,6 +119,12 @@ export interface CanonicalEvent {
   timestamp: string;
   /** Optional thread context (parent tweets) */
   context?: string;
+  /** Full Spectrum: thesis string (from thesis extraction) */
+  thesis?: string;
+  /** Full Spectrum: precomputed relevance score */
+  relevance_score?: number;
+  /** Full Spectrum: sentiment intensity for refine */
+  sentiment_intensity?: number;
 }
 
 export interface ClassifierOutput {
@@ -147,6 +153,23 @@ export interface ThesisBundle {
   primary: ThesisType;
   supporting_point: string | null;
   evidence_bullets: string[];
+}
+
+/** Full Spectrum: structured roast output from LLM (self-critique + refine) */
+export interface StructuredRoast {
+  roast_text: string;
+  used_memes: string[];
+  bissigkeit_score: number;
+  missed_keywords?: string[];
+  needs_refine: boolean;
+  critique_summary?: string;
+}
+
+/** Full Spectrum config overrides */
+export interface FullSpectrumConfig {
+  full_spectrum_prompt: boolean;
+  aggressive_mode?: "analyst" | "horny" | false;
+  max_refine_attempts?: number;
 }
 
 export interface EligibilityResult {
@@ -301,6 +324,10 @@ export interface CanonicalConfig {
   refine_min_length?: number;
   /** Refine: minimum keywords from claim that should appear in reply (default 1) */
   refine_keyword_min_count?: number;
+  /** Full Spectrum: use StructuredRoast + self-critique + refine loop instead of legacy prompt */
+  full_spectrum_prompt?: boolean;
+  /** Full Spectrum: max refine attempts (default 2) */
+  max_refine_attempts?: number;
 }
 
 export const DEFAULT_CANONICAL_CONFIG: CanonicalConfig = {

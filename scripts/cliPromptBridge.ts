@@ -24,17 +24,29 @@ function parseArgs(): {
   debugPrompt: boolean;
   debugBridge: boolean;
   debugDecision: boolean;
+  systemOverride?: string;
 } {
   const args = process.argv.slice(2);
   const flags = new Set(args.filter((a) => a.startsWith("--")));
-  const nonFlags = args.filter((a) => !a.startsWith("--"));
-  const userInput = nonFlags.join(" ").trim();
+  const nonFlags = args.filter((a) => !a.startsWith("--") && a !== "--system"); // Avoid capturing the flag value as input if it was misplaced
+  
+  // Custom logic to find --system and its value, then remove them from non-flags
+  let systemOverride: string | undefined;
+  const sysIdx = args.indexOf("--system");
+  if (sysIdx !== -1 && sysIdx + 1 < args.length) {
+    systemOverride = args[sysIdx + 1];
+  }
+
+  // Filter out the system prompt from the user input if it was included in nonFlags
+  const filteredNonFlags = nonFlags.filter(val => val !== systemOverride);
+  const userInput = filteredNonFlags.join(" ").trim();
 
   return {
     userInput,
     debugPrompt: flags.has("--debug-prompt"),
     debugBridge: flags.has("--debug-bridge"),
     debugDecision: flags.has("--debug-decision"),
+    systemOverride,
   };
 }
 
@@ -50,23 +62,45 @@ function outputError(reason: string, detail?: string): never {
 }
 
 async function main(): Promise<void> {
-  const { userInput, debugPrompt, debugBridge, debugDecision } = parseArgs();
+  const args = parseArgs();
+  const userInput = args.userInput;
+  const systemOverride = args.systemOverride;
 
   if (!userInput) {
     outputError("skip_invalid_input", "empty input");
   }
 
-  const apiKey = process.env.XAI_API_KEY;
+  const apiKey = process.env.XAI_API_KEY || process.env.OPENAI_API_KEY;
   if (!apiKey) {
     outputError(
       "bridge_error",
-      "XAI_API_KEY not set — LLM required for canonical pipeline"
+      "API Key not set (XAI_API_KEY or OPENAI_API_KEY) — LLM required for canonical pipeline"
     );
   }
 
   const llmClient = withCircuitBreaker(createXAILLMClient());
   const deps = { llm: llmClient, botUserId: BOT_USER_ID_TERMINAL };
-  const config = DEFAULT_CANONICAL_CONFIG;
+  
+  // Apply system override to config if provided
+  const config = { ...DEFAULT_CANONICAL_CONFIG };
+  if (systemOverride) {
+    (config as any).system_prompt_override = systemOverride;
+  }
+
+  // Apply test/aggressive mode flags from environment
+  if (process.env.AGGRESSIVE_MODE === "analyst") {
+    config.aggressive_mode = "analyst";
+  } else if (process.env.AGGRESSIVE_MODE === "horny") {
+    config.aggressive_mode = "horny";
+  }
+  
+  if (process.env.TEST_MODE === "true") {
+    config.test_mode = true;
+  }
+
+  if (process.env.FULL_SPECTRUM_PROMPT === "true") {
+    config.full_spectrum_prompt = true;
+  }
 
   let event: CanonicalEvent;
   try {
@@ -75,58 +109,18 @@ async function main(): Promise<void> {
     outputError("skip_invalid_input", e instanceof Error ? e.message : String(e));
   }
 
-  const debug: Record<string, unknown> = {};
-  if (debugBridge) {
-    debug.simulated_mention = {
-      event_id: event.event_id,
-      text: event.text,
-      author_handle: event.author_handle,
-      author_id: event.author_id,
-      platform: event.platform,
-      trigger_type: event.trigger_type,
-      timestamp: event.timestamp,
-    };
-  }
-
   try {
     const startMs = Date.now();
     const result = await handleEvent(event, deps, config);
     const latencyMs = Date.now() - startMs;
 
     if (result.action === "skip") {
-      if (debugDecision || debugBridge) {
-        debug.skip_reason = result.skip_reason;
-        debug.audit_path = result.audit?.path;
-        debug.audit_eligibility_trace = result.audit?.eligibility_trace;
-        debug.audit_policy_trace = result.audit?.policy_trace;
-      }
-      if (debugDecision && result.audit) {
-        debug.classifier = {
-          intent: result.audit.classifier_output.intent,
-          target: result.audit.classifier_output.target,
-          policy_blocked: result.audit.classifier_output.policy_blocked,
-          policy_severity: result.audit.classifier_output.policy_severity,
-        };
-        debug.scores = result.audit.score_bundle;
-        debug.mode = result.audit.mode;
-        debug.thesis = result.audit.thesis?.primary ?? null;
-      }
-
       outputJson({
         skip: true,
         reason: result.skip_reason,
         latency_ms: latencyMs,
-        ...(Object.keys(debug).length > 0 ? { debug } : {}),
       });
       return;
-    }
-
-    if (debugDecision || debugBridge) {
-      debug.mode = result.mode;
-      debug.thesis = result.thesis.primary;
-    }
-    if (debugPrompt && result.audit) {
-      debug.prompt_hash = result.audit.prompt_hash;
     }
 
     outputJson({
@@ -134,7 +128,6 @@ async function main(): Promise<void> {
       reply_text: result.reply_text,
       mode: result.mode,
       latency_ms: latencyMs,
-      ...(Object.keys(debug).length > 0 ? { debug } : {}),
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
