@@ -1,4 +1,4 @@
-template_key: Gorky_on_sol_certificate
+template_key: twimsalot_certificate
 base_style_prompt: >
   humorous official certificate, cyberpunk neon seals,
   glitch borders, demonic notary stamp, meme document style
@@ -21,7 +21,7 @@ text_zones:
     - "Dead Coin Reviver"
     - "Graveyard Wanderer"
   footer:
-    - "ISSUED BY Gorky_on_sol ENTITY"
+    - "ISSUED BY twimsalot ENTITY"
     - "VALID UNTIL NEXT RUG"
     - "NO REFUNDS ON DEGENERACY"
 caption_style: mocking_authority

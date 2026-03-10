@@ -14,7 +14,7 @@ xai:
   max_tokens: 280
   temperature: 0.7
 
-# Gorky_on_sol rollout stages (LAUNCH_MODE env)
+# twimsalot rollout stages (LAUNCH_MODE env)
 # off | dry_run | shadow | restricted | full
 rollout:
   launch_mode: dry_run

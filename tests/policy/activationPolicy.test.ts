@@ -82,7 +82,7 @@ describe("activationPolicy", () => {
       config,
       botUserId,
       authorId: botUserId,
-      authorUsername: "Gorky_on_sol",
+      authorUsername: "twimsalot",
     });
 
     expect(decision.allowed).toBe(false);

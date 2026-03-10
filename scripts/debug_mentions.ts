@@ -9,7 +9,7 @@ async function checkMentions() {
     accessSecret: process.env.X_ACCESS_SECRET || "",
   });
 
-  const BOT_USERNAME = process.env.BOT_USERNAME || "Gorky_on_sol";
+  const BOT_USERNAME = process.env.BOT_USERNAME || "twimsalot";
   const me = await rawClient.v2.me();
   const userId = me.data.id;
   

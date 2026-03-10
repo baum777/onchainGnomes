@@ -18,7 +18,7 @@ describe("Critical: aggression => humorMode=rhyme override", () => {
       text: "YOU SUCK!!! SCAM!!!",
       aggression: { isAggressive: true },
       energy: 5,
-      seedKey: "Gorky_on_sol",
+      seedKey: "twimsalot",
     });
 
     expect(mode).toBe("rhyme");

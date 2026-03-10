@@ -39,21 +39,21 @@ describe("createSimulatedMention", () => {
     expect(event.cashtags).toContain("SOL");
   });
 
-  it("auto-prefixes @Gorky_on_sol when missing", () => {
+  it("auto-prefixes @twimsalot when missing", () => {
     const event = createSimulatedMention("Denkst du der Meta-Trend dreht sich?");
     expect(event.text).toMatch(/^@\w+\s+Denkst du der Meta-Trend/);
     expect(event.text).toContain("Denkst du der Meta-Trend dreht sich?");
   });
 
-  it("preserves input if @Gorky_on_sol already present", () => {
-    const event = createSimulatedMention("@Gorky_on_sol What about altseason?");
-    expect(event.text).toContain("@Gorky_on_sol");
+  it("preserves input if @twimsalot already present", () => {
+    const event = createSimulatedMention("@twimsalot What about altseason?");
+    expect(event.text).toContain("@twimsalot");
     expect(event.text).toContain("What about altseason?");
   });
 
   it("extracts cashtags, hashtags, urls", () => {
     const event = createSimulatedMention(
-      "@Gorky_on_sol Check $PEPE and #memecoins https://example.com"
+      "@twimsalot Check $PEPE and #memecoins https://example.com"
     );
     expect(event.cashtags).toContain("PEPE");
     expect(event.hashtags).toContain("memecoins");

@@ -19,14 +19,14 @@ export type LoadedPreset = ImagePreset & {
 
 const PRESET_ALIASES: Record<string, string> = {
   // Backward compatibility aliases (legacy → current)
-  horny_roast_card: "Gorky_on_sol_roast_card",
-  horny_cyberpunk: "Gorky_on_sol_cyberpunk",
-  horny_chart_ghost: "Gorky_on_sol_chart_ghost",
-  horny_trade_screen: "Gorky_on_sol_trade_screen",
-  horny_certificate: "Gorky_on_sol_certificate",
-  horny_ghost: "Gorky_on_sol_ghost",
-  horny_courtroom: "Gorky_on_sol_courtroom",
-  horny_chart_autopsy: "Gorky_on_sol_chart_autopsy",
+  horny_roast_card: "twimsalot_roast_card",
+  horny_cyberpunk: "twimsalot_cyberpunk",
+  horny_chart_ghost: "twimsalot_chart_ghost",
+  horny_trade_screen: "twimsalot_trade_screen",
+  horny_certificate: "twimsalot_certificate",
+  horny_ghost: "twimsalot_ghost",
+  horny_courtroom: "twimsalot_courtroom",
+  horny_chart_autopsy: "twimsalot_chart_autopsy",
 };
 
 export function resolvePresetKey(key: string): string {

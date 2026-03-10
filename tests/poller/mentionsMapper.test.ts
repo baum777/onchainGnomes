@@ -46,7 +46,7 @@ describe("mentionsMapper", () => {
           data: [
             {
               id: "tweet_123",
-              text: "Hello @Gorky_on_sol",
+              text: "Hello @twimsalot",
               author_id: "user_456",
               created_at: "2024-01-15T12:00:00Z",
               conversation_id: "conv_789",
@@ -78,7 +78,7 @@ describe("mentionsMapper", () => {
       expect(result.mentions).toHaveLength(1);
       expect(result.mentions[0]).toMatchObject({
         id: "tweet_123",
-        text: "Hello @Gorky_on_sol",
+        text: "Hello @twimsalot",
         author_id: "user_456",
         authorUsername: "alice",
         conversation_id: "conv_789",
@@ -354,13 +354,13 @@ describe("mentionsMapper", () => {
         data: {
           data: [
             { id: "1000000000000000001",
-              text: "@Gorky_on_sol help",
+              text: "@twimsalot help",
               author_id: "user_twim",
               created_at: "2024-01-15T10:00:00Z",
             } as unknown as TweetV2,
             {
               id: "2000000000000000002",
-              text: "@Gorky_on_sol hello",
+              text: "@twimsalot hello",
               author_id: "user_nira",
               created_at: "2024-01-15T11:00:00Z",
             } as unknown as TweetV2,
@@ -410,7 +410,7 @@ describe("mentionsMapper", () => {
           ],
           includes: {
             users: [
-              { id: botUserId, username: "Gorky_on_sol" } as unknown as UserV2,
+              { id: botUserId, username: "twimsalot" } as unknown as UserV2,
               { id: "user_abc", username: "regularuser" } as unknown as UserV2,
             ],
           } as ApiV2Includes,

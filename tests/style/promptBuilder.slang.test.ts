@@ -39,7 +39,7 @@ const mockScores: ScoreBundle = {
 };
 
 const mockConfig: CanonicalConfig = {
-  persona_name: "Gorky_on_sol",
+  persona_name: "twimsalot",
   platform: "twitter",
   thresholds: {
     min_relevance: 0.45,
@@ -196,7 +196,7 @@ describe("promptToLLMInput with slang mode", () => {
     const prompt = buildPrompt(mockEvent, "dry_one_liner", mockThesis, mockScores, mockConfig);
     const llmInput = promptToLLMInput(prompt);
 
-    expect(llmInput.system).toContain("You are Gorky_on_sol");
+    expect(llmInput.system).toContain("You are twimsalot");
     expect(llmInput.system).toContain("Response mode: dry_one_liner");
     expect(llmInput.system).not.toContain("SLANG MODE ACTIVE");
   });
