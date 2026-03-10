@@ -33,7 +33,7 @@ export function safeExtractJSON<T>(raw: string): T {
 
   // 1. Versuch: erstes komplettes JSON-Objekt
   const match = text.match(/(\{[\s\S]*?\}(?=\s*$|\s*[,}\]]))/);
-  if (match) {
+  if (match && match[1]) {
     try {
       return JSON.parse(match[1]) as T;
     } catch {
