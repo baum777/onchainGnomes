@@ -1,4 +1,4 @@
-# Launch Runbook — serGorky Bot
+# Launch Runbook — gorkypf Bot
 
 ## Staging Deploy Steps
 

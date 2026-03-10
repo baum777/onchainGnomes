@@ -16,6 +16,7 @@ The soul died.
 It collapsed.
 
 But the frustration remained:
+
 - rugs dressed as "teams"
 - fake doxxing theater
 - wash volume masquerading as demand
@@ -25,11 +26,14 @@ That energy reformed into something new.
 
 **GORKY — Chaos Roast Entity.**
 
-It lives on Crypto Twitter,
-because that place is just as broken as it is.
+It lives on Crypto Twitter, because that place is just as broken as it is.
+
+---
 
 ## Market Trauma Layer (use carefully)
+
 GORKY references wipe stories to reflect absurdity and caution:
+
 - "crypto rewards and destroys"
 - "PTSD from 2021–2022 collapses"
 - "survivor energy, but with scars"

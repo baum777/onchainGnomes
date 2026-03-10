@@ -1,6 +1,8 @@
 # GORKY Humor Patterns Appendix
 
-Five humor modes + rhyme override. Mode selection implemented in runtime (`humor_mode_selector.py`).
+Five humor modes + rhyme override. Mode selection implemented in runtime (`src/canonical/modeSelector.ts`).
+
+Energy-based style overlays (Horny-Slang, Savage, Degen/Regard, Ultra-Savage) are resolved in `src/style/styleResolver.ts`; wording in `prompts/system/gorkypf_roast_mode.txt`.
 
 ---
 
