@@ -110,6 +110,7 @@ export function buildAuditRecord(params: {
   return {
     event_id: params.event.event_id,
     event_hash: stableHash(eventSnapshot),
+    event_text: params.event.text,
     classifier_output: params.cls,
     score_bundle: params.scores,
     mode: params.mode,

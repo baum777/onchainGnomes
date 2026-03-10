@@ -1,5 +1,5 @@
 /**
- * Prompt Loader — Load and render twimsalot persona prompt templates
+ * Prompt Loader — Load and render gorkypf persona prompt templates
  */
 
 import { readFileSync } from "node:fs";
@@ -7,7 +7,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const GORKY_PROMPTS_DIR = join(__dirname, "twimsalot");
+const GORKY_PROMPTS_DIR = join(__dirname, "gorkypf");
 
 export interface PromptVariables {
   mention_text: string;
@@ -19,15 +19,15 @@ export interface PromptVariables {
 }
 
 export function loadGorkySystemPrompt(): string {
-  return readFileSync(join(GORKY_PROMPTS_DIR, "twimsalot_system.md"), "utf-8").trim();
+  return readFileSync(join(GORKY_PROMPTS_DIR, "gorkypf_system.md"), "utf-8").trim();
 }
 
 export function loadGorkyDeveloperPrompt(): string {
-  return readFileSync(join(GORKY_PROMPTS_DIR, "twimsalot_developer.md"), "utf-8").trim();
+  return readFileSync(join(GORKY_PROMPTS_DIR, "gorkypf_developer.md"), "utf-8").trim();
 }
 
 export function loadGorkyUserTemplate(): string {
-  return readFileSync(join(GORKY_PROMPTS_DIR, "twimsalot_user_template.md"), "utf-8").trim();
+  return readFileSync(join(GORKY_PROMPTS_DIR, "gorkypf_user_template.md"), "utf-8").trim();
 }
 
 export function renderUserPrompt(vars: PromptVariables): string {

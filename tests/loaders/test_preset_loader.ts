@@ -10,16 +10,16 @@ import { resolve } from "path";
 describe("presetLoader", () => {
   describe("resolvePresetKey", () => {
     it("returns aliased key for legacy horny_ prefixed keys", () => {
-      expect(resolvePresetKey("horny_roast_card")).toBe("twimsalot_roast_card");
-      expect(resolvePresetKey("horny_cyberpunk")).toBe("twimsalot_cyberpunk");
+      expect(resolvePresetKey("horny_roast_card")).toBe("gorkypf_roast_card");
+      expect(resolvePresetKey("horny_cyberpunk")).toBe("gorkypf_cyberpunk");
     });
 
     it("returns original key if no alias", () => {
       expect(resolvePresetKey("custom_preset")).toBe("custom_preset");
-      expect(resolvePresetKey("twimsalot_roast_card")).toBe("twimsalot_roast_card");
+      expect(resolvePresetKey("gorkypf_roast_card")).toBe("gorkypf_roast_card");
     });
 
-    it("handles all legacy HORNY -> twimsalot aliases", () => {
+    it("handles all legacy HORNY -> gorkypf aliases", () => {
       const legacyKeys = [
         "horny_roast_card",
         "horny_cyberpunk",
@@ -33,7 +33,7 @@ describe("presetLoader", () => {
 
       for (const key of legacyKeys) {
         const resolved = resolvePresetKey(key);
-        expect(resolved.startsWith("twimsalot_")).toBe(true);
+        expect(resolved.startsWith("gorkypf_")).toBe(true);
         expect(resolved).not.toContain("horny");
       }
     });
@@ -41,8 +41,8 @@ describe("presetLoader", () => {
     it("no file contains string 'horny' except migration aliases", () => {
       // This is a conceptual test - actual file scanning would be in integration tests
       const aliasMap = {
-        horny_roast_card: "twimsalot_roast_card",
-        horny_cyberpunk: "twimsalot_cyberpunk",
+        horny_roast_card: "gorkypf_roast_card",
+        horny_cyberpunk: "gorkypf_cyberpunk",
       };
       expect(Object.keys(aliasMap).some(k => k.includes("horny"))).toBe(true);
       expect(Object.values(aliasMap).every(v => !v.includes("horny"))).toBe(true);
@@ -54,7 +54,7 @@ describe("presetLoader", () => {
       // This test requires actual preset files
       // Will skip gracefully if file doesn't exist
       try {
-        const presetPath = resolve("./prompts/presets/images/twimsalot_roast_card.yaml");
+        const presetPath = resolve("./prompts/presets/images/gorkypf_roast_card.yaml");
         const preset = loadPreset(presetPath);
 
         expect(preset.preset_key).toBeDefined();
@@ -83,13 +83,13 @@ describe("presetLoader", () => {
     it("finds preset via alias", () => {
       // Mock preset map
       const mockPresets = new Map([
-        ["twimsalot_roast_card", { preset_key: "twimsalot_roast_card", style_prompt: "test", sourcePath: "" }],
+        ["gorkypf_roast_card", { preset_key: "gorkypf_roast_card", style_prompt: "test", sourcePath: "" }],
       ]);
 
       const preset = getPresetByKey(mockPresets, "horny_roast_card");
 
       expect(preset).toBeDefined();
-      expect(preset?.preset_key).toBe("twimsalot_roast_card");
+      expect(preset?.preset_key).toBe("gorkypf_roast_card");
     });
   });
 });

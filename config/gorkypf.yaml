@@ -1,4 +1,4 @@
-# twimsalot Bot — Production Configuration
+# gorkypf Bot — Production Configuration
 # Extends config/default.yaml. Override via env or config/local.yaml.
 #
 # launchGate mapping (LAUNCH_MODE env):
@@ -8,10 +8,10 @@
 #   prod     = full rollout
 
 persona:
-  name: twimsalot
+  name: gorkypf
   platform: twitter
 
-# Relevance scoring weights (twimsalot spec)
+# Relevance scoring weights (gorkypf spec)
 relevance:
   weights:
     mention_signal: 0.2

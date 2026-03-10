@@ -20,7 +20,7 @@ export function getIdentityFactsFromEnv(): IdentityFacts {
   const mint = getBotTokenMint();
   const treasury = getBotTreasuryWallet();
   return {
-    ticker: process.env.BOT_TICKER ?? "twimsalot",
+    ticker: process.env.BOT_TICKER ?? "gorkypf",
     mint,
     treasury: treasury || undefined,
     programId: process.env.BOT_PROGRAM_ID,

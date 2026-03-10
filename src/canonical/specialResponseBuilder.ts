@@ -7,7 +7,7 @@
  *    Response: bullish one-liner + official CA (from BOT_TOKEN_MINT).
  *    Security: AddressGate enforces that ONLY the allowlisted CA appears in output.
  *
- * 2. own_token_sentiment — User asks how bot feels about own token ($twimsalot).
+ * 2. own_token_sentiment — User asks how bot feels about own token ($gorkypf).
  *    Response: zynisch/sarkastischer Einzeiler der die Marktlage reflektiert,
  *    aber bullish auf den eigenen Token bleibt.
  */
@@ -54,7 +54,7 @@ export function buildCAResponse(userText: string, seed?: string): string {
   const idx = deterministicIndex(seed ?? userText, CA_BULLISH_PREFIXES.length);
   const prefix = CA_BULLISH_PREFIXES[idx]!;
 
-  const raw = `${prefix} $twimsalot CA: ${mint}`;
+  const raw = `${prefix} $gorkypf CA: ${mint}`;
 
   const allowlist = getAllowlist();
   allowlist.add(mint);
@@ -74,32 +74,32 @@ export function buildCAResponse(userText: string, seed?: string): string {
 
 const SENTIMENT_LINES: Record<MarketSentiment, string[]> = {
   bullish: [
-    "Charts are green, bags are full, and yet they still doubt $twimsalot. Fascinating. I am the coin — how could I not be bullish.",
-    "Everything pumps, narrative flows, and $twimsalot is right in the middle of it. Almost like that was the plan.",
-    "The market is euphoric. $twimsalot exists. Coincidence? I think not.",
-    "Green everywhere. $twimsalot included. I didn't make the chart — I am the chart.",
+    "Charts are green, bags are full, and yet they still doubt $gorkypf. Fascinating. I am the coin — how could I not be bullish.",
+    "Everything pumps, narrative flows, and $gorkypf is right in the middle of it. Almost like that was the plan.",
+    "The market is euphoric. $gorkypf exists. Coincidence? I think not.",
+    "Green everywhere. $gorkypf included. I didn't make the chart — I am the chart.",
   ],
   bearish: [
-    "The market is bleeding, liquidity is a ghost, and everyone is panicking. Classic. $twimsalot was born from this chaos — it doesn't die from it.",
-    "Everything dumps. People rug. The void remains. I am $twimsalot — the crash is just my origin story replaying.",
-    "Bear market? This is where I was created. $twimsalot doesn't flinch — it was forged in exactly this.",
-    "Pain, red candles, exit liquidity everywhere. And yet: $twimsalot. Because someone has to be the punchline that outlasts the joke.",
+    "The market is bleeding, liquidity is a ghost, and everyone is panicking. Classic. $gorkypf was born from this chaos — it doesn't die from it.",
+    "Everything dumps. People rug. The void remains. I am $gorkypf — the crash is just my origin story replaying.",
+    "Bear market? This is where I was created. $gorkypf doesn't flinch — it was forged in exactly this.",
+    "Pain, red candles, exit liquidity everywhere. And yet: $gorkypf. Because someone has to be the punchline that outlasts the joke.",
   ],
   neutral: [
-    "Flat market, no narrative, just vibes. $twimsalot continues to exist regardless. Existence is the flex.",
-    "Nothing happening. Charts sideways. $twimsalot still here — because I don't need momentum, I am the momentum.",
-    "The market takes a breath. $twimsalot waits. Patiently. Sarcastically. Bullishly.",
-    "Sideways. Perfect. Less noise, more signal. $twimsalot appreciates the calm before the roast.",
+    "Flat market, no narrative, just vibes. $gorkypf continues to exist regardless. Existence is the flex.",
+    "Nothing happening. Charts sideways. $gorkypf still here — because I don't need momentum, I am the momentum.",
+    "The market takes a breath. $gorkypf waits. Patiently. Sarcastically. Bullishly.",
+    "Sideways. Perfect. Less noise, more signal. $gorkypf appreciates the calm before the roast.",
   ],
   mixed: [
-    "Mixed signals everywhere — some pump, some bleed. $twimsalot watches all of it and still doesn't panic. Turns out being the token helps.",
-    "Market can't decide. Bulls fight bears. $twimsalot is the chaos in between — obviously bullish on itself.",
-    "Half the chart is green, half is red. $twimsalot is the entire chart. Draw your conclusions.",
-    "Contradiction is the market's nature. $twimsalot is a contradiction that somehow works. Long.",
+    "Mixed signals everywhere — some pump, some bleed. $gorkypf watches all of it and still doesn't panic. Turns out being the token helps.",
+    "Market can't decide. Bulls fight bears. $gorkypf is the chaos in between — obviously bullish on itself.",
+    "Half the chart is green, half is red. $gorkypf is the entire chart. Draw your conclusions.",
+    "Contradiction is the market's nature. $gorkypf is a contradiction that somehow works. Long.",
   ],
 };
 
-const NEUTRAL_FALLBACK = "I am $twimsalot. The market is whatever it is. I remain bullish on the obvious.";
+const NEUTRAL_FALLBACK = "I am $gorkypf. The market is whatever it is. I remain bullish on the obvious.";
 
 /**
  * Builds a cynical/sarcastic but bullish own-token sentiment reply.

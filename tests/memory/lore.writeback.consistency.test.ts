@@ -44,14 +44,14 @@ describe("Lore writeback: two-run consistency contract", () => {
     expect(lore1.entries.length).toBeGreaterThan(0);
 
     // Run 2: pretend the bot sees stored lore now
-    const origin = lore1.entries.find((e) => e.key === "twimsalot.origin")?.canon;
+    const origin = lore1.entries.find((e) => e.key === "gorkypf.origin")?.canon;
     expect(origin).toBeTruthy();
 
     // Ensure no contradiction pattern: canon is stable (contract check)
     const deltas2 = mockLLM.loreDelta("lore_query", "LORE", "Tell me your origin again.");
     const lore2 = applyLoreDeltas(lore1, deltas2);
 
-    const origin2 = lore2.entries.find((e) => e.key === "twimsalot.origin")?.canon;
+    const origin2 = lore2.entries.find((e) => e.key === "gorkypf.origin")?.canon;
     expect(origin2).toBe(origin); // canon should not drift
   });
 });

@@ -117,6 +117,38 @@ export class RedisStateStore implements StateStore {
     }
   }
 
+  /** Redis list: LPUSH (für audit tail) */
+  async lpush(key: string, ...values: string[]): Promise<number> {
+    try {
+      return await this.redis.lpush(this.key(key), ...values);
+    } catch (error) {
+      incrementCounter(COUNTER_NAMES.STATE_STORE_ERROR_TOTAL);
+      logError("[RedisStore] lpush failed", { key, error });
+      return 0;
+    }
+  }
+
+  /** Redis list: LTRIM (Tail-Cleanup, behalte letzten Bereich) */
+  async ltrim(key: string, start: number, stop: number): Promise<void> {
+    try {
+      await this.redis.ltrim(this.key(key), start, stop);
+    } catch (error) {
+      incrementCounter(COUNTER_NAMES.STATE_STORE_ERROR_TOTAL);
+      logError("[RedisStore] ltrim failed", { key, error });
+    }
+  }
+
+  /** Redis list: LRANGE */
+  async lrange(key: string, start: number, stop: number): Promise<string[]> {
+    try {
+      return await this.redis.lrange(this.key(key), start, stop);
+    } catch (error) {
+      incrementCounter(COUNTER_NAMES.STATE_STORE_ERROR_TOTAL);
+      logError("[RedisStore] lrange failed", { key, error });
+      return [];
+    }
+  }
+
   // ── Event State ───────────────────────────────────────────────────────
 
   async getEventState(eventId: string): Promise<EventTracking | null> {

@@ -39,9 +39,9 @@ describe("botActivationConfig", () => {
   });
 
   it("normalizes usernames: lowercase, @ prefix", () => {
-    process.env.BOT_WHITELIST_USERNAMES = "  TwimSalot , Nirapump_  ";
+    process.env.BOT_WHITELIST_USERNAMES = "  gorkypf , Nirapump_  ";
     const config = readActivationConfigFromEnv();
-    expect(config.whitelistUsernames).toContain("@twimsalot");
+    expect(config.whitelistUsernames).toContain("@gorkypf");
     expect(config.whitelistUsernames).toContain("@nirapump_");
   });
 

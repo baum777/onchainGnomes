@@ -16,11 +16,21 @@ export interface FullSpectrumLLMInput {
   user: string;
 }
 
+/** Heuristik: Standalone-Mention ohne Thread-Kontext */
+function isStandaloneMention(event: CanonicalEvent): boolean {
+  return (
+    !event.parent_text &&
+    (event.conversation_context?.length ?? 0) === 0
+  );
+}
+
 export function buildMasterPrompt(
   event: CanonicalEvent,
   thesis: ThesisBundle,
   scores: ScoreBundle,
   relevanceResult?: RelevanceResult,
+  /** Persona-Memory-Snippets, nur bei Standalone-Mentions */
+  personaSnippets?: string[],
 ): FullSpectrumLLMInput {
   const thesisStr =
     (event as { thesis?: string }).thesis ?? String(thesis.primary);
@@ -39,8 +49,15 @@ export function buildMasterPrompt(
     .filter(Boolean)
     .join("\n");
 
+  const memoryBlock =
+    isStandaloneMention(event) &&
+    personaSnippets &&
+    personaSnippets.length > 0
+      ? `Gorky weiß aus den letzten Tagen:\n${personaSnippets.map((s) => `• ${s}`).join("\n")}\n\n`
+      : "";
+
   return {
-    system: `${MASTER_SYSTEM_PROMPT}\n\n${NEGATIVE_EXAMPLES}`,
+    system: `${MASTER_SYSTEM_PROMPT}\n\n${memoryBlock}${NEGATIVE_EXAMPLES}`,
     developer: "Antworte ausschließlich im JSON-Format wie spezifiziert. Kein Text davor oder danach.",
     user,
   };

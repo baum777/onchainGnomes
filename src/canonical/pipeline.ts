@@ -19,6 +19,7 @@ import { extractThesis } from "./thesisExtractor.js";
 import { selectMode } from "./modeSelector.js";
 import { fallbackCascade } from "./fallbackCascade.js";
 import { buildAuditRecord, persistAuditRecord } from "./auditLog.js";
+import { addToAuditTail } from "./auditTail.js";
 import { safetyFilter } from "../safety/safetyFilter.js";
 import { mapNarrative } from "../narrative/narrativeMapper.js";
 import { computeRelevanceScore } from "./relevanceScorer.js";
@@ -140,6 +141,7 @@ export async function handleEvent(
       response_mode: "single_tweet",
     });
     persistAuditRecord(audit);
+    addToAuditTail(audit).catch(() => {});
     return {
       action: "publish",
       mode: "neutral_clarification",
@@ -176,6 +178,7 @@ export async function handleEvent(
       response_mode: "single_tweet",
     });
     persistAuditRecord(audit);
+    addToAuditTail(audit).catch(() => {});
     return {
       action: "publish",
       mode: "market_banter",
@@ -307,6 +310,7 @@ export async function handleEvent(
     slang_applied: styleContext.slangEnabled,
   });
   persistAuditRecord(audit);
+  addToAuditTail(audit).catch(() => {});
 
   try {
     const store = getStateStore();

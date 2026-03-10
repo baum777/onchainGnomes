@@ -52,7 +52,7 @@ export const envSchema = z.object({
       "KV_URL must use redis:// protocol"
     ),
 
-  REDIS_KEY_PREFIX: z.string().optional().default("twimsalot:"),
+  REDIS_KEY_PREFIX: z.string().optional().default("gorkypf:"),
 
   // Poll config
   POLL_INTERVAL_MS: pollIntervalSchema,

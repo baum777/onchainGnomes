@@ -1,5 +1,5 @@
 {
-  "name": "twimsalot-bot",
+  "name": "gorkypf-bot",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -9,6 +9,9 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "demo:render": "tsx scripts/render_demo.ts",
+    "simulate": "tsx scripts/simulateConversation.ts",
+    "simulate:ci": "tsx scripts/simulateConversation.ts --strict",
+    "snippets:extract": "tsx src/persona/dailySnippetExtractor.ts",
     "poll": "tsx -r dotenv/config src/index.ts",
     "test": "vitest run",
     "test:run": "vitest run",

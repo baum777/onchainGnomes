@@ -25,6 +25,7 @@ import {
   buildMasterPrompt,
   buildRefinePromptFullSpectrum,
 } from "./fullSpectrumPromptBuilder.js";
+import { loadPersonaSnippets } from "../persona/memorySnippets.js";
 import { trimToLimit } from "../utils/textTrim.js";
 
 interface GenerateResult {
@@ -106,7 +107,20 @@ async function generateFullSpectrum(
   }
   await recordLLMCall(false);
 
-  const input = buildMasterPrompt(event, thesis, scores, promptContext?.relevanceResult);
+  let personaSnippets: string[] | undefined;
+  const isStandalone = !event.parent_text && (event.conversation_context?.length ?? 0) === 0;
+  if (isStandalone) {
+    try {
+      const snippets = await loadPersonaSnippets();
+      if (snippets.length > 0) {
+        personaSnippets = snippets.map((s) => s.text);
+      }
+    } catch {
+      // Snippets optional, continue without
+    }
+  }
+
+  const input = buildMasterPrompt(event, thesis, scores, promptContext?.relevanceResult, personaSnippets);
   const raw = await llm.generateJSON<unknown>({
     system: input.system,
     developer: input.developer,

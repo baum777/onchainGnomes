@@ -125,6 +125,9 @@ export interface CanonicalEvent {
   relevance_score?: number;
   /** Full Spectrum: sentiment intensity for refine */
   sentiment_intensity?: number;
+
+  /** Markiert, ob dieses Event für Test-/Simulationszwecke erzeugt wurde */
+  is_simulated?: boolean;
 }
 
 export interface ClassifierOutput {
@@ -235,6 +238,8 @@ export interface ValidationResult {
 export interface AuditRecord {
   event_id: string;
   event_hash: string;
+  /** Original mention text for snippet extraction and analytics */
+  event_text?: string;
   classifier_output: ClassifierOutput;
   score_bundle: ScoreBundle;
   mode: CanonicalMode;
@@ -331,7 +336,7 @@ export interface CanonicalConfig {
 }
 
 export const DEFAULT_CANONICAL_CONFIG: CanonicalConfig = {
-  persona_name: "twimsalot",
+  persona_name: "gorkypf",
   platform: "twitter",
   thresholds: {
     min_relevance: 0.45,

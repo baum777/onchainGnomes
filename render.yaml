@@ -1,4 +1,4 @@
-# Render Blueprint — xAi Bot / twimsalot
+# Render Blueprint — xAi Bot / gorkypf
 # Background Worker + optional Health Web Service
 # Node.js/TypeScript project — Python files are legacy and ignored
 
@@ -34,7 +34,7 @@ services:
       - key: KV_URL
         sync: false  # Set in Render dashboard: redis://default:PASS@HOST.upstash.io:6379
       - key: REDIS_KEY_PREFIX
-        value: "twimsalot:"
+        value: "gorkypf:"
 
       # X/Twitter API (sensitive - set in dashboard)
       - key: X_API_KEY
@@ -58,7 +58,7 @@ services:
 
       # Bot Configuration
       - key: BOT_USERNAME
-        value: twimsalot_on_sol
+        value: gorkypf_on_sol
       - key: LAUNCH_MODE
         value: prod
       - key: BOT_ACTIVATION_MODE
@@ -102,4 +102,24 @@ services:
       - key: USE_REDIS
         value: "true"
       - key: KV_URL
+        sync: false
+
+  # Daily Persona Snippet Extractor — Cron (täglich 3 Uhr UTC)
+  - type: cron
+    name: gorky-daily-snippets
+    runtime: node
+    region: frankfurt
+    plan: free
+    branch: main
+    buildCommand: pnpm install --frozen-lockfile && pnpm build
+    startCommand: pnpm exec tsx src/persona/dailySnippetExtractor.ts
+    schedule: "0 3 * * *"
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: USE_REDIS
+        value: "true"
+      - key: KV_URL
+        sync: false
+      - key: XAI_API_KEY
         sync: false

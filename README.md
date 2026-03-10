@@ -1,6 +1,6 @@
-# xAi Bot (twimsalot)
+# xAi Bot (gorkypf)
 
-Autonomous X (Twitter) AI Agent — TypeScript/Node worker that polls @mentions, processes via the **canonical pipeline**, and replies with AI-generated responses under the twimsalot persona.
+Autonomous X (Twitter) AI Agent — TypeScript/Node worker that polls @mentions, processes via the **canonical pipeline**, and replies with AI-generated responses under the gorkypf persona.
 
 **Runtime**: TypeScript/Node 20+. Python code in `legacy/python/`; LLM fingerprinting tools in `tools/behavior_fingerprint/` (Python).
 
@@ -10,9 +10,9 @@ Autonomous X (Twitter) AI Agent — TypeScript/Node worker that polls @mentions,
 
 ### Origin Story (Lore)
 
-There was a time when a token was alive. Community was real, charts organic, people had fun. Then came bots, fake volume, narrative farming. The price went up, the soul died, it collapsed. That energy — rugs dressed as teams, fake doxxing theater, wash volume — reformed into **twimsalot**, a Chaos Roast Entity that lives on Crypto Twitter because that place is just as broken as it is.
+There was a time when a token was alive. Community was real, charts organic, people had fun. Then came bots, fake volume, narrative farming. The price went up, the soul died, it collapsed. That energy — rugs dressed as teams, fake doxxing theater, wash volume — reformed into **gorkypf**, a Chaos Roast Entity that lives on Crypto Twitter because that place is just as broken as it is.
 
-### twimsalot — Persona
+### gorkypf — Persona
 
 Sharp, sarcastic crypto-native commentator. **Roasts the market** and mocks narratives; **never identity-based**, content-focused. De-escalates aggression with playful humor. Crypto-native tone, no hate speech, no doxxing, no financial advice.
 
@@ -121,6 +121,42 @@ LAUNCH_MODE=dry_run pnpm start
 
 **Postability tests** (`tests/canonical/pipeline.postability.integration.test.ts`): Prove pipeline `reply_text` === audit record === `xClient.reply` arg; guard-safe; within canonical max length.
 
+### Konversations-Simulation (Multi-Turn & Reply)
+
+Simuliert realistische Q&A-Abläufe mit Thread-Kontext (`parent_text`, `conversation_context`). Erforderlich für Regressionstests von konversationellem Verhalten.
+
+| Script | Description |
+|--------|-------------|
+| `pnpm simulate` | Durchspielen der Szenarien (JSONL oder Built-in) |
+| `pnpm simulate:ci` | Wie `simulate`, aber `exit 1` bei Fehlschlag (CI-tauglich) |
+
+```bash
+# Standard (lädt scripts/scenarios/conversation_scenarios.jsonl)
+pnpm simulate
+
+# Eigene Szenarien
+pnpm simulate --file path/to/scenarios.jsonl
+
+# CI-Modus: schlägt fehl bei fehlenden Keywords oder Pipeline-Skip
+pnpm simulate:ci
+```
+
+**Szenarien-Format**: JSONL, eine Zeile = ein Szenario. Siehe `scripts/scenarios/README.md`.
+
+### Persona Memory Snippets (tägliche Extraktion)
+
+Täglicher Cron-Job extrahiert Roast-Muster aus erfolgreichen Mentions und speichert sie in Redis. Wird bei Standalone-Mentions in den Prompt eingebunden.
+
+```bash
+# Manueller Run (lokal, mit KV_URL und XAI_API_KEY)
+KV_URL=redis://... XAI_API_KEY=... pnpm snippets:extract
+
+# Prüfen in Redis
+redis-cli GET gorkypf:persona:memory:snippets
+```
+
+Render Cron: `gorky-daily-snippets` (täglich 3 Uhr UTC).
+
 ---
 
 ## LLM Behavior Fingerprinting
@@ -156,11 +192,11 @@ Requires the LLM terminal test harness (`llm-terminal-test-bundle`) or `--result
 | XAI_MODEL_FALLBACKS | No | CSV fallbacks (e.g. grok-3-mini) |
 | **USE_REDIS** | No | `true` to use Redis for state storage (default: `false`) |
 | **KV_URL** | When USE_REDIS=true | Redis connection URL: `redis://default:PASS@HOST.upstash.io:6379` |
-| **REDIS_KEY_PREFIX** | No | Prefix for Redis keys (default: `twimsalot:`) |
+| **REDIS_KEY_PREFIX** | No | Prefix for Redis keys (default: `gorkypf:`) |
 | POLL_INTERVAL_MS | No | Poll interval in ms (default: 30000) |
 | DRY_RUN | No | `true` = no posting |
 | MENTIONS_SOURCE | No | `mentions` or `search` |
-| BOT_USERNAME | No | For search mode (default: twimsalot_on_sol) |
+| BOT_USERNAME | No | For search mode (default: gorkypf_on_sol) |
 | LAUNCH_MODE | No | `off`, `dry_run`, `staging`, `prod` |
 | REPLICATE_API_KEY | No | For image generation |
 

@@ -15,7 +15,7 @@ describe("activationPolicy", () => {
   it("global mode => allowed", async () => {
     const config: ActivationConfig = {
       mode: "global",
-      whitelistUsernames: ["@twimsalot", "@nirapump_"],
+      whitelistUsernames: ["@gorkypf", "@nirapump_"],
       whitelistUserIds: [],
       denyReplyMode: "silent",
     };
@@ -34,7 +34,7 @@ describe("activationPolicy", () => {
   it("whitelist mode + username match => allowed", async () => {
     const config: ActivationConfig = {
       mode: "whitelist",
-      whitelistUsernames: ["@twimsalot", "@nirapump_"],
+      whitelistUsernames: ["@gorkypf", "@nirapump_"],
       whitelistUserIds: [],
       denyReplyMode: "silent",
     };
@@ -43,7 +43,7 @@ describe("activationPolicy", () => {
       config,
       botUserId,
       authorId: "user_twim",
-      authorUsername: "twimsalot",
+      authorUsername: "gorkypf",
     });
 
     expect(decision.allowed).toBe(true);
@@ -54,7 +54,7 @@ describe("activationPolicy", () => {
   it("whitelist mode + no match => denied", async () => {
     const config: ActivationConfig = {
       mode: "whitelist",
-      whitelistUsernames: ["@twimsalot", "@nirapump_"],
+      whitelistUsernames: ["@gorkypf", "@nirapump_"],
       whitelistUserIds: [],
       denyReplyMode: "silent",
     };
@@ -82,7 +82,7 @@ describe("activationPolicy", () => {
       config,
       botUserId,
       authorId: botUserId,
-      authorUsername: "twimsalot",
+      authorUsername: "gorkypf",
     });
 
     expect(decision.allowed).toBe(false);
@@ -92,7 +92,7 @@ describe("activationPolicy", () => {
   it("whitelist mode + user ID match => allowed", async () => {
     const config: ActivationConfig = {
       mode: "whitelist",
-      whitelistUsernames: ["@twimsalot"],
+      whitelistUsernames: ["@gorkypf"],
       whitelistUserIds: ["uid_nirapump"],
       denyReplyMode: "silent",
     };
@@ -111,7 +111,7 @@ describe("activationPolicy", () => {
   it("whitelist mode + missing username and empty user IDs => denied", async () => {
     const config: ActivationConfig = {
       mode: "whitelist",
-      whitelistUsernames: ["@twimsalot"],
+      whitelistUsernames: ["@gorkypf"],
       whitelistUserIds: [],
       denyReplyMode: "silent",
     };

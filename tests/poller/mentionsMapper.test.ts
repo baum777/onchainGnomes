@@ -46,7 +46,7 @@ describe("mentionsMapper", () => {
           data: [
             {
               id: "tweet_123",
-              text: "Hello @twimsalot",
+              text: "Hello @gorkypf",
               author_id: "user_456",
               created_at: "2024-01-15T12:00:00Z",
               conversation_id: "conv_789",
@@ -78,7 +78,7 @@ describe("mentionsMapper", () => {
       expect(result.mentions).toHaveLength(1);
       expect(result.mentions[0]).toMatchObject({
         id: "tweet_123",
-        text: "Hello @twimsalot",
+        text: "Hello @gorkypf",
         author_id: "user_456",
         authorUsername: "alice",
         conversation_id: "conv_789",
@@ -354,20 +354,20 @@ describe("mentionsMapper", () => {
         data: {
           data: [
             { id: "1000000000000000001",
-              text: "@twimsalot help",
+              text: "@gorkypf help",
               author_id: "user_twim",
               created_at: "2024-01-15T10:00:00Z",
             } as unknown as TweetV2,
             {
               id: "2000000000000000002",
-              text: "@twimsalot hello",
+              text: "@gorkypf hello",
               author_id: "user_nira",
               created_at: "2024-01-15T11:00:00Z",
             } as unknown as TweetV2,
           ],
           includes: {
             users: [
-              { id: "user_twim", username: "twimsalot" } as unknown as UserV2,
+              { id: "user_twim", username: "gorkypf" } as unknown as UserV2,
               { id: "user_nira", username: "nirapump_" } as unknown as UserV2,
             ],
           } as ApiV2Includes,
@@ -380,10 +380,10 @@ describe("mentionsMapper", () => {
       const result = mapMentionsResponse(mockResponse);
 
       // Verify usernames are resolved for whitelist matching
-      expect(result.mentions[0]?.authorUsername).toBe("twimsalot");
+      expect(result.mentions[0]?.authorUsername).toBe("gorkypf");
       expect(result.mentions[1]?.authorUsername).toBe("nirapump_");
 
-      // These usernames would match the default whitelist: @twimsalot,@nirapump_
+      // These usernames would match the default whitelist: @gorkypf,@nirapump_
     });
   });
 
@@ -410,7 +410,7 @@ describe("mentionsMapper", () => {
           ],
           includes: {
             users: [
-              { id: botUserId, username: "twimsalot" } as unknown as UserV2,
+              { id: botUserId, username: "gorkypf" } as unknown as UserV2,
               { id: "user_abc", username: "regularuser" } as unknown as UserV2,
             ],
           } as ApiV2Includes,
