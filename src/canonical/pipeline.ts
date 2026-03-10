@@ -21,6 +21,7 @@ import { fallbackCascade } from "./fallbackCascade.js";
 import { buildAuditRecord, persistAuditRecord } from "./auditLog.js";
 import { safetyFilter } from "../safety/safetyFilter.js";
 import { mapNarrative } from "../narrative/narrativeMapper.js";
+import { computeRelevanceScore } from "./relevanceScorer.js";
 import { selectPattern } from "../roast/patternEngine.js";
 import { formatDecision } from "../roast/formatDecision.js";
 import { detectCARequest, detectOwnTokenSentiment } from "../intent/detectIntent.js";
@@ -115,7 +116,9 @@ export async function handleEvent(
   }
 
   // ── Special intent fast-path: CA request ────────────────────────────────
-  if (detectCARequest(event.text)) {
+  // In aggressive mode: CA safety still applies (address gate always enforced)
+  // but we skip the fast-path so the full roast pipeline runs instead.
+  if (detectCARequest(event.text) && !config.aggressive_mode) {
     const replyText = buildCAResponse(event.text, event.event_id);
     const cls = classify(event);
     const scores = scoreEvent(event, cls);
@@ -147,7 +150,8 @@ export async function handleEvent(
   }
 
   // ── Special intent fast-path: Own token sentiment ────────────────────────
-  if (detectOwnTokenSentiment(event.text)) {
+  // In aggressive mode: skip fast-path so the full roast pipeline runs instead.
+  if (detectOwnTokenSentiment(event.text) && !config.aggressive_mode) {
     const replyText = buildOwnTokenSentimentResponse(
       { marketSentiment: "neutral" },
       event.event_id,
@@ -232,11 +236,20 @@ export async function handleEvent(
     return makeSkipResult(event, "skip_format_decision", cls, scores, config);
   }
 
+  const relevanceResult = computeRelevanceScore({
+    event,
+    cls,
+    scores,
+    thesis,
+    narrative: narrative ?? null,
+  });
+
   const promptContext = {
     pattern_id: pattern.pattern_id,
     narrative_label: narrative?.label ?? undefined,
     format_target: format.format,
     style: styleContext,
+    relevanceResult,
   };
 
   const result = await fallbackCascade(

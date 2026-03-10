@@ -9,6 +9,8 @@ type LLMInput = {
   system?: string;
   developer?: string;
   user: string;
+  schemaHint?: string;
+  temperature?: number;
 };
 
 const XAI_API = process.env.XAI_BASE_URL ?? "https://api.x.ai/v1";
@@ -19,13 +21,41 @@ const CANNED_REPLY =
 /** Models that returned 403; skip until TTL expires */
 const unavailableUntil = new Map<string, number>();
 
+/**
+ * Neuer robuster JSON-Extractor – behebt den brittle Parsing-Mangel
+ */
+export function safeExtractJSON<T>(raw: string): T {
+  let text = raw.trim()
+    .replace(/```json|```/gi, "")           // Markdown Codeblocks
+    .replace(/<thinking>[\s\S]*?<\/thinking>/gi, "") // Grok Thinking-Tags
+    .trim();
+
+  // 1. Versuch: erstes komplettes JSON-Objekt
+  const match = text.match(/(\{[\s\S]*?\}(?=\s*$|\s*[,}\]]))/);
+  if (match) {
+    try {
+      return JSON.parse(match[1]) as T;
+    } catch {
+      // JSON.parse failed on match, continue to fallback
+    }
+  }
+
+  // 2. Fallback: ganzen Text versuchen + kleine Korrekturen
+  text = text.replace(/,\s*}/g, "}").replace(/,\s*]/g, "]");
+  try {
+    return JSON.parse(text) as T;
+  } catch (e) {
+    console.error("[LLM] JSON parse failed → graceful fallback", { error: e, rawLength: raw.length });
+    // Canned Reply statt Crash
+    return {
+      reply_text: "Sorry, ich hatte gerade einen kleinen Denkfehler. Was hast du nochmal gefragt? 🔥",
+      style_label: "degraded"
+    } as any;
+  }
+}
+
 function extractJSON<T>(text: string): T {
-  const trimmed = text.trim();
-  const start = trimmed.indexOf("{");
-  const end = trimmed.lastIndexOf("}");
-  if (start === -1 || end === -1 || end <= start)
-    throw new Error("No JSON object in response");
-  return JSON.parse(trimmed.slice(start, end + 1)) as T;
+  return safeExtractJSON<T>(text);
 }
 
 function isPermissionError(err: unknown): boolean {
@@ -128,7 +158,7 @@ export function createXAILLMClient(opts?: {
   const overrideModel = opts?.model;
 
   return {
-    async generateJSON<T>(input: LLMInput): Promise<T> {
+    async generateJSON<T>(input: LLMInput & { temperature?: number }): Promise<T> {
       const allModels = overrideModel ? [overrideModel] : getModelPriority();
       const models = allModels.filter(isAvailable);
       let lastError: unknown;

@@ -70,6 +70,8 @@ function createMockLLM(replies: string[]): LLMClient {
   };
 }
 
+const configNoRefine = { ...DEFAULT_CANONICAL_CONFIG, refine_enabled: false };
+
 describe("fallbackCascade", () => {
   it("succeeds on first attempt with valid reply", async () => {
     const llm = createMockLLM(["Nice hype, zero proof."]);
@@ -80,11 +82,51 @@ describe("fallbackCascade", () => {
       makeThesis(),
       makeScores(),
       makeCls(),
-      DEFAULT_CANONICAL_CONFIG,
+      configNoRefine,
     );
     expect(result.success).toBe(true);
     expect(result.reply_text).toBe("Nice hype, zero proof.");
     expect(result.final_mode).toBe("dry_one_liner");
+    expect(result.attempts).toBe(1);
+  });
+
+  it("triggers refine when first reply is too short and returns refined reply", async () => {
+    const llm = createMockLLM([
+      "Short.", // too short, triggers refine
+      "Your concentrated nothing-burger launch with sloppy liquidity and inorganic volume? Cope.",
+    ]);
+    const event = makeEvent();
+    event.text = "We have concentrated liquidity and nothing sloppy";
+    const result = await fallbackCascade(
+      llm,
+      event,
+      "dry_one_liner",
+      makeThesis(),
+      makeScores(),
+      makeCls(),
+      { ...DEFAULT_CANONICAL_CONFIG, refine_enabled: true },
+    );
+    expect(result.success).toBe(true);
+    expect(result.reply_text).toBe("Your concentrated nothing-burger launch with sloppy liquidity and inorganic volume? Cope.");
+    expect(result.attempts).toBe(2);
+  });
+
+  it("skips refine when first reply is long enough and has keywords", async () => {
+    const longReply = "Your concentrated nothing-burger with sloppy liquidity and inorganic volume screams paper hands. Cope.";
+    const llm = createMockLLM([longReply]);
+    const event = makeEvent();
+    event.text = "concentrated sloppy inorganic volume";
+    const result = await fallbackCascade(
+      llm,
+      event,
+      "dry_one_liner",
+      makeThesis(),
+      makeScores(),
+      makeCls(),
+      { ...DEFAULT_CANONICAL_CONFIG, refine_enabled: true },
+    );
+    expect(result.success).toBe(true);
+    expect(result.reply_text).toBe(longReply);
     expect(result.attempts).toBe(1);
   });
 
@@ -100,7 +142,7 @@ describe("fallbackCascade", () => {
       makeThesis(),
       makeScores(),
       makeCls(),
-      DEFAULT_CANONICAL_CONFIG,
+      configNoRefine,
     );
     expect(result.success).toBe(true);
     expect(result.reply_text).toBe("All hype, no proof.");
@@ -120,7 +162,7 @@ describe("fallbackCascade", () => {
       makeThesis(),
       makeScores(),
       makeCls(),
-      DEFAULT_CANONICAL_CONFIG,
+      configNoRefine,
     );
     expect(result.success).toBe(true);
     expect(result.final_mode).toBe("soft_deflection");
@@ -137,7 +179,7 @@ describe("fallbackCascade", () => {
       makeThesis(),
       makeScores(),
       makeCls(),
-      DEFAULT_CANONICAL_CONFIG,
+      configNoRefine,
     );
     expect(result.success).toBe(false);
     expect(result.reply_text).toBeNull();

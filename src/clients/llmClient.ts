@@ -8,5 +8,7 @@ export interface LLMClient {
     developer: string;
     user: string;
     schemaHint?: string;
+    /** Override temperature (xAI). Default 0.7; use 0.9 for refine/aggressive replies. */
+    temperature?: number;
   }): Promise<T>;
 }

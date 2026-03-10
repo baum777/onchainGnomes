@@ -8,6 +8,7 @@ import type {
   ThesisBundle,
   ValidationResult,
 } from "./types.js";
+import type { RelevanceResult } from "./relevanceScorer.js";
 import { downgradeMode } from "./downgradeMatrix.js";
 import {
   buildPrompt,
@@ -17,6 +18,8 @@ import {
 import { validateResponse } from "./validator.js";
 import { attemptRepair } from "../validation/repairLayer.js";
 import { checkLLMBudget, recordLLMCall } from "../state/sharedBudgetGate.js";
+import { extractExpectedKeywords, shouldRefine } from "./refineChecker.js";
+import { buildRefinePrompt } from "./refinePromptBuilder.js";
 
 interface GenerateResult {
   reply_text: string;
@@ -79,6 +82,8 @@ export interface FallbackCascadeContext {
   pattern_id?: string;
   narrative_label?: string;
   format_target?: string;
+  /** Precomputed relevance score for refine step */
+  relevanceResult?: RelevanceResult;
 }
 
 export async function fallbackCascade(
@@ -121,6 +126,60 @@ export async function fallbackCascade(
   attempts++;
   const val1 = validateResponse(gen1.reply_text, currentMode, cls, config);
   if (val1.ok) {
+    const refineEnabled = (config as { refine_enabled?: boolean }).refine_enabled ?? true;
+    const minLength = (config as { refine_min_length?: number }).refine_min_length ?? 80;
+    const minKeywordCount = (config as { refine_keyword_min_count?: number }).refine_keyword_min_count ?? 1;
+
+    const keywords = extractExpectedKeywords(event.text, thesis.evidence_bullets);
+    const needsRefine = refineEnabled && shouldRefine(gen1.reply_text, keywords, minLength, minKeywordCount);
+
+    if (needsRefine) {
+      const budgetCheck = await checkLLMBudget(false);
+      if (budgetCheck.allowed) {
+        await recordLLMCall(false);
+        attempts++;
+
+        const rel = promptContext?.relevanceResult ?? {
+          score: scores.relevance,
+          components: { sentiment_intensity: 0.3 },
+        };
+        const refinePrompt = buildRefinePrompt({
+          previousReply: gen1.reply_text,
+          mentionText: event.text,
+          context: event.parent_text ?? undefined,
+          thesis: thesis.primary,
+          thesisSupporting: thesis.supporting_point,
+          relevanceScore: rel.score,
+          sentimentIntensity: rel.components.sentiment_intensity,
+          expectedKeywords: keywords,
+        });
+
+        const refined = await llm.generateJSON<{ reply?: string; reply_text?: string }>({
+          system: refinePrompt.system,
+          developer: refinePrompt.developer,
+          user: refinePrompt.user,
+          schemaHint: '{ "reply": "string" }',
+          temperature: 0.9,
+        });
+
+        const refinedText = refined.reply ?? refined.reply_text ?? null;
+        if (refinedText) {
+          const valRefine = validateResponse(refinedText, currentMode, cls, config);
+          if (valRefine.ok) {
+            return {
+              success: true,
+              reply_text: refinedText,
+              final_mode: currentMode,
+              model_id: gen1.model_id,
+              prompt_hash: gen1.prompt_hash,
+              validation: valRefine,
+              attempts,
+            };
+          }
+        }
+      }
+    }
+
     return {
       success: true,
       reply_text: gen1.reply_text,

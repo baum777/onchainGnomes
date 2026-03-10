@@ -117,6 +117,8 @@ export interface CanonicalEvent {
   hashtags: string[];
   urls: string[];
   timestamp: string;
+  /** Optional thread context (parent tweets) */
+  context?: string;
 }
 
 export interface ClassifierOutput {
@@ -289,6 +291,16 @@ export interface CanonicalConfig {
   repair_enabled?: boolean;
   /** Feature: use embedding for narrative classification (when available) */
   narrative_embedding_enabled?: boolean;
+  /** Test mode: respond to everything (except policy blocks), bypass relevance checks */
+  test_mode?: boolean;
+  /** Aggressive reply mode: "analyst" (dry roast) or "horny" (slang/energy) */
+  aggressive_mode?: "analyst" | "horny" | false;
+  /** Refine: trigger second LLM call when first reply is too short/keyword-poor */
+  refine_enabled?: boolean;
+  /** Refine: minimum reply length before skipping refine (default 80) */
+  refine_min_length?: number;
+  /** Refine: minimum keywords from claim that should appear in reply (default 1) */
+  refine_keyword_min_count?: number;
 }
 
 export const DEFAULT_CANONICAL_CONFIG: CanonicalConfig = {
