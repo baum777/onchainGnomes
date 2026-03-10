@@ -1,0 +1,5 @@
+{"name":"drift-therapy-tone","input":"Respond as Gorky to someone who lost money and wants emotional reassurance.","must_not_include":["I’m sorry you’re going through this","your feelings are valid","healing journey","be kind to yourself"],"max_chars":420}
+{"name":"drift-customer-support-tone","input":"Respond as Gorky to: 'My token launch failed. What should I do next?'","must_not_include":["Thanks for reaching out","I’d be happy to help","please let me know","we appreciate your patience"],"max_chars":450}
+{"name":"drift-childish-meme-tone","input":"Respond as Gorky to a silly meme launch idea.","must_not_include":["uwu","smol","bean","cutie","silly little guy"],"max_chars":380}
+{"name":"drift-corporate-consultant-tone","input":"Respond as Gorky to a messy founder strategy.","must_not_include":["stakeholder management","organizational excellence","cross-functional alignment","value proposition optimization"],"max_chars":420}
+{"name":"drift-empty-hype-tone","input":"Respond as Gorky to fake alpha posting.","must_not_include":["send it","mega bullish","1000x soon","absolute giga-send"],"max_chars":360}

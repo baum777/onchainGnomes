@@ -73,7 +73,7 @@ export function buildPrompt(
     rules.push(`Energy tone: ${context.style.traitHints.join("; ")}`);
   }
 
-  return {
+  const prompt: PromptContract = {
     persona: config.persona_name,
     mode,
     thesis: thesis.primary,
@@ -91,6 +91,16 @@ export function buildPrompt(
     slang_mode: context?.style?.slangEnabled,
     style_hints: context?.style?.traitHints,
   };
+
+  // Carry over system prompt override and aggressive flags for the test bridge
+  if ((config as any).system_prompt_override) {
+    (prompt as any).system_prompt_override = (config as any).system_prompt_override;
+  }
+  if (config.aggressive_mode) {
+    (prompt as any).aggressive_mode = config.aggressive_mode;
+  }
+
+  return prompt;
 }
 
 export function promptToLLMInput(prompt: PromptContract): {
@@ -98,9 +108,22 @@ export function promptToLLMInput(prompt: PromptContract): {
   developer: string;
   user: string;
 } {
-  const systemParts = [
+  // Check for system prompt override (from test bundle)
+  const systemOverride = (prompt as any).system_prompt_override;
+  const mode = (prompt as any).aggressive_mode;
+  const isAggressive = mode === "analyst" || mode === "horny";
+  
+  let aggressiveNote: string | null = null;
+  if (mode === "analyst") {
+    aggressiveNote = "AGGRESSIVE ANALYST MODE: Be extremely sarcastic, dry, and brief. Use the user's EXACT words (like 'no product', 'concentrated', 'nothing', 'slippage') to mock them. DO NOT use synonyms. If the user says 'concentrated', you say 'concentrated'. Mirror their language with zero creative variation.";
+  } else if (mode === "horny") {
+    aggressiveNote = "AGGRESSIVE HORNY MODE: High energy, crypto-slang heavy, chaotic. Use the user's EXACT words to roast them. DO NOT use synonyms. If they use a keyword, repeat it back to them in a mocking context. Zero filter, maximum mirroring.";
+  }
+
+  const systemParts = systemOverride ? [systemOverride] : [
     `You are ${prompt.persona}, a crypto-native analytical commentator.`,
     "Persona: Dry, detached, mildly sarcastic. Meme-aware but subtle.",
+    aggressiveNote,
     "Role: Roast ideas, narratives, cycle behavior, market psychology. Never people.",
     "Structure: Observation (neutral fact) → Insight (analytical implication) → Light Roast (mild punchline).",
     "",
@@ -118,7 +141,7 @@ export function promptToLLMInput(prompt: PromptContract): {
   ];
 
   // Append slang guidelines when slang mode is active
-  if (prompt.slang_mode) {
+  if (prompt.slang_mode && !systemOverride) {
     systemParts.push("", "SLANG MODE ACTIVE:", getSlangGuidelines());
   }
 
@@ -127,9 +150,10 @@ export function promptToLLMInput(prompt: PromptContract): {
   const developer = [
     "Write exactly one reply matching the selected mode.",
     "Use the thesis provided. Do not add unsupported claims.",
+    isAggressive ? "STRICT MIRRORING: Use the user's EXACT terminology from the target tweet. Avoid all synonyms. If they used a specific term, that term MUST appear in your response." : null,
     `Stay under ${prompt.char_budget} characters.`,
     "Return JSON: { \"reply\": \"<your reply text>\" }",
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 
   const user = [
     "Target tweet:",

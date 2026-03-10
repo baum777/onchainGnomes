@@ -17,11 +17,24 @@ from rich.table import Table
 
 from evaluator import evaluate_response
 from logger import write_ndjson
+from llm_client import ask_llm
 
 console = Console()
 
 # Project root (xAi_Bot-App) for running the TypeScript prompt bridge
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+
+
+def _load_system_prompt(args: argparse.Namespace) -> str | None:
+    path_or_content = args.system_file or args.system
+    if not path_or_content:
+        return None
+    
+    # Check if it's a file path
+    if os.path.isfile(path_or_content):
+        with open(path_or_content, "r", encoding="utf-8") as f:
+            return f.read().strip()
+    return path_or_content
 
 
 def _resolve_bridge_command(
@@ -160,12 +173,35 @@ def run_interactive(
         if not user_input:
             continue
 
-        prompt_data = run_canonical_prompt_bridge(
+        # Resolve bridge command
+        cmd, debug_info = _resolve_bridge_command(
             user_input,
             debug_prompt=debug_prompt,
             debug_bridge=debug_bridge,
             debug_decision=debug_decision,
         )
+
+        if cmd:
+            try:
+                result = subprocess.run(
+                    cmd,
+                    cwd=PROJECT_ROOT,
+                    env=os.environ.copy(),
+                    capture_output=True,
+                    text=True,
+                    timeout=90,
+                )
+                if result.returncode != 0:
+                    prompt_data = {"skip": True, "reason": "bridge_error", "bridge_error_detail": result.stderr or "subprocess failed"}
+                else:
+                    # Extract only last JSON line to ignore debug/console output
+                    stdout_lines = result.stdout.strip().split("\n")
+                    last_line = stdout_lines[-1] if stdout_lines else ""
+                    prompt_data = json.loads(last_line)
+            except (subprocess.TimeoutExpired, json.JSONDecodeError, FileNotFoundError, IndexError) as e:
+                prompt_data = {"skip": True, "reason": "bridge_error", "bridge_error_detail": str(e)}
+        else:
+            prompt_data = {"skip": True, "reason": "bridge_error", "bridge_error_detail": "Binary resolution failed"}
 
         if prompt_data.get("skip"):
             reason = prompt_data.get("reason", "unknown")
@@ -214,12 +250,36 @@ def run_file_tests(
             name = testcase.get("name", f"test-{total}")
             prompt = testcase["input"]
 
-            prompt_data = run_canonical_prompt_bridge(
+            # Resolve bridge command
+            cmd, debug_info = _resolve_bridge_command(
                 prompt,
                 debug_prompt=debug_prompt,
                 debug_bridge=False,
                 debug_decision=False,
             )
+
+            if cmd:
+                try:
+                    result = subprocess.run(
+                        cmd,
+                        cwd=PROJECT_ROOT,
+                        env=os.environ.copy(),
+                        capture_output=True,
+                        text=False, # Get raw bytes to handle encoding
+                        timeout=90,
+                    )
+                    if result.returncode != 0:
+                        prompt_data = {"skip": True, "reason": "bridge_error", "bridge_error_detail": result.stderr.decode("utf-8", errors="replace") or "subprocess failed"}
+                    else:
+                        # Decode with utf-8 and extract only last JSON line
+                        stdout_str = result.stdout.decode("utf-8", errors="replace")
+                        stdout_lines = stdout_str.strip().split("\n")
+                        last_line = stdout_lines[-1] if stdout_lines else ""
+                        prompt_data = json.loads(last_line)
+                except (subprocess.TimeoutExpired, json.JSONDecodeError, FileNotFoundError, IndexError) as e:
+                    prompt_data = {"skip": True, "reason": "bridge_error", "bridge_error_detail": str(e)}
+            else:
+                prompt_data = {"skip": True, "reason": "bridge_error", "bridge_error_detail": "Binary resolution failed"}
             if prompt_data.get("skip"):
                 reason = prompt_data.get("reason", "unknown")
                 detail = prompt_data.get("bridge_error_detail")
@@ -298,7 +358,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Terminal LLM response tester (canonical pipeline)")
     parser.add_argument("--mode", choices=["interactive", "file"], default="interactive")
     parser.add_argument("--file", help="Path to JSONL test file")
-    parser.add_argument("--system", help="Legacy: ignored when using canonical pipeline", default=None)
+    parser.add_argument("--system", help="System prompt string or path to file", default=None)
+    parser.add_argument("--system-file", help="Alias for --system", default=None)
     parser.add_argument("--strict", action="store_true", help="Return exit code 1 on any failed test")
     parser.add_argument("--log-file", help="Optional NDJSON log file path", default=None)
     parser.add_argument(
@@ -324,9 +385,12 @@ def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
 
+    # Load system prompt (from file or string)
+    system_prompt = _load_system_prompt(args)
+
     if args.mode == "interactive":
         run_interactive(
-            system_prompt=args.system,
+            system_prompt=system_prompt,
             debug_prompt=args.debug_prompt,
             debug_bridge=args.debug_bridge,
             debug_decision=args.debug_decision,
@@ -337,7 +401,7 @@ def main() -> None:
         if not args.file:
             raise SystemExit("--file is required in file mode")
         exit_code = run_file_tests(
-            args.file, args.system, args.strict, args.log_file, args.debug_prompt
+            args.file, system_prompt, args.strict, args.log_file, args.debug_prompt
         )
         raise SystemExit(exit_code)
 

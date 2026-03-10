@@ -5,7 +5,7 @@
  * Suitable for single-worker deployments.
  */
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import type { StateStore, EventTracking, CursorState } from "./stateStore.js";
 import { logInfo, logError } from "../ops/logger.js";
@@ -32,12 +32,24 @@ function loadJson<T>(file: string, defaultValue: T): T {
 }
 
 function saveJson(file: string, data: unknown, dir: string): void {
+  let tmpFile = "";
   try {
     ensureDir(dir);
-    writeFileSync(file, JSON.stringify(data, null, 2), "utf-8");
+    
+    // === ATOMIC WRITE – behebt Race Conditions & Korruption ===
+    tmpFile = `${file}.tmp.${Date.now()}`;
+    writeFileSync(tmpFile, JSON.stringify(data, null, 2), "utf-8");
+    renameSync(tmpFile, file); // atomar auf allen OS
+    
+    logInfo("[FileSystemStore] Atomic write erfolgreich", { file });
   } catch (error) {
     incrementCounter(COUNTER_NAMES.STATE_STORE_ERROR_TOTAL);
     logError("[FileSystemStore] Failed to save", { file, error });
+    
+    // Cleanup tmp if it was created
+    if (tmpFile && existsSync(tmpFile)) {
+      try { unlinkSync(tmpFile); } catch {}
+    }
   }
 }
 

@@ -31,12 +31,20 @@ export function checkEligibility(
   const { thresholds } = config;
   const isSocial = SOCIAL_INTENTS.includes(classifier.intent);
 
+  // Hard policy blocks always apply, even in aggressive mode
   if (isHardPolicyBlock(classifier)) {
     return { eligible: false, skip_reason: "skip_policy" };
   }
 
+  // Risk ceiling always applies
   if (scores.risk > thresholds.max_risk) {
     return { eligible: false, skip_reason: "skip_high_risk" };
+  }
+
+  // Aggressive mode: bypass all relevance/confidence/opportunity checks
+  // (except policy & risk, which are already checked above)
+  if (config.aggressive_mode) {
+    return { eligible: true, skip_reason: null };
   }
 
   if (classifier.intent === "greeting" || classifier.intent === "casual_ping") {

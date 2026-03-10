@@ -23,6 +23,16 @@ export function selectMode(
   thesis: ThesisBundle,
   config: CanonicalConfig,
 ): CanonicalMode {
+  // Aggressive mode: force specific mode based on submode
+  if (config.aggressive_mode === "analyst") {
+    // Dry, sarcastic roast (analyst_meme_lite is best for this)
+    return "analyst_meme_lite";
+  }
+  if (config.aggressive_mode === "horny") {
+    // Slang-heavy, energetic roast (dry_one_liner with slang enabled)
+    return "dry_one_liner";
+  }
+
   const socialMode = SOCIAL_MODE_MAP[cls.intent];
   if (socialMode) {
     return socialMode;

@@ -8,31 +8,35 @@ let cachedStore: StateStore | null = null;
 export function getStateStore(): StateStore {
   if (cachedStore) return cachedStore;
 
-  const useRedis = process.env.USE_REDIS === "true";
+  // Redis wird jetzt DEFAULT für Production (verhindert Race Conditions + State-Verlust)
+  const useRedis = process.env.USE_REDIS !== "false" &&
+                   (process.env.USE_REDIS === "true" ||
+                    process.env.NODE_ENV === "production");
+
   const kvUrl = process.env.KV_URL?.trim();
 
   if (useRedis) {
     if (!kvUrl) {
       throw new Error(
-        "USE_REDIS=true but KV_URL is not configured. " +
-        "Set KV_URL=redis://... or disable Redis."
+        "USE_REDIS=true oder Production-Umgebung erkannt, aber KV_URL fehlt. " +
+        "Setze KV_URL=redis://... für stabile Persistenz."
       );
     }
 
     if (!kvUrl.startsWith("redis://")) {
       throw new Error(
-        "KV_URL must use redis:// protocol. " +
-        "Upstash REST URLs (https://) are not supported with ioredis. " +
-        `Got: ${maskUrl(kvUrl)}`
+        "KV_URL muss redis:// protocol nutzen. " +
+        "Upstash REST URLs (https://) werden nicht unterstützt. " +
+        `Erhalten: ${maskUrl(kvUrl)}`
       );
     }
 
-    logInfo("[StateStore] Using Redis store", {
+    logInfo("[StateStore] ✅ Redis Backend aktiv (Production Default)", {
       prefix: process.env.REDIS_KEY_PREFIX ?? "gorkypf:",
     });
     cachedStore = getRedisStore(kvUrl);
   } else {
-    logInfo("[StateStore] Using FileSystem store", {
+    logInfo("[StateStore] 📁 FileSystem Backend (nur für lokale Tests)", {
       dataDir: process.env.DATA_DIR ?? "./data",
     });
     cachedStore = getFileSystemStore();

@@ -54,21 +54,21 @@ def ask_llm_canonical(
     ]
 
     started = time.perf_counter()
-    response = client.responses.create(
+    response = client.chat.completions.create(
         model=MODEL,
-        input=messages,
+        messages=messages,
     )
     latency_ms = int((time.perf_counter() - started) * 1000)
 
     usage = None
     if getattr(response, "usage", None) is not None:
         usage = {
-            "input_tokens": getattr(response.usage, "input_tokens", None),
-            "output_tokens": getattr(response.usage, "output_tokens", None),
+            "input_tokens": getattr(response.usage, "prompt_tokens", None),
+            "output_tokens": getattr(response.usage, "completion_tokens", None),
             "total_tokens": getattr(response.usage, "total_tokens", None),
         }
 
-    raw_text = (response.output_text or "").strip()
+    raw_text = response.choices[0].message.content.strip()
     reply_text = _extract_reply_from_json(raw_text)
 
     return LLMResult(
@@ -87,22 +87,22 @@ def ask_llm(user_input: str, system_prompt: str | None = None) -> LLMResult:
     messages.append({"role": "user", "content": user_input})
 
     started = time.perf_counter()
-    response = client.responses.create(
+    response = client.chat.completions.create(
         model=MODEL,
-        input=messages,
+        messages=messages,
     )
     latency_ms = int((time.perf_counter() - started) * 1000)
 
     usage = None
     if getattr(response, "usage", None) is not None:
         usage = {
-            "input_tokens": getattr(response.usage, "input_tokens", None),
-            "output_tokens": getattr(response.usage, "output_tokens", None),
+            "input_tokens": getattr(response.usage, "prompt_tokens", None),
+            "output_tokens": getattr(response.usage, "completion_tokens", None),
             "total_tokens": getattr(response.usage, "total_tokens", None),
         }
 
     return LLMResult(
-        text=(response.output_text or "").strip(),
+        text=response.choices[0].message.content.strip(),
         latency_ms=latency_ms,
         usage=usage,
         raw_model=getattr(response, "model", None),
