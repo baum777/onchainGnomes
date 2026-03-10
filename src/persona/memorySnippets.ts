@@ -43,9 +43,10 @@ export async function addOrUpdateSnippets(newSnippets: string[]): Promise<void> 
   for (const text of newSnippets) {
     if (!text.trim()) continue;
     const idx = existing.findIndex((s) => s.text === text);
-    if (idx >= 0) {
-      existing[idx].sourceCount += 1;
-      existing[idx].createdAt = now;
+    const item = idx >= 0 ? existing[idx] : undefined;
+    if (item) {
+      item.sourceCount += 1;
+      item.createdAt = now;
     } else {
       existing.push({ text, createdAt: now, sourceCount: 1 });
     }
