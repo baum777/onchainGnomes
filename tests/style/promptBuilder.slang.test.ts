@@ -64,6 +64,9 @@ describe("buildPrompt with style context", () => {
     const styleContext: StyleContext = {
       energyLevel: "HIGH",
       slangEnabled: true,
+      savage_horny_slang: false,
+      ultra_savage: false,
+      degen_regard: false,
       traitHints: ["playful slang mode", "heat metaphors"],
       slangDensity: "medium",
       tone: "playful",
@@ -82,6 +85,9 @@ describe("buildPrompt with style context", () => {
     const styleContext: StyleContext = {
       energyLevel: "HIGH",
       slangEnabled: true,
+      savage_horny_slang: false,
+      ultra_savage: false,
+      degen_regard: false,
       traitHints: ["playful slang mode", "heat metaphors"],
       slangDensity: "medium",
       tone: "playful",
@@ -100,6 +106,9 @@ describe("buildPrompt with style context", () => {
     const styleContext: StyleContext = {
       energyLevel: "LOW",
       slangEnabled: false,
+      savage_horny_slang: false,
+      ultra_savage: false,
+      degen_regard: false,
       traitHints: ["dry observation tone"],
       slangDensity: "none",
       tone: "dry",
@@ -128,6 +137,8 @@ describe("promptToLLMInput with slang mode", () => {
       style: {
         energyLevel: "HIGH",
         slangEnabled: true,
+        savage_horny_slang: false,
+        ultra_savage: false,
         traitHints: ["playful slang mode"],
         slangDensity: "medium",
         tone: "playful",
@@ -147,6 +158,9 @@ describe("promptToLLMInput with slang mode", () => {
       style: {
         energyLevel: "EXTREME",
         slangEnabled: true,
+        savage_horny_slang: false,
+        ultra_savage: false,
+        degen_regard: false,
         traitHints: ["max meme energy"],
         slangDensity: "high",
         tone: "unhinged",
@@ -163,6 +177,9 @@ describe("promptToLLMInput with slang mode", () => {
       style: {
         energyLevel: "LOW",
         slangEnabled: false,
+        savage_horny_slang: false,
+        ultra_savage: false,
+        degen_regard: false,
         traitHints: ["dry observation tone"],
         slangDensity: "none",
         tone: "dry",
@@ -180,6 +197,8 @@ describe("promptToLLMInput with slang mode", () => {
       style: {
         energyLevel: "HIGH",
         slangEnabled: true,
+        savage_horny_slang: false,
+        ultra_savage: false,
         traitHints: ["playful slang mode"],
         slangDensity: "medium",
         tone: "playful",
@@ -199,5 +218,70 @@ describe("promptToLLMInput with slang mode", () => {
     expect(llmInput.system).toContain("You are gorkypf");
     expect(llmInput.system).toContain("Response mode: dry_one_liner");
     expect(llmInput.system).not.toContain("SLANG MODE ACTIVE");
+  });
+
+  it("includes savage horny-slang block when savage_horny_slang is true", () => {
+    const prompt = buildPrompt(mockEvent, "market_banter", mockThesis, mockScores, mockConfig, {
+      style: {
+        energyLevel: "EXTREME",
+        slangEnabled: true,
+        savage_horny_slang: true,
+        ultra_savage: false,
+        degen_regard: false,
+        traitHints: ["max meme energy"],
+        slangDensity: "high",
+        tone: "unhinged",
+      },
+    });
+
+    const llmInput = promptToLLMInput(prompt);
+
+    expect(llmInput.system).toContain("SAVAGE HORNY-SLANG ACTIVE");
+    expect(llmInput.system).toContain("sniffing blood");
+    expect(llmInput.system).toContain("as fuck");
+    expect(llmInput.system).toContain("losing their minds");
+  });
+
+  it("includes ultra-savage block when ultra_savage is true", () => {
+    const prompt = buildPrompt(mockEvent, "market_banter", mockThesis, mockScores, mockConfig, {
+      style: {
+        energyLevel: "EXTREME",
+        slangEnabled: true,
+        savage_horny_slang: true,
+        ultra_savage: true,
+        degen_regard: false,
+        traitHints: ["max meme energy"],
+        slangDensity: "high",
+        tone: "unhinged",
+      },
+    });
+
+    const llmInput = promptToLLMInput(prompt);
+
+    expect(llmInput.system).toContain("ULTRA-SAVAGE MODE");
+    expect(llmInput.system).toContain("nuked");
+    expect(llmInput.system).toContain("rekt");
+    expect(llmInput.system).toContain("bloodbath");
+  });
+
+  it("includes degen-regard block when degen_regard is true", () => {
+    const prompt = buildPrompt(mockEvent, "market_banter", mockThesis, mockScores, mockConfig, {
+      style: {
+        energyLevel: "HIGH",
+        slangEnabled: true,
+        savage_horny_slang: false,
+        ultra_savage: false,
+        degen_regard: true,
+        traitHints: ["playful slang mode"],
+        slangDensity: "medium",
+        tone: "playful",
+      },
+    });
+
+    const llmInput = promptToLLMInput(prompt);
+
+    expect(llmInput.system).toContain("DEGEN / REGARD MODE ACTIVE");
+    expect(llmInput.system).toContain("ngmi");
+    expect(llmInput.system).toContain("regarded");
   });
 });

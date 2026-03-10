@@ -10,6 +10,8 @@ import type {
   StructuredRoast,
 } from "./types.js";
 import type { RelevanceResult } from "./relevanceScorer.js";
+import type { StyleContext } from "../style/styleResolver.js";
+import { calculateHybridBissigkeit } from "../style/styleResolver.js";
 import { downgradeMode } from "./downgradeMatrix.js";
 import {
   buildPrompt,
@@ -99,7 +101,7 @@ async function generateFullSpectrum(
   scores: ScoreBundle,
   config: CanonicalConfig,
   promptContext?: FallbackCascadeContext,
-): Promise<{ reply_text: string; model_id: string; prompt_hash: string } | null> {
+): Promise<{ reply_text: string; model_id: string; prompt_hash: string; finalBissigkeit?: number } | null> {
   const budgetCheck = await checkLLMBudget(false);
   if (!budgetCheck.allowed) {
     console.warn(`[BUDGET_GATE] Blocking Full Spectrum LLM for event ${event.event_id}: ${budgetCheck.skipReason}`);
@@ -120,7 +122,15 @@ async function generateFullSpectrum(
     }
   }
 
-  const input = buildMasterPrompt(event, thesis, scores, promptContext?.relevanceResult, personaSnippets);
+  const input = buildMasterPrompt(
+    event,
+    thesis,
+    scores,
+    promptContext?.relevanceResult,
+    personaSnippets,
+    promptContext?.style,
+    promptContext?.estimatedBissigkeit,
+  );
   const raw = await llm.generateJSON<unknown>({
     system: input.system,
     developer: input.developer,
@@ -130,6 +140,19 @@ async function generateFullSpectrum(
 
   const structured = normalizeToStructuredRoast(raw);
   if (!structured) return null;
+
+  const finalBissigkeit = calculateHybridBissigkeit(
+    structured.bissigkeit_score,
+    scores.severity ?? 0,
+    scores.opportunity ?? 0,
+    scores.risk ?? 0,
+    promptContext?.relevanceResult?.score ?? scores.relevance ?? 0.5,
+  );
+  if (Math.abs(finalBissigkeit - structured.bissigkeit_score) > 2.0) {
+    console.warn(
+      `[Bissigkeit] drift: LLM ${structured.bissigkeit_score} → Hybrid ${finalBissigkeit.toFixed(1)}`,
+    );
+  }
 
   let roastText = structured.roast_text;
   const needsRefine =
@@ -168,6 +191,7 @@ async function generateFullSpectrum(
     reply_text: trimToLimit(roastText, 260),
     model_id: config.model_id,
     prompt_hash,
+    finalBissigkeit,
   };
 }
 
@@ -179,6 +203,8 @@ export interface FallbackResult {
   prompt_hash: string | null;
   validation: ValidationResult | null;
   attempts: number;
+  /** Post-LLM hybrid bissigkeit (Full Spectrum only) */
+  finalBissigkeit?: number;
 }
 
 export interface FallbackCascadeContext {
@@ -187,6 +213,10 @@ export interface FallbackCascadeContext {
   format_target?: string;
   /** Precomputed relevance score for refine step */
   relevanceResult?: RelevanceResult;
+  /** Style context for savage/ultra/degen in Full Spectrum */
+  style?: StyleContext;
+  /** Pre-LLM estimated bissigkeit for prompt hint */
+  estimatedBissigkeit?: number;
 }
 
 export async function fallbackCascade(
@@ -232,6 +262,7 @@ export async function fallbackCascade(
         prompt_hash: gen.prompt_hash,
         validation: val,
         attempts,
+        finalBissigkeit: gen.finalBissigkeit,
       };
     }
     const repairEnabled = (config as { repair_enabled?: boolean }).repair_enabled ?? true;
@@ -252,6 +283,7 @@ export async function fallbackCascade(
           prompt_hash: gen.prompt_hash,
           validation: repairOut.validation_after,
           attempts,
+          finalBissigkeit: gen.finalBissigkeit,
         };
       }
     }
@@ -263,6 +295,7 @@ export async function fallbackCascade(
       prompt_hash: gen.prompt_hash,
       validation: val,
       attempts,
+      finalBissigkeit: gen.finalBissigkeit,
     };
   }
 

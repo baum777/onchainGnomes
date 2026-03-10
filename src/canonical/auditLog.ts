@@ -100,6 +100,7 @@ export function buildAuditRecord(params: {
   response_mode?: string;
   energy_level?: import("./types.js").MarketEnergyLevel;
   slang_applied?: boolean;
+  bissigkeit_score?: number;
 }): AuditRecord {
   const eventSnapshot = JSON.stringify({
     event_id: params.event.event_id,
@@ -131,6 +132,7 @@ export function buildAuditRecord(params: {
     response_mode: params.response_mode,
     energy_level: params.energy_level,
     slang_applied: params.slang_applied,
+    bissigkeit_score: params.bissigkeit_score,
   };
 }
 

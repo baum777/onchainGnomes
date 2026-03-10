@@ -29,7 +29,11 @@ import { detectCARequest, detectOwnTokenSentiment } from "../intent/detectIntent
 import { buildCAResponse, buildOwnTokenSentimentResponse } from "./specialResponseBuilder.js";
 import { getStateStore } from "../state/storeFactory.js";
 import { calculateMarketEnergy, extractEnergySignals } from "../style/energyDetector.js";
-import { resolveStyle } from "../style/styleResolver.js";
+import { computeKeywordDensity, isMemeCoinEvent } from "../style/degenRegardDetector.js";
+import {
+  estimateBissigkeitProxy,
+  resolveStyle,
+} from "../style/styleResolver.js";
 
 export interface PipelineDeps {
   llm: LLMClient;
@@ -211,12 +215,33 @@ export async function handleEvent(
     return makeSkipResult(event, "skip_low_confidence", cls, scores, config);
   }
 
-  // Calculate market energy and resolve style
+  const narrative = mapNarrative(event, cls);
+  const relevanceResult = computeRelevanceScore({
+    event,
+    cls,
+    scores,
+    thesis,
+    narrative: narrative ?? null,
+  });
+
+  // Calculate market energy and resolve style (relevance for hybrid bissigkeit)
   const energySignals = extractEnergySignals(event, cls, scores);
   const energyLevel = calculateMarketEnergy(energySignals);
-  const styleContext = resolveStyle(mode, energyLevel);
+  const bissigkeit =
+    event.bissigkeit_score ??
+    estimateBissigkeitProxy(
+      scores,
+      thesis,
+      relevanceResult.score ?? scores.relevance,
+    );
+  const keyword_density = computeKeywordDensity(event);
+  const is_meme_coin_event = isMemeCoinEvent(event, cls, energySignals);
+  const styleContext = resolveStyle(mode, energyLevel, bissigkeit, {
+    relevance_score: relevanceResult.score ?? scores.relevance,
+    keyword_density,
+    is_meme_coin_event,
+  });
 
-  const narrative = mapNarrative(event, cls);
   const pattern = selectPattern(
     thesis,
     narrative ?? { label: "unclassified", confidence: 0.5, sentiment: "neutral" },
@@ -239,20 +264,13 @@ export async function handleEvent(
     return makeSkipResult(event, "skip_format_decision", cls, scores, config);
   }
 
-  const relevanceResult = computeRelevanceScore({
-    event,
-    cls,
-    scores,
-    thesis,
-    narrative: narrative ?? null,
-  });
-
   const promptContext = {
     pattern_id: pattern.pattern_id,
     narrative_label: narrative?.label ?? undefined,
     format_target: format.format,
     style: styleContext,
     relevanceResult,
+    estimatedBissigkeit: bissigkeit,
   };
 
   const result = await fallbackCascade(
@@ -308,6 +326,7 @@ export async function handleEvent(
     response_mode: format.format,
     energy_level: energyLevel,
     slang_applied: styleContext.slangEnabled,
+    bissigkeit_score: result.finalBissigkeit,
   });
   persistAuditRecord(audit);
   addToAuditTail(audit).catch(() => {});

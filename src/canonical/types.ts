@@ -125,6 +125,8 @@ export interface CanonicalEvent {
   relevance_score?: number;
   /** Full Spectrum: sentiment intensity for refine */
   sentiment_intensity?: number;
+  /** Optional upstream bissigkeit score (fallback via estimateBissigkeitProxy) */
+  bissigkeit_score?: number;
 
   /** Markiert, ob dieses Event für Test-/Simulationszwecke erzeugt wurde */
   is_simulated?: boolean;
@@ -207,6 +209,12 @@ export interface PromptContract {
   energy_level?: MarketEnergyLevel;
   /** Whether horny_slang_energy mode is active */
   slang_mode?: boolean;
+  /** Whether savage_horny_slang is active (EXTREME + bissigkeit >= 8) */
+  savage_horny_slang?: boolean;
+  /** Whether ultra_savage is active (EXTREME + bissigkeit > 9.2) */
+  ultra_savage?: boolean;
+  /** Whether degen_regard is active (chaotic meme-coin) */
+  degen_regard?: boolean;
   /** Style hints for the LLM (optional) */
   style_hints?: string[];
 }
@@ -265,6 +273,8 @@ export interface AuditRecord {
   energy_level?: MarketEnergyLevel;
   /** Analytics: whether horny_slang_energy was applied */
   slang_applied?: boolean;
+  /** Analytics: final hybrid bissigkeit (Full Spectrum) */
+  bissigkeit_score?: number;
 }
 
 export type PipelineResult =

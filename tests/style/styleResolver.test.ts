@@ -5,11 +5,16 @@
 import { describe, it, expect } from "vitest";
 import {
   resolveStyle,
+  estimateBissigkeitProxy,
+  calculateHybridBissigkeit,
   getSlangGuidelines,
+  getSavageSlangGuidelines,
+  getUltraSavageGuidelines,
   modeSupportsStyling,
   getSamplePhrases,
   SLANG_CATEGORIES,
 } from "../../src/style/styleResolver.js";
+import type { ScoreBundle, ThesisBundle } from "../../src/canonical/types.js";
 import type { CanonicalMode } from "../../src/canonical/types.js";
 
 describe("resolveStyle", () => {
@@ -70,6 +75,92 @@ describe("resolveStyle", () => {
     const style = resolveStyle("dry_one_liner", "HIGH");
     expect(style.energyLevel).toBe("HIGH");
   });
+
+  describe("savage_horny_slang (bissigkeit + energy)", () => {
+    it("LOW energy → no horny regardless of bissigkeit", () => {
+      const style = resolveStyle("dry_one_liner", "LOW", 8);
+      expect(style.slangEnabled).toBe(false);
+      expect(style.savage_horny_slang).toBe(false);
+    });
+
+    it("HIGH energy, bissigkeit 6 → normal horny, no savage", () => {
+      const style = resolveStyle("dry_one_liner", "HIGH", 6);
+      expect(style.slangEnabled).toBe(true);
+      expect(style.savage_horny_slang).toBe(false);
+    });
+
+    it("EXTREME energy, bissigkeit 7.9 → normal horny, no savage", () => {
+      const style = resolveStyle("dry_one_liner", "EXTREME", 7.9);
+      expect(style.slangEnabled).toBe(true);
+      expect(style.savage_horny_slang).toBe(false);
+    });
+
+    it("EXTREME energy, bissigkeit 8.5 → savage horny", () => {
+      const style = resolveStyle("dry_one_liner", "EXTREME", 8.5);
+      expect(style.slangEnabled).toBe(true);
+      expect(style.savage_horny_slang).toBe(true);
+      expect(style.ultra_savage).toBe(false);
+    });
+
+    it("EXTREME energy, bissigkeit 9.5 → savage + ultra", () => {
+      const style = resolveStyle("dry_one_liner", "EXTREME", 9.5);
+      expect(style.slangEnabled).toBe(true);
+      expect(style.savage_horny_slang).toBe(true);
+      expect(style.ultra_savage).toBe(true);
+    });
+
+    it("HIGH energy, low relevance, bissigkeit 7 → degen_regard", () => {
+      const style = resolveStyle("dry_one_liner", "HIGH", 7, {
+        relevance_score: 0.6,
+        keyword_density: 0,
+        is_meme_coin_event: false,
+      });
+      expect(style.degen_regard).toBe(true);
+    });
+
+    it("HIGH energy, high relevance → no degen_regard", () => {
+      const style = resolveStyle("dry_one_liner", "HIGH", 7.5, {
+        relevance_score: 0.9,
+        keyword_density: 0,
+        is_meme_coin_event: false,
+      });
+      expect(style.degen_regard).toBe(false);
+    });
+  });
+});
+
+describe("estimateBissigkeitProxy", () => {
+  const mockThesis: ThesisBundle = {
+    primary: "empty_hype_no_substance",
+    supporting_point: null,
+    evidence_bullets: [],
+  };
+
+  it("returns at least 5.0 for low scores", () => {
+    const scores: ScoreBundle = {
+      relevance: 0,
+      confidence: 0,
+      severity: 0,
+      opportunity: 0,
+      risk: 0,
+      novelty: 0,
+    };
+    expect(estimateBissigkeitProxy(scores)).toBeGreaterThanOrEqual(5);
+  });
+
+  it("returns higher value for high severity/opportunity", () => {
+    const scores: ScoreBundle = {
+      relevance: 0.8,
+      confidence: 0.7,
+      severity: 0.9,
+      opportunity: 0.8,
+      risk: 0.2,
+      novelty: 0.5,
+    };
+    const result = estimateBissigkeitProxy(scores, mockThesis);
+    expect(result).toBeGreaterThan(6);
+    expect(result).toBeLessThanOrEqual(10);
+  });
 });
 
 describe("getSlangGuidelines", () => {
@@ -96,6 +187,26 @@ describe("getSlangGuidelines", () => {
     expect(guidelines).toContain("damn this chart hot");
     expect(guidelines).toContain("liquidity looking thirsty");
     expect(guidelines).toContain("ct gonna clap for this");
+  });
+});
+
+describe("getSavageSlangGuidelines", () => {
+  it("includes savage block header and examples", () => {
+    const guidelines = getSavageSlangGuidelines();
+    expect(guidelines).toContain("SAVAGE HORNY-SLANG ACTIVE");
+    expect(guidelines).toContain("sniffing blood");
+    expect(guidelines).toContain("as fuck");
+    expect(guidelines).toContain("losing their minds");
+  });
+});
+
+describe("getUltraSavageGuidelines", () => {
+  it("includes ultra-savage block header and examples", () => {
+    const guidelines = getUltraSavageGuidelines();
+    expect(guidelines).toContain("ULTRA-SAVAGE MODE");
+    expect(guidelines).toContain("nuked");
+    expect(guidelines).toContain("rekt");
+    expect(guidelines).toContain("bloodbath");
   });
 });
 

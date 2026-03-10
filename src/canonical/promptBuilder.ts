@@ -9,7 +9,12 @@ import type {
 } from "./types.js";
 import { getHardMax } from "./modeBudgets.js";
 import type { StyleContext } from "../style/styleResolver.js";
-import { getSlangGuidelines } from "../style/styleResolver.js";
+import {
+  getSlangGuidelines,
+  getSavageSlangGuidelines,
+  getUltraSavageGuidelines,
+  getDegenRegardGuidelines,
+} from "../style/styleResolver.js";
 
 function deriveConfidenceStance(confidence: number): "low" | "medium" | "high" {
   if (confidence >= 0.75) return "high";
@@ -89,6 +94,9 @@ export function buildPrompt(
     format_target: context?.format_target,
     energy_level: context?.style?.energyLevel,
     slang_mode: context?.style?.slangEnabled,
+    savage_horny_slang: context?.style?.savage_horny_slang,
+    ultra_savage: context?.style?.ultra_savage,
+    degen_regard: context?.style?.degen_regard,
     style_hints: context?.style?.traitHints,
   };
 
@@ -143,6 +151,21 @@ export function promptToLLMInput(prompt: PromptContract): {
   // Append slang guidelines when slang mode is active
   if (prompt.slang_mode && !systemOverride) {
     systemParts.push("", "SLANG MODE ACTIVE:", getSlangGuidelines());
+  }
+
+  // Savage horny-slang block (EXTREME + bissigkeit >= 8)
+  if (prompt.savage_horny_slang && !systemOverride) {
+    systemParts.push("", getSavageSlangGuidelines());
+  }
+
+  // Ultra-savage block (EXTREME + bissigkeit > 9.2)
+  if (prompt.ultra_savage && !systemOverride) {
+    systemParts.push("", getUltraSavageGuidelines());
+  }
+
+  // Degen/Regard block (chaotic meme-coin)
+  if (prompt.degen_regard && !systemOverride) {
+    systemParts.push("", getDegenRegardGuidelines());
   }
 
   const system = systemParts.filter(Boolean).join("\n");
