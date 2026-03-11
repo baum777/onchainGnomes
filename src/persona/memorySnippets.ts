@@ -5,7 +5,7 @@
 import { getStateStore } from "../state/storeFactory.js";
 import { logInfo, logWarn } from "../ops/logger.js";
 
-/** Redis/StateStore Key (Prefix gorkypf: wird vom Store hinzugefügt) */
+/** Redis/StateStore Key (Prefix GORKY_ON_SOL: wird vom Store hinzugefügt) */
 const SNIPPETS_KEY = "persona:memory:snippets";
 const MAX_SNIPPETS = 6;
 

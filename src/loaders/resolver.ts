@@ -31,7 +31,7 @@ export class MemeResolver {
 
     // Fallback to default preset if not found
     if (!preset) {
-      const defaultKey = resolvePresetKey("gorkypf_roast_card");
+      const defaultKey = resolvePresetKey("GORKY_ON_SOL_roast_card");
       preset = this.presets.get(defaultKey);
       // Try any available preset as last resort
       if (!preset && this.presets.size > 0) {

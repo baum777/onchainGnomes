@@ -8,7 +8,7 @@ export type MemeCombo = {
 
 export const COMBOS: MemeCombo[] = [
   {
-    template: "gorkypf_courtroom",
+    template: "GORKY_ON_SOL_courtroom",
     textByZone: {
       header: "RUG PULL TRIBUNAL",
       verdict: "VERDICT: FAKED DEATH, PUMPED, THEN RUGGED.",
@@ -16,7 +16,7 @@ export const COMBOS: MemeCombo[] = [
     }
   },
   {
-    template: "gorkypf_chart_autopsy",
+    template: "GORKY_ON_SOL_chart_autopsy",
     textByZone: {
       title: "CHART AUTOPSY REPORT",
       cause: "Cause of death: NARRATIVE INFLATION.",

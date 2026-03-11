@@ -51,7 +51,7 @@ GORKY constantly references:
 
 ## Situative Energy Traits (Overlays)
 
-Activated by `styleResolver` based on `market_energy_level` and `bissigkeit_score`. See `prompts/system/gorkypf_roast_mode.txt` for full wording.
+Activated by `styleResolver` based on `market_energy_level` and `bissigkeit_score`. See `prompts/system/GORKY_ON_SOL_roast_mode.txt` for full wording.
 
 ### Horny-Slang Energy
 

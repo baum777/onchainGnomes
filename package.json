@@ -1,5 +1,5 @@
 {
-  "name": "gorkypf-bot",
+  "name": "GORKY_ON_SOL-bot",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -30,6 +30,7 @@
     "dotenv": "^17.3.1",
     "ioredis": "^5.10.0",
     "js-yaml": "^4.1.0",
+    "openai": "6.27.0",
     "replicate": "^1.0.0",
     "sharp": "^0.33.5",
     "twitter-api-v2": "^1.15.0",

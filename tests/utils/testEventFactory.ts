@@ -12,7 +12,7 @@ export interface SimulationOptions {
   is_simulated?: boolean;
 }
 
-const BOT_HANDLE = (process.env.BOT_USERNAME ?? "gorkypf").replace(/^@/, "");
+const BOT_HANDLE = (process.env.BOT_USERNAME ?? "GORKY_ON_SOL").replace(/^@/, "");
 const MENTION_PREFIX = `@${BOT_HANDLE}`;
 const MENTION_PREFIX_REGEX = new RegExp(`^@${BOT_HANDLE}\\s+`, "i");
 

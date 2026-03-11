@@ -1,6 +1,6 @@
-# xAi Bot (gorkypf)
+# xAi Bot (GORKY_ON_SOL)
 
-Autonomous X (Twitter) AI Agent — TypeScript/Node worker that polls @mentions, processes via the **canonical pipeline**, and replies with AI-generated responses under the gorkypf persona.
+Autonomous X (Twitter) AI Agent — TypeScript/Node worker that polls @mentions, processes via the **canonical pipeline**, and replies with AI-generated responses under the GORKY_ON_SOL persona.
 
 **Runtime**: TypeScript/Node 20+. Python code in `legacy/python/`; LLM fingerprinting tools in `tools/behavior_fingerprint/` (Python).
 
@@ -152,7 +152,7 @@ Täglicher Cron-Job extrahiert Roast-Muster aus erfolgreichen Mentions und speic
 KV_URL=redis://... XAI_API_KEY=... pnpm snippets:extract
 
 # Prüfen in Redis
-redis-cli GET gorkypf:persona:memory:snippets
+redis-cli GET GORKY_ON_SOL:persona:memory:snippets
 ```
 
 Render Cron: `gorky-daily-snippets` (täglich 3 Uhr UTC).
@@ -192,11 +192,11 @@ Requires the LLM terminal test harness (`llm-terminal-test-bundle`) or `--result
 | XAI_MODEL_FALLBACKS | No | CSV fallbacks (e.g. grok-3-mini) |
 | **USE_REDIS** | No | `true` to use Redis for state storage (default: `false`) |
 | **KV_URL** | When USE_REDIS=true | Redis connection URL: `redis://default:PASS@HOST.upstash.io:6379` |
-| **REDIS_KEY_PREFIX** | No | Prefix for Redis keys (default: `gorkypf:`) |
+| **REDIS_KEY_PREFIX** | No | Prefix for Redis keys (default: `GORKY_ON_SOL:`) |
 | POLL_INTERVAL_MS | No | Poll interval in ms (default: 30000) |
 | DRY_RUN | No | `true` = no posting |
 | MENTIONS_SOURCE | No | `mentions` or `search` |
-| BOT_USERNAME | No | For search mode (default: gorkypf_on_sol) |
+| BOT_USERNAME | No | For search mode (default: GORKY_ON_SOL_on_sol) |
 | LAUNCH_MODE | No | `off`, `dry_run`, `staging`, `prod` |
 | REPLICATE_API_KEY | No | For image generation |
 

@@ -2,7 +2,7 @@
 
 Five humor modes + rhyme override. Mode selection implemented in runtime (`src/canonical/modeSelector.ts`).
 
-Energy-based style overlays (Horny-Slang, Savage, Degen/Regard, Ultra-Savage) are resolved in `src/style/styleResolver.ts`; wording in `prompts/system/gorkypf_roast_mode.txt`.
+Energy-based style overlays (Horny-Slang, Savage, Degen/Regard, Ultra-Savage) are resolved in `src/style/styleResolver.ts`; wording in `prompts/system/GORKY_ON_SOL_roast_mode.txt`.
 
 ---
 

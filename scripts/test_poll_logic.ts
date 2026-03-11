@@ -11,7 +11,7 @@ async function testPoll() {
     accessSecret: process.env.X_ACCESS_SECRET || "",
   });
 
-  const BOT_USERNAME = (process.env.BOT_USERNAME ?? "gorkypf_on_sol").replace(/^@/, "");
+  const BOT_USERNAME = (process.env.BOT_USERNAME ?? "GORKY_ON_SOL_on_sol").replace(/^@/, "");
   const MENTIONS_SOURCE = process.env.MENTIONS_SOURCE;
 
   console.log(`Testing poll with MENTIONS_SOURCE=${MENTIONS_SOURCE}, BOT_USERNAME=${BOT_USERNAME}`);

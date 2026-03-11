@@ -1,4 +1,4 @@
-template_key: gorkypf_certificate
+template_key: GORKY_ON_SOL_certificate
 base_style_prompt: >
   humorous official certificate, cyberpunk neon seals,
   glitch borders, demonic notary stamp, meme document style
@@ -21,7 +21,7 @@ text_zones:
     - "Dead Coin Reviver"
     - "Graveyard Wanderer"
   footer:
-    - "ISSUED BY gorkypf ENTITY"
+    - "ISSUED BY GORKY_ON_SOL ENTITY"
     - "VALID UNTIL NEXT RUG"
     - "NO REFUNDS ON DEGENERACY"
 caption_style: mocking_authority

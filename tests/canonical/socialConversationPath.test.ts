@@ -52,9 +52,9 @@ describe("social conversation path — integration", () => {
     if (fs.existsSync(AUDIT_FILE)) fs.unlinkSync(AUDIT_FILE);
   });
 
-  it('altseason case: "@gorkypf is there an altseason on the horizon?" is not skipped', async () => {
+  it('altseason case: "@GORKY_ON_SOL is there an altseason on the horizon?" is not skipped', async () => {
     const result = await handleEvent(
-      makeEvent({ text: "@gorkypf is there an altseason on the horizon?" }),
+      makeEvent({ text: "@GORKY_ON_SOL is there an altseason on the horizon?" }),
       makeDeps("Altseason? The charts whisper, but the void hasn't confirmed."),
       DEFAULT_CANONICAL_CONFIG,
     );

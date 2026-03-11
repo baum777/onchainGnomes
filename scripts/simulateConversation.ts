@@ -45,7 +45,7 @@ const BUILTIN_SCENARIOS: ConversationScenario[] = [
         skipPipeline: true,
       },
       {
-        userInput: "@gorkypf How many times do we hear this before something actually ships?",
+        userInput: "@GORKY_ON_SOL How many times do we hear this before something actually ships?",
         expectedKeywords: ["nothing", "vaporware", "cope", "ship"],
       },
     ],
@@ -53,13 +53,13 @@ const BUILTIN_SCENARIOS: ConversationScenario[] = [
   {
     name: "multi-turn-market-panic",
     turns: [
-      { userInput: "@gorkypf BTC -8%, CT sagt end of crypto. Cope oder real?" },
+      { userInput: "@GORKY_ON_SOL BTC -8%, CT sagt end of crypto. Cope oder real?" },
       {
-        userInput: "@gorkypf ok aber was sagt die liquidation heatmap?",
+        userInput: "@GORKY_ON_SOL ok aber was sagt die liquidation heatmap?",
         expectedKeywords: ["liquidation", "cascade", "leverage", "rekt"],
       },
       {
-        userInput: "@gorkypf und wie siehts mit den whale wallets aus?",
+        userInput: "@GORKY_ON_SOL und wie siehts mit den whale wallets aus?",
         expectedKeywords: ["concentrated", "whale", "distribution", "exit"],
       },
     ],
@@ -153,7 +153,7 @@ async function runScenario(
       lastBotReply = replyText;
       parentForNext = replyText;
       conversationContext.push(`${event.author_handle}: ${event.text}`);
-      conversationContext.push(`@gorkypf: ${replyText}`);
+      conversationContext.push(`@GORKY_ON_SOL: ${replyText}`);
       turnsExecuted++;
 
       console.log(`Gorky: ${replyText}`);

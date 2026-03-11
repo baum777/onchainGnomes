@@ -1,4 +1,4 @@
-# gorkypf Bot — Production Configuration
+# GORKY_ON_SOL Bot — Production Configuration
 # Extends config/default.yaml. Override via env or config/local.yaml.
 #
 # launchGate mapping (LAUNCH_MODE env):
@@ -8,10 +8,10 @@
 #   prod     = full rollout
 
 persona:
-  name: gorkypf
+  name: GORKY_ON_SOL
   platform: twitter
 
-# Relevance scoring weights (gorkypf spec)
+# Relevance scoring weights (GORKY_ON_SOL spec)
 relevance:
   weights:
     mention_signal: 0.2

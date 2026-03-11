@@ -346,7 +346,7 @@ export interface CanonicalConfig {
 }
 
 export const DEFAULT_CANONICAL_CONFIG: CanonicalConfig = {
-  persona_name: "gorkypf",
+  persona_name: "GORKY_ON_SOL",
   platform: "twitter",
   thresholds: {
     min_relevance: 0.45,

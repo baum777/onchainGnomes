@@ -1,4 +1,4 @@
-# Launch Runbook — gorkypf Bot
+# Launch Runbook — GORKY_ON_SOL Bot
 
 ## Staging Deploy Steps
 

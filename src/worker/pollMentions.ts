@@ -1,5 +1,5 @@
 /**
- * sergorkypf Mention Poller
+ * serGORKY_ON_SOL Mention Poller
  *
  * Fetches mentions, processes via canonical pipeline.
  * Uses file-based storage for idempotency.
@@ -13,7 +13,7 @@ import { TwitterApi } from "twitter-api-v2";
 import { createXClient } from "../clients/xClient.js";
 import { createXReadClient } from "../clients/xReadClient.js";
 import { checkXConfigHealth } from "../clients/xClientConfig.js";
-import { createXAILLMClient } from "../clients/llmClient.xai.js";
+import { createUnifiedLLMClient } from "../clients/llmClient.unified.js";
 import {
   mapMentionsResponse,
   MENTIONS_FETCH_OPTIONS,
@@ -69,7 +69,7 @@ const MENTIONS_SOURCE = (process.env.MENTIONS_SOURCE ?? "mentions").toLowerCase(
   | "mentions"
   | "search";
 
-const BOT_USERNAME = (process.env.BOT_USERNAME ?? "gorkypf_on_sol").replace(/^@/, "");
+const BOT_USERNAME = (process.env.BOT_USERNAME ?? "GORKY_ON_SOL_on_sol").replace(/^@/, "");
 
 interface ProcessedMentionsState {
   last_since_id: string | null;
@@ -364,7 +364,7 @@ export async function runWorkerLoop(): Promise<void> {
   // Setup global error handlers first
   setupGlobalErrorHandlers();
   
-  console.log("[START] gorkypf Mention Poller (canonical pipeline)");
+  console.log("[START] GORKY_ON_SOL Mention Poller (canonical pipeline)");
   console.log(`[CONFIG] DRY_RUN=${DRY_RUN}`);
   console.log(`[CONFIG] POLL_INTERVAL=${POLL_INTERVAL_MS}ms`);
   console.log(`[CONFIG] Mentions source: ${MENTIONS_SOURCE}`);
@@ -413,14 +413,7 @@ export async function runWorkerLoop(): Promise<void> {
     process.exit(1);
   }
 
-  const llmClient = process.env.XAI_API_KEY
-    ? withCircuitBreaker(createXAILLMClient())
-    : undefined;
-
-  if (!llmClient) {
-    console.error("[FATAL] No XAI_API_KEY set — LLM client unavailable.");
-    process.exit(1);
-  }
+  const llmClient = withCircuitBreaker(createUnifiedLLMClient());
 
   const pipelineDeps: PipelineDeps = {
     llm: llmClient,

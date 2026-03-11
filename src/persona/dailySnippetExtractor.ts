@@ -9,7 +9,7 @@ import "dotenv/config";
 import { getRecentAuditEntries } from "../canonical/auditTail.js";
 import type { AuditRecord } from "../canonical/types.js";
 import { addOrUpdateSnippets } from "./memorySnippets.js";
-import { createXAILLMClient } from "../clients/llmClient.xai.js";
+import { createUnifiedLLMClient } from "../clients/llmClient.unified.js";
 import { withCircuitBreaker } from "../ops/llmCircuitBreaker.js";
 import { logInfo, logWarn } from "../ops/logger.js";
 
@@ -24,7 +24,7 @@ const EXTRACTION_DEVELOPER = `Antworte ausschließlich mit einem JSON-Array von 
 
 
 async function runDailySnippetExtraction(): Promise<void> {
-  const apiKey = process.env.XAI_API_KEY || process.env.OPENAI_API_KEY;
+  const apiKey = process.env.LLM_API_KEY || process.env.XAI_API_KEY || process.env.OPENAI_API_KEY;
   if (!apiKey) {
     logWarn("[SnippetExtractor] XAI_API_KEY nicht gesetzt, überspringe Extraktion");
     return;
@@ -77,7 +77,7 @@ async function runDailySnippetExtraction(): Promise<void> {
 
   const userPrompt = `Mentions der letzten Tage (User → Gorky-Antwort):\n\n${mentionsText}\n\nExtrahiere maximal 3 neue Snippets als JSON-Array von Strings.`;
 
-  const llm = withCircuitBreaker(createXAILLMClient());
+  const llm = withCircuitBreaker(createUnifiedLLMClient());
   try {
     const raw = await llm.generateJSON<unknown>({
       system: EXTRACTION_SYSTEM,
