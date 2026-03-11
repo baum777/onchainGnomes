@@ -7,7 +7,7 @@
  * - Recovery on worker restart
  */
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { logInfo, logError, logWarn } from "../ops/logger.js";
 import { setGauge } from "../observability/metrics.js";
@@ -129,7 +129,6 @@ export function saveCursorState(state: CursorState): void {
     }
     
     // Atomic rename
-    const { renameSync } = require("node:fs");
     renameSync(tempFile, CURSOR_FILE);
     
     cachedCursor = state.since_id;

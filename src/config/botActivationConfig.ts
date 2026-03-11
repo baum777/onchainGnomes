@@ -3,7 +3,7 @@
  *
  * Reads activation mode and whitelist from env.
  * BOT_ACTIVATION_MODE: "global" | "whitelist"
- * BOT_WHITELIST_USERNAMES: "@GORKY_ON_SOL,@nirapump_"
+ * BOT_WHITELIST_USERNAMES: "@gorky_on_sol,@nirapump_"
  * BOT_WHITELIST_USER_IDS: optional cache
  */
 

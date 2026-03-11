@@ -1,5 +1,5 @@
 /**
- * serGORKY_ON_SOL Mention Poller
+ * gorky_on_sol Mention Poller
  *
  * Fetches mentions, processes via canonical pipeline.
  * Uses file-based storage for idempotency.
@@ -69,7 +69,7 @@ const MENTIONS_SOURCE = (process.env.MENTIONS_SOURCE ?? "mentions").toLowerCase(
   | "mentions"
   | "search";
 
-const BOT_USERNAME = (process.env.BOT_USERNAME ?? "GORKY_ON_SOL_on_sol").replace(/^@/, "");
+const BOT_USERNAME = (process.env.BOT_USERNAME ?? "gorky_on_sol").replace(/^@/, "");
 
 interface ProcessedMentionsState {
   last_since_id: string | null;
@@ -364,7 +364,7 @@ export async function runWorkerLoop(): Promise<void> {
   // Setup global error handlers first
   setupGlobalErrorHandlers();
   
-  console.log("[START] GORKY_ON_SOL Mention Poller (canonical pipeline)");
+  console.log("[START] gorky_on_sol Mention Poller (canonical pipeline)");
   console.log(`[CONFIG] DRY_RUN=${DRY_RUN}`);
   console.log(`[CONFIG] POLL_INTERVAL=${POLL_INTERVAL_MS}ms`);
   console.log(`[CONFIG] Mentions source: ${MENTIONS_SOURCE}`);

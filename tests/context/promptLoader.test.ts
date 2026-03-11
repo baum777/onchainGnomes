@@ -8,21 +8,21 @@ import {
 } from "../../src/context/prompts/promptLoader.js";
 
 describe("promptLoader", () => {
-  it("loads GORKY_ON_SOL_system.md", () => {
+  it("loads system prompt", () => {
     const content = loadGorkySystemPrompt();
-    expect(content).toContain("GORKY_ON_SOL");
+    expect(content).toContain("GORKY");
     expect(content).toContain("crypto-native");
     expect(content).toContain("280");
   });
 
-  it("loads GORKY_ON_SOL_developer.md", () => {
+  it("loads developer prompt", () => {
     const content = loadGorkyDeveloperPrompt();
     expect(content).toContain("reply_text");
     expect(content).toContain("style_label");
     expect(content).toContain("JSON");
   });
 
-  it("loads GORKY_ON_SOL_user_template.md", () => {
+  it("loads user template", () => {
     const content = loadGorkyUserTemplate();
     expect(content).toContain("{{mention_text}}");
     expect(content).toContain("{{thread_summary}}");

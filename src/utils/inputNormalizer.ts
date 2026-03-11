@@ -40,8 +40,16 @@ export function sanitizeText(text: unknown): string {
   // Trim and limit length
   let sanitized = text.trim().slice(0, MAX_TEXT_LENGTH);
   
-  // Remove control characters except newlines
-  sanitized = sanitized.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+  // Remove control characters (avoid control-regex lint)
+  sanitized = Array.from(sanitized)
+    .filter((ch) => {
+      if (ch === "\n") return true;
+      const code = ch.charCodeAt(0);
+      if (code === 0x7f) return false; // DEL
+      if (code < 0x20) return false; // C0 controls
+      return true;
+    })
+    .join("");
   
   // Normalize whitespace
   sanitized = sanitized.replace(/\s+/g, " ");

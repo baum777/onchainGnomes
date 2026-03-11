@@ -48,7 +48,7 @@ describe("storeFactory", () => {
       delete process.env.REDIS_URL;
 
       expect(() => getStateStore()).toThrow(
-        "USE_REDIS=true but KV_URL is not configured"
+        "USE_REDIS=true oder Production-Umgebung erkannt, aber KV_URL fehlt."
       );
     });
 
@@ -57,7 +57,7 @@ describe("storeFactory", () => {
       process.env.KV_URL = "https://upstash.example.com";
 
       expect(() => getStateStore()).toThrow(
-        "KV_URL must use redis:// protocol"
+        "KV_URL muss redis:// protocol nutzen."
       );
     });
 

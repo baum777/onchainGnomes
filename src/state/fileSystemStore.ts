@@ -8,7 +8,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import type { StateStore, EventTracking, CursorState } from "./stateStore.js";
-import { logInfo, logError } from "../ops/logger.js";
+import { logInfo, logError, logWarn } from "../ops/logger.js";
 import { incrementCounter } from "../observability/metrics.js";
 import { COUNTER_NAMES } from "../observability/metricTypes.js";
 
@@ -48,7 +48,14 @@ function saveJson(file: string, data: unknown, dir: string): void {
     
     // Cleanup tmp if it was created
     if (tmpFile && existsSync(tmpFile)) {
-      try { unlinkSync(tmpFile); } catch {}
+      try {
+        unlinkSync(tmpFile);
+      } catch (cleanupError) {
+        logWarn("[FileSystemStore] Failed to cleanup tmp file", {
+          tmpFile,
+          cleanupError,
+        });
+      }
     }
   }
 }
