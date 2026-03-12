@@ -77,6 +77,29 @@ export async function recordEventSeen(eventId: string): Promise<void> {
 }
 
 /**
+ * Record that a mention was skipped (block, circuit breaker, etc.) - marks as processed for idempotency
+ */
+export async function recordMentionSkipped(eventId: string): Promise<void> {
+  const existing = await getTracking(eventId);
+  const tracking: EventTracking = {
+    ...(existing || { eventId, attempts: 0 }),
+    state: "processed_ok",
+    eventId,
+  };
+  await saveTracking(tracking);
+}
+
+/**
+ * Check if a mention has been processed (seen and decided on - skip or published)
+ */
+export async function isProcessed(eventId: string): Promise<boolean> {
+  const tracking = await getTracking(eventId);
+  if (tracking) return true;
+  const pub = await isPublished(eventId);
+  return pub.published;
+}
+
+/**
  * Record that an event has been processed successfully
  */
 export async function recordEventProcessed(eventId: string): Promise<void> {

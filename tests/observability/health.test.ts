@@ -4,16 +4,18 @@ import { setGauge, resetMetrics } from "../../src/observability/metrics.js";
 import { GAUGE_NAMES } from "../../src/observability/metricTypes.js";
 
 describe("observability health", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    process.env.USE_REDIS = "false";
     resetMetrics();
     setHealthDeps({
       getAuditBufferSize: () => 0,
       loadCursor: () => Promise.resolve({ since_id: null, last_fetch_at: "", fetched_count: 0, version: 1 }),
     });
+    await resetPollSuccessTimestamp();
   });
 
   it("returns healthy when checks pass", async () => {
-    recordPollSuccess();
+    await recordPollSuccess();
     const report = await runHealthChecks();
     expect(report.status).toBe("healthy");
     expect(report.checks.length).toBeGreaterThan(0);
@@ -21,14 +23,14 @@ describe("observability health", () => {
   });
 
   it("returns degraded when recent poll never succeeded", async () => {
-    resetPollSuccessTimestamp();
+    await resetPollSuccessTimestamp();
     const report = await runHealthChecks();
     const recentPoll = report.checks.find((c) => c.name === "recent_poll_success");
     expect(recentPoll?.status).toBe("degraded");
   });
 
   it("returns unhealthy when failure streak is high", async () => {
-    recordPollSuccess();
+    await recordPollSuccess();
     setGauge(GAUGE_NAMES.RECENT_FAILURE_STREAK, 10);
     const report = await runHealthChecks();
     const backlog = report.checks.find((c) => c.name === "backlog_stuck");
@@ -36,7 +38,7 @@ describe("observability health", () => {
   });
 
   it("returns degraded when audit buffer is large", async () => {
-    recordPollSuccess();
+    await recordPollSuccess();
     setHealthDeps({
       getAuditBufferSize: () => 85,
       loadCursor: () => Promise.resolve({}),

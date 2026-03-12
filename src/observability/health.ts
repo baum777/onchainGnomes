@@ -21,20 +21,32 @@ export interface HealthReport {
   timestamp: string;
 }
 
-let lastPollSuccessMs: number = 0;
+const WORKER_HEARTBEAT_KEY = "worker:last_poll_success";
 const STALE_POLL_MS = 5 * 60 * 1000; // 5 minutes
+const HEARTBEAT_TTL_SECONDS = 10 * 60; // 10 min
 const AUDIT_BUFFER_DEGRADED = 80;
 const AUDIT_BUFFER_UNHEALTHY = 95;
 const FAILURE_STREAK_DEGRADED = 2;
 const FAILURE_STREAK_UNHEALTHY = 5;
 
-export function recordPollSuccess(): void {
-  lastPollSuccessMs = Date.now();
+/** Worker calls this on successful poll — writes to StateStore for cross-process Health. */
+export async function recordPollSuccess(): Promise<void> {
+  try {
+    const store = getStateStore();
+    await store.set(WORKER_HEARTBEAT_KEY, String(Date.now()), HEARTBEAT_TTL_SECONDS);
+  } catch {
+    // Non-fatal; health will show degraded
+  }
 }
 
-/** Reset poll success timestamp (for tests). */
-export function resetPollSuccessTimestamp(): void {
-  lastPollSuccessMs = 0;
+/** Reset poll success (for tests). */
+export async function resetPollSuccessTimestamp(): Promise<void> {
+  try {
+    const store = getStateStore();
+    await store.del(WORKER_HEARTBEAT_KEY);
+  } catch {
+    // Ignore
+  }
 }
 
 async function checkStateStoreReachable(): Promise<HealthCheckResult> {
@@ -90,19 +102,32 @@ async function checkCursorLoadable(loadCursor: () => Promise<unknown>): Promise<
 }
 
 async function checkRecentPollSuccess(): Promise<HealthCheckResult> {
-  const now = Date.now();
-  const age = now - lastPollSuccessMs;
-  if (lastPollSuccessMs === 0) {
-    return { name: "recent_poll_success", status: "degraded", message: "no poll success recorded" };
-  }
-  if (age > STALE_POLL_MS) {
+  try {
+    const store = getStateStore();
+    const raw = await store.get(WORKER_HEARTBEAT_KEY);
+    if (!raw) {
+      return { name: "recent_poll_success", status: "degraded", message: "no poll success recorded" };
+    }
+    const lastPollSuccessMs = parseInt(raw, 10);
+    if (Number.isNaN(lastPollSuccessMs)) {
+      return { name: "recent_poll_success", status: "degraded", message: "invalid heartbeat" };
+    }
+    const age = Date.now() - lastPollSuccessMs;
+    if (age > STALE_POLL_MS) {
+      return {
+        name: "recent_poll_success",
+        status: "unhealthy",
+        message: `last success ${Math.round(age / 1000)}s ago`,
+      };
+    }
+    return { name: "recent_poll_success", status: "healthy" };
+  } catch (error) {
     return {
       name: "recent_poll_success",
-      status: "unhealthy",
-      message: `last success ${Math.round(age / 1000)}s ago`,
+      status: "degraded",
+      message: error instanceof Error ? error.message : String(error),
     };
   }
-  return { name: "recent_poll_success", status: "healthy" };
 }
 
 async function checkBacklogStuck(snapshot: ReturnType<typeof getSnapshot>): Promise<HealthCheckResult> {

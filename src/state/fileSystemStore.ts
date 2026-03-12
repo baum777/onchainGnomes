@@ -233,6 +233,21 @@ export class FileSystemStateStore implements StateStore {
     saveJson(this.cursorFile, cursor, this.dataDir);
   }
 
+  async tryAcquireLeaderLock(lockKey: string, holderId: string, ttlSeconds: number): Promise<boolean> {
+    const entry = this.kvCache.get(lockKey);
+    if (entry && entry.expiresAt && entry.expiresAt > Date.now()) return false;
+    const expiresAt = Date.now() + ttlSeconds * 1000;
+    this.kvCache.set(lockKey, { value: holderId, expiresAt });
+    return true;
+  }
+
+  async releaseLeaderLock(lockKey: string, holderId: string): Promise<boolean> {
+    const entry = this.kvCache.get(lockKey);
+    if (!entry || entry.value !== holderId) return false;
+    this.kvCache.delete(lockKey);
+    return true;
+  }
+
   async ping(): Promise<boolean> {
     try {
       ensureDir(this.dataDir);

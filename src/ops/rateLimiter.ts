@@ -3,9 +3,12 @@
  *
  * Protects against X API rate limits and ban risk.
  * Consume in all modes (incl. dry_run) for realistic behavior.
+ *
+ * Backend: memory (in-process) or store (Redis/FileSystem).
+ * Use RATE_LIMIT_BACKEND=store for multi-worker production.
  */
 
-import { cacheGet, cacheSet } from "./memoryCache.js";
+import { getRateLimitBackend } from "./rateLimitBackend.js";
 
 export type RateLimitDecision =
   | { ok: true }
@@ -25,7 +28,8 @@ function stateKey(scope: string, id: string): string {
 }
 
 async function loadState(key: string, capacity: number): Promise<BucketState> {
-  const raw = await cacheGet(key);
+  const backend = getRateLimitBackend();
+  const raw = await backend.get(key);
   if (!raw)
     return { tokens: capacity, lastRefillMs: now() };
   try {
@@ -47,7 +51,8 @@ async function saveState(
   s: BucketState,
   ttlSeconds = 24 * 60 * 60
 ): Promise<void> {
-  await cacheSet(key, JSON.stringify(s), ttlSeconds);
+  const backend = getRateLimitBackend();
+  await backend.set(key, JSON.stringify(s), ttlSeconds);
 }
 
 /**

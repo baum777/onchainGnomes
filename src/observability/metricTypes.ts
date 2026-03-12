@@ -20,6 +20,8 @@ export const COUNTER_NAMES = {
   AUDIT_FLUSH_SUCCESS_TOTAL: "audit_flush_success_total",
   AUDIT_FLUSH_FAILURE_TOTAL: "audit_flush_failure_total",
   STATE_STORE_ERROR_TOTAL: "state_store_error_total",
+  POLL_LOCK_ACQUIRED_TOTAL: "poll_lock_acquired_total",
+  POLL_LOCK_FAILED_TOTAL: "poll_lock_failed_total",
   // Tool-specific counters (NEW)
   TOOL_CALL_TOTAL: "tool_call_total",
   TOOL_SUCCESS_TOTAL: "tool_success_total",

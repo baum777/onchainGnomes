@@ -289,7 +289,7 @@ KV_URL=redis://default:PASS@HOST.upstash.io:6379
 
 ## 🚨 Wichtige Hinweise
 
-1. **Sicherheit:** `.env` Datei niemals committen! Sie ist in `.gitignore` eingetragen.
+1. **Sicherheit:** `.env` Datei niemals committen! Sie ist in `.gitignore` eingetragen. Niemals echte Secrets im Repo ablegen. Keys rotieren, falls sie jemals im Repo standen.
 
 2. **API Keys:** 
    - X API Keys im [Developer Portal](https://developer.twitter.com) erstellen

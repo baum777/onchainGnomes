@@ -81,6 +81,57 @@ xAi_Bot-App/
 
 ---
 
+## Architecture
+
+### State Management (Single Source of Truth)
+
+All runtime state (cursor, processed mentions, event lifecycle, publish idempotency) lives in **StateStore** (Redis or FileSystem). No parallel JSON files or in-memory shadows.
+
+| Concept | Storage |
+|---------|---------|
+| Cursor (since_id) | `store.getCursor()` / `store.setCursor()` |
+| Processed / Idempotency | `eventStateStore` (event_state + published) |
+| Publish locks | StateStore `acquirePublishLock` / `releasePublishLock` |
+| Worker heartbeat | `worker:last_poll_success` in StateStore (cross-process Health) |
+
+### Deployment Modes (Betriebsregel)
+
+| Mode | Store | Multi-Worker | Verwendung |
+|------|-------|--------------|------------|
+| **Redis** | `USE_REDIS=true` + `KV_URL` | **Ja** | Production mit 2+ Instanzen. Distributed Poll-Lock und Leader Election erfordern Redis. |
+| **FileSystem** | Default (ohne Redis) | **Nein** | Lokale Entwicklung, Single-Instance nur. Poll-Lock ist nicht distributed — mehrere Worker würden parallel pollen. |
+
+**Betriebsregel:** Multi-Worker Production Deployment ist **nur mit Redis** freigegeben. FileSystem = single-instance only.
+
+### Cursor-Advance-Policy
+
+Der Cursor (`since_id`) steuert, ab welchem Tweet die nächste Poll-Anfrage startet.
+
+| Regel | Bedeutung |
+|-------|-----------|
+| **Fortschreibung** | Cursor wird nur nach **erfolgreichem** Poll (fetch + Verarbeitung) fortgeschrieben |
+| **Grundlage** | `maxId` aus der API-Antwort — höchste Tweet-ID der aktuellen Batch |
+| **Wann** | Erst nachdem alle Mentions im Batch verarbeitet wurden (oder übersprungen); dann `store.setCursor({ since_id: maxId, ... })` |
+| **Partial Failures** | Einzelne Mention-Fehler brechen den Zyklus nicht ab; der Cursor wird trotzdem auf `maxId` gesetzt. Bereits gesehene Mentions sind in `event_state`/`published`; kein Re-Fetch nötig |
+| **Crash vor Advance** | Cursor bleibt unverändert. Nach Restart wird derselbe Bereich erneut gefetcht. Dedupe via `isProcessed`/`isPublished` verhindert Doppelposts |
+| **Safety** | Keine Events verloren (Cursor springt nie blind nach vorn); kein Doppeln (Idempotenz-State vor Advance) |
+
+**Migration**: Legacy `processed_mentions.json` is auto-migrated on first run; the file is renamed to `.migrated`.
+
+### Health / Ready Semantics
+
+| Endpoint | Meaning |
+|----------|---------|
+| `GET /health` | Full check: store reachable, recent poll success (worker heartbeat), audit buffer, cursor, failure streak |
+| `GET /ready` | Lightweight: store `ping()` only |
+| `GET /metrics` | Uptime gauge |
+
+Worker writes `worker:last_poll_success` to StateStore on each successful poll. The Health service (separate process) reads it — so Health reflects real worker activity when both use the same Redis.
+
+**Security:** Never commit real secrets. Rotate keys if they ever appeared in the repo.
+
+---
+
 ## Local Development
 
 ```bash
@@ -206,6 +257,32 @@ Full list: `docs/var.README.md`.
 
 ---
 
+## Architecture
+
+### State Management (Single Source of Truth)
+
+State ist zentralisiert über den `StateStore` (Redis oder FileSystem):
+
+| Konzept | Quelle | Beschreibung |
+|--------|--------|--------------|
+| Cursor (since_id) | `store.getCursor()` / `store.setCursor()` | Pagination für Mention-Fetch |
+| Processed / Publish | `eventStateStore` (Event-State + Published) | Idempotenz, keine Doppelreplies |
+| Worker Heartbeat | `worker:last_poll_success` in StateStore | Health-Service liest Worker-Status cross-process |
+
+**Redis vs FileSystem:** Mit `USE_REDIS=true` und `KV_URL` nutzt der Bot Redis; andernfalls den lokalen FileSystem-Store. Redis ist für Produktion empfohlen (shared state, Restart-sicher). Der Worker-Heartbeat funktioniert cross-process nur mit Redis.
+
+### Health / Ready Semantik
+
+| Endpoint | Bedeutung |
+|----------|-----------|
+| `GET /health` | Vollständiger Report: state_store_reachable, recent_poll_success (Worker-Heartbeat), audit_logger, cursor, backlog_stuck |
+| `GET /ready` | Leichtgewichtig: `store.ping()` |
+| `GET /metrics` | Prometheus-artig: bot_uptime_seconds |
+
+Der Worker schreibt bei jedem erfolgreichen Poll `worker:last_poll_success` in den StateStore. Der Health-Service (separater Prozess) liest diesen Key — mit Redis sieht er den echten Worker-Status.
+
+---
+
 ## Render Deployment
 
 1. Connect repo to [Render](https://render.com)
@@ -253,7 +330,13 @@ Full list: `docs/var.README.md`.
 2. Filters self-mentions and already-processed tweets (dedupe + state)
 3. Canonical pipeline: classify → score → eligibility → thesis → mode → fallbackCascade (LLM) → validate
 4. Posts reply via `xClient.reply(result.reply_text, mention.id)` or skips with log reason
-5. Persists state to `data/processed_mentions.json`; audit to `data/audit_log.jsonl`
+5. Persists state via **StateStore** (Redis or FileSystem); audit to `data/audit_log.jsonl`
+
+### State Management (Single Source of Truth)
+
+- **StateStore** (Redis or FileSystem) is the single source for: cursor (since_id), processed mentions (event_state), publish idempotency
+- No local JSON files for state; migration from legacy `processed_mentions.json` runs once on startup
+- Worker heartbeat (`worker:last_poll_success`) written to StateStore for cross-process Health checks
 
 ---
 

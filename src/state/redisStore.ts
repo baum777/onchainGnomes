@@ -308,6 +308,47 @@ export class RedisStateStore implements StateStore {
     }
   }
 
+  // ── Leader Lock (Single-Worker / Poll Lock) ──────────────────────────────
+
+  async tryAcquireLeaderLock(lockKey: string, holderId: string, ttlSeconds: number): Promise<boolean> {
+    try {
+      const key = this.key(lockKey);
+      const result = await this.redis.set(key, holderId, "EX", ttlSeconds, "NX");
+      return result === "OK";
+    } catch (error) {
+      incrementCounter(COUNTER_NAMES.STATE_STORE_ERROR_TOTAL);
+      logError("[RedisStore] tryAcquireLeaderLock failed", { lockKey, error });
+      return false;
+    }
+  }
+
+  async releaseLeaderLock(lockKey: string, holderId: string): Promise<boolean> {
+    try {
+      const key = this.key(lockKey);
+      const script = `if redis.call("get", KEYS[1]) == ARGV[1] then return redis.call("del", KEYS[1]) else return 0 end`;
+      const result = await this.redis.eval(script, 1, key, holderId);
+      return result === 1;
+    } catch (error) {
+      incrementCounter(COUNTER_NAMES.STATE_STORE_ERROR_TOTAL);
+      logError("[RedisStore] releaseLeaderLock failed", { lockKey, error });
+      return false;
+    }
+  }
+
+  /** Extend lock TTL if we still hold it (for leader heartbeat). */
+  async extendLeaderLock(lockKey: string, holderId: string, ttlSeconds: number): Promise<boolean> {
+    try {
+      const key = this.key(lockKey);
+      const script = `if redis.call("get", KEYS[1]) == ARGV[1] then return redis.call("expire", KEYS[1], ARGV[2]) else return 0 end`;
+      const result = await this.redis.eval(script, 1, key, holderId, String(ttlSeconds));
+      return result === 1;
+    } catch (error) {
+      incrementCounter(COUNTER_NAMES.STATE_STORE_ERROR_TOTAL);
+      logError("[RedisStore] extendLeaderLock failed", { lockKey, error });
+      return false;
+    }
+  }
+
   // ── Lifecycle ─────────────────────────────────────────────────────────
 
   async ping(): Promise<boolean> {

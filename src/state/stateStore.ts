@@ -23,6 +23,11 @@ export interface StateStore {
   incr(key: string): Promise<number>;
   expire(key: string, seconds: number): Promise<void>;
 
+  /** Distributed leader lock: SET NX EX. Returns true if acquired. */
+  tryAcquireLeaderLock(lockKey: string, holderId: string, ttlSeconds: number): Promise<boolean>;
+  /** Release leader lock only if we hold it (compare-and-delete). Returns true if released. */
+  releaseLeaderLock(lockKey: string, holderId: string): Promise<boolean>;
+
   ping(): Promise<boolean>;
   close(): Promise<void>;
 }

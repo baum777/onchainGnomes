@@ -28,7 +28,6 @@ Phase 4 adds an observability layer on top of the existing Gorky pipeline (Phase
 | `src/canonical/auditLog.ts` | getAuditBufferSize(); flush success/failure counters; audit_buffer_size gauge |
 | `src/utils/robustFetch.ts` | fetch_retry_total, fetch_rate_limited_total, fetch_duration_ms |
 | `src/worker/pollMentions.ts` | mentions_* / publish_* counters; gauges (poll interval, failure streak); recordPollSuccess; setHealthDeps; mention_processing_duration_ms, publish_duration_ms |
-| `src/state/eventState.ts` | publish_duplicate_prevented_total on duplicate skip |
 | `src/state/eventStateStore.ts` | publish_duplicate_prevented_total on duplicate skip |
 | `src/state/sharedBudgetGate.ts` | llm_budget_block_total; llm_budget_used / llm_budget_remaining gauges |
 | `src/state/fileSystemStore.ts` | state_store_error_total on save failure |
@@ -64,7 +63,7 @@ Run: `npm test -- tests/observability`
 
 ## 8. Instrumentation Pitfall to Avoid
 
-**Do not** increment the same counter from both the in-memory path (e.g. eventState) and the store-backed path (eventStateStore) for the same logical event in a single process. Only one path runs per deployment; duplicate increments would double-count. We instrument both so that whichever module is used emits the metric.
+**Note:** eventState (in-memory) was removed; eventStateStore is the single path. No duplicate counter increments.
 
 ## 9. Build Order (first 10 files)
 
@@ -75,7 +74,7 @@ Run: `npm test -- tests/observability`
 5. `src/observability/index.ts`
 6. `src/canonical/auditLog.ts` (update)
 7. `src/utils/robustFetch.ts` (update)
-8. `src/state/eventState.ts` (update)
+8. `src/state/eventStateStore.ts` (single source)
 9. `src/state/sharedBudgetGate.ts` (update)
 10. `src/worker/pollMentions.ts` (update)
 

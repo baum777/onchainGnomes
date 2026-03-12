@@ -36,10 +36,11 @@ export function getStateStore(): StateStore {
     });
     cachedStore = getRedisStore(kvUrl);
   } else {
+    const dataDir = process.env.DATA_DIR?.trim();
     logInfo("[StateStore] 📁 FileSystem Backend (nur für lokale Tests)", {
-      dataDir: process.env.DATA_DIR ?? "./data",
+      dataDir: dataDir ?? "./data",
     });
-    cachedStore = getFileSystemStore();
+    cachedStore = getFileSystemStore(dataDir || undefined);
   }
 
   return cachedStore;

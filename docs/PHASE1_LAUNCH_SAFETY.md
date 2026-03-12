@@ -34,11 +34,11 @@ MAX_PUBLISH_RETRIES=3              # Max Retries
 
 Alle 29 Phase-1-Tests passieren:
 - `tests/safety/budgetGate.test.ts`: 8 Tests
-- `tests/state/eventState.test.ts`: 15 Tests  
+- `tests/state/eventStateStore.test.ts`: State transitions, idempotency (eventState removed, use eventStateStore)  
 - `tests/canonical/auditLog.async.test.ts`: 6 Tests
 
 ```bash
-pnpm test -- tests/safety/budgetGate.test.ts tests/state/eventState.test.ts tests/canonical/auditLog.async.test.ts
+pnpm test -- tests/safety/budgetGate.test.ts tests/state/eventStateStore.test.ts tests/canonical/auditLog.async.test.ts
 ```
 
 ## Implementierungsdetails

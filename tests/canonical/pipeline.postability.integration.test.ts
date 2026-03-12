@@ -20,12 +20,13 @@ import { getHardMax } from "../../src/canonical/modeBudgets.js";
 import { stableHash } from "../../src/utils/hash.js";
 import { assertPublicTextSafe } from "../../src/boundary/publicTextGuard.js";
 import * as auditLog from "../../src/canonical/auditLog.js";
+import { resetStoreCache } from "../../src/state/storeFactory.js";
 import { cacheClear } from "../../src/ops/memoryCache.js";
 import fs from "node:fs";
 import path from "node:path";
 
 const AUDIT_FILE = path.join(process.cwd(), "data", "audit_log.jsonl");
-const DATA_FILE = path.resolve(process.cwd(), "data", "processed_mentions.json");
+const DATA_DIR = path.resolve(process.cwd(), "data");
 
 vi.mock("../../src/ops/launchGate.js", () => ({
   shouldPost: () => ({ action: "post" as const }),
@@ -58,23 +59,14 @@ function makeDeps(reply: string): PipelineDeps {
   };
 }
 
-interface ProcessedMentionsState {
-  last_since_id: string | null;
-  processed: string[];
-}
-
-function makeState(): ProcessedMentionsState {
-  return { last_since_id: null, processed: [] };
-}
-
 describe("pipeline postability integration", () => {
   let persistSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(async () => {
     process.env.USE_REDIS = "false";
+    resetStoreCache();
     await cacheClear();
     if (fs.existsSync(AUDIT_FILE)) fs.unlinkSync(AUDIT_FILE);
-    if (fs.existsSync(DATA_FILE)) fs.unlinkSync(DATA_FILE);
 
     persistSpy = vi.spyOn(auditLog, "persistAuditRecord").mockImplementation(vi.fn());
   });
@@ -82,7 +74,6 @@ describe("pipeline postability integration", () => {
   afterEach(() => {
     persistSpy.mockRestore();
     if (fs.existsSync(AUDIT_FILE)) fs.unlinkSync(AUDIT_FILE);
-    if (fs.existsSync(DATA_FILE)) fs.unlinkSync(DATA_FILE);
   });
 
   describe("Case A — happy path publish", () => {
@@ -97,8 +88,7 @@ describe("pipeline postability integration", () => {
       });
       const xClient = { reply: replySpy } as ReturnType<typeof import("../../src/clients/xClient.js").createXClient>;
 
-      const state = makeState();
-      const result = await processCanonicalMention(deps, xClient, mention, state, false);
+      const result = await processCanonicalMention(deps, xClient, mention, false);
 
       expect(result).toBeDefined();
       expect(result!.action).toBe("publish");
@@ -135,8 +125,7 @@ describe("pipeline postability integration", () => {
       const replySpy = vi.fn().mockResolvedValue({ id: "tid", text: "" });
       const xClient = { reply: replySpy } as ReturnType<typeof import("../../src/clients/xClient.js").createXClient>;
 
-      const state = makeState();
-      const result = await processCanonicalMention(deps, xClient, mention, state, false, configNoRepair);
+      const result = await processCanonicalMention(deps, xClient, mention, false, configNoRepair);
 
       expect(result).toBeDefined();
       expect(result!.action).toBe("skip");
@@ -161,8 +150,7 @@ describe("pipeline postability integration", () => {
       const replySpy = vi.fn().mockResolvedValue({ id: "tid", text: "" });
       const xClient = { reply: replySpy } as ReturnType<typeof import("../../src/clients/xClient.js").createXClient>;
 
-      const state = makeState();
-      const result = await processCanonicalMention(deps, xClient, mention, state, false);
+      const result = await processCanonicalMention(deps, xClient, mention, false);
 
       expect(result).toBeDefined();
       expect(result!.action).toBe("skip");
@@ -189,8 +177,7 @@ describe("pipeline postability integration", () => {
       });
       const xClient = { reply: replySpy } as ReturnType<typeof import("../../src/clients/xClient.js").createXClient>;
 
-      const state = makeState();
-      const result = await processCanonicalMention(deps, xClient, mention, state, false);
+      const result = await processCanonicalMention(deps, xClient, mention, false);
 
       expect(result).toBeDefined();
       expect(result!.action).toBe("publish");
