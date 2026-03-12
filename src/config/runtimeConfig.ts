@@ -10,7 +10,8 @@
 import { validateEnv, type EnvConfig } from "./envSchema.js";
 import { loadLaunchEnv, type LaunchEnv } from "./env.js";
 
-export interface RuntimeConfig extends EnvConfig, LaunchEnv {}
+/** EnvConfig.LOG_LEVEL is uppercase (DEBUG/INFO); LaunchEnv uses lowercase. Use LaunchEnv for LOG_LEVEL. */
+export type RuntimeConfig = Omit<EnvConfig, "LOG_LEVEL"> & LaunchEnv;
 
 let cached: RuntimeConfig | null = null;
 

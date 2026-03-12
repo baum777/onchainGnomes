@@ -106,7 +106,7 @@ async function migrateLegacyStateIfExists(): Promise<void> {
   try {
     const result = await migrateLegacyState(LEGACY_DATA_FILE, getStateStore());
     if (result.migratedCount > 0 || result.cursorSet) {
-      logInfo("[MIGRATION] Migrated legacy state", result);
+      logInfo("[MIGRATION] Migrated legacy state", { ...result });
     }
   } catch (error) {
     logWarn("[MIGRATION] Failed to migrate legacy state, continuing fresh", {
