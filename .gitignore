@@ -74,9 +74,11 @@ web_modules/
 .yarn-integrity
 
 # dotenv environment variable files
+.env.oauth2
 .env
 .env.*
 !.env.example
+!.env.oauth2.example
 
 # Python
 __pycache__/

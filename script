@@ -1,0 +1,189 @@
+#requires -Version 7.0
+
+param(
+    [Parameter(Mandatory = $true)]
+    [string]$ClientId,
+
+    [Parameter(Mandatory = $true)]
+    [string]$ClientSecret,
+
+    [string]$RedirectUri = "http://127.0.0.1:8080/callback",
+    [string]$Scopes = "tweet.read tweet.write users.read offline.access",
+    [string]$TokenOutputPath = ".\x-gnome-tokens.json"
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+
+function ConvertTo-Base64Url {
+    param([byte[]]$Bytes)
+    $b64 = [Convert]::ToBase64String($Bytes)
+    return $b64.TrimEnd('=').Replace('+', '-').Replace('/', '_')
+}
+
+function New-RandomString {
+    param([int]$Length = 64)
+    $bytes = New-Object byte[] $Length
+    [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
+    return ConvertTo-Base64Url -Bytes $bytes
+}
+
+function New-CodeVerifier {
+    # RFC 7636: 43-128 chars
+    $raw = New-RandomString -Length 64
+    if ($raw.Length -lt 43) {
+        $raw = $raw.PadRight(43, 'A')
+    }
+    if ($raw.Length -gt 128) {
+        $raw = $raw.Substring(0, 128)
+    }
+    return $raw
+}
+
+function New-CodeChallenge {
+    param([string]$CodeVerifier)
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    $bytes = [System.Text.Encoding]::ASCII.GetBytes($CodeVerifier)
+    $hash = $sha.ComputeHash($bytes)
+    return ConvertTo-Base64Url -Bytes $hash
+}
+
+function Start-CallbackListener {
+    param([string]$Prefix)
+
+    $listener = [System.Net.HttpListener]::new()
+    $listener.Prefixes.Add($Prefix)
+    $listener.Start()
+    return $listener
+}
+
+function Get-CallbackPrefixFromRedirectUri {
+    param([string]$Uri)
+
+    $u = [System.Uri]$Uri
+    $prefix = "{0}://{1}:{2}{3}/" -f $u.Scheme, $u.Host, $u.Port, $u.AbsolutePath.TrimEnd('/')
+    return $prefix
+}
+
+# --- PKCE / State ---
+$codeVerifier  = New-CodeVerifier
+$codeChallenge = New-CodeChallenge -CodeVerifier $codeVerifier
+$state         = New-RandomString -Length 24
+
+# --- Authorize URL ---
+$encodedRedirect = [uri]::EscapeDataString($RedirectUri)
+$encodedScopes   = [uri]::EscapeDataString($Scopes)
+
+$authorizeUrl = "https://x.com/i/oauth2/authorize" +
+    "?response_type=code" +
+    "&client_id=$([uri]::EscapeDataString($ClientId))" +
+    "&redirect_uri=$encodedRedirect" +
+    "&scope=$encodedScopes" +
+    "&state=$([uri]::EscapeDataString($state))" +
+    "&code_challenge=$([uri]::EscapeDataString($codeChallenge))" +
+    "&code_challenge_method=S256"
+
+# --- Local callback listener ---
+$callbackPrefix = Get-CallbackPrefixFromRedirectUri -Uri $RedirectUri
+$listener = Start-CallbackListener -Prefix $callbackPrefix
+
+Write-Host ""
+Write-Host "Authorize URL:"
+Write-Host $authorizeUrl
+Write-Host ""
+Write-Host "Öffne Browser. Bitte dort mit dem BOT-ACCOUNT (@gnome) einloggen und autorisieren..."
+Write-Host "Listener: $callbackPrefix"
+Write-Host ""
+
+Start-Process $authorizeUrl
+
+try {
+    $context = $listener.GetContext()
+    $request = $context.Request
+    $response = $context.Response
+
+    $query = [System.Web.HttpUtility]::ParseQueryString($request.Url.Query)
+    $returnedCode  = $query["code"]
+    $returnedState = $query["state"]
+    $returnedError = $query["error"]
+    $errorDesc     = $query["error_description"]
+
+    $html = ""
+    if ($returnedError) {
+        $html = "<html><body><h2>OAuth fehlgeschlagen</h2><p>$returnedError</p><p>$errorDesc</p></body></html>"
+    }
+    else {
+        $html = "<html><body><h2>OAuth erfolgreich</h2><p>Du kannst dieses Fenster schließen.</p></body></html>"
+    }
+
+    $buffer = [System.Text.Encoding]::UTF8.GetBytes($html)
+    $response.ContentLength64 = $buffer.Length
+    $response.ContentType = "text/html; charset=utf-8"
+    $response.OutputStream.Write($buffer, 0, $buffer.Length)
+    $response.OutputStream.Close()
+
+    if ($returnedError) {
+        throw "OAuth-Fehler vom Callback: $returnedError - $errorDesc"
+    }
+
+    if (-not $returnedCode) {
+        throw "Kein authorization code im Callback gefunden."
+    }
+
+    if ($returnedState -ne $state) {
+        throw "State-Mismatch. Möglicher CSRF oder Redirect-Fehler."
+    }
+
+    Write-Host "Authorization code empfangen."
+}
+finally {
+    $listener.Stop()
+    $listener.Close()
+}
+
+# --- Token Exchange ---
+$tokenUrl = "https://api.x.com/2/oauth2/token"
+
+$body = @{
+    grant_type    = "authorization_code"
+    code          = $returnedCode
+    client_id     = $ClientId
+    redirect_uri  = $RedirectUri
+    code_verifier = $codeVerifier
+}
+
+Write-Host "Tausche authorization code gegen Access/Refresh Token..."
+
+$tokenResponse = Invoke-RestMethod `
+    -Method Post `
+    -Uri $tokenUrl `
+    -ContentType "application/x-www-form-urlencoded" `
+    -Body $body
+
+# --- Ausgabe ---
+Write-Host ""
+Write-Host "Token-Antwort erhalten." -ForegroundColor Green
+Write-Host ""
+
+$tokenResponse | ConvertTo-Json -Depth 10 | Set-Content -Path $TokenOutputPath -Encoding UTF8
+
+Write-Host "Gespeichert in: $TokenOutputPath"
+Write-Host ""
+
+if ($tokenResponse.refresh_token) {
+    Write-Host "REFRESH TOKEN:" -ForegroundColor Cyan
+    Write-Host $tokenResponse.refresh_token
+    Write-Host ""
+} else {
+    Write-Warning "Kein refresh_token enthalten. Prüfe, ob offline.access wirklich als Scope genehmigt wurde."
+}
+
+Write-Host "ACCESS TOKEN:" -ForegroundColor Cyan
+Write-Host $tokenResponse.access_token
+Write-Host ""
+
+Write-Host "EXPIRES IN:" -ForegroundColor Cyan
+Write-Host $tokenResponse.expires_in
+Write-Host ""
+
+Write-Host "SCOPE:" -ForegroundColor Cyan
+Write-Host $tokenResponse.scope
