@@ -41,7 +41,7 @@ import {
   isPublished,
   isProcessed,
 } from "../state/eventStateStore.js";
-import { getStateStore } from "../state/storeFactory.js";
+import { getStateStore, initializeStateStore } from "../state/storeFactory.js";
 import type { CursorState } from "../state/stateStore.js";
 import { migrateLegacyState } from "./migrateLegacyState.js";
 
@@ -451,7 +451,7 @@ export async function runWorkerLoop(): Promise<void> {
     botUserId: userId,
   };
 
-  const store = getStateStore();
+  const store = await initializeStateStore();
   setHealthDeps({
     getAuditBufferSize,
     loadCursor: () => store.getCursor(),
@@ -485,11 +485,14 @@ export async function runWorkerLoop(): Promise<void> {
         }
       }
       if (!leaderId) {
-        const acquired = await tryAcquirePollLock(myHolderId);
-        if (!acquired) {
+        const lockResult = await tryAcquirePollLock(myHolderId);
+        if (lockResult === "denied") {
           console.log("[POLL] Not leader, waiting...");
           await sleep(POLL_LOCK_RETRY_MS);
           continue;
+        }
+        if (lockResult === "error") {
+          throw new Error("[POLL_LOCK] Redis infrastructure error while acquiring leader lock");
         }
         leaderId = myHolderId;
       }

@@ -66,8 +66,8 @@ export const envSchema = z.object({
     .string()
     .optional()
     .refine(
-      (val) => !val || val.startsWith("redis://"),
-      "KV_URL must use redis:// protocol"
+      (val) => !val || val.startsWith("redis://") || val.startsWith("rediss://"),
+      "KV_URL must use redis:// or rediss:// protocol"
     ),
 
   REDIS_KEY_PREFIX: z.string().optional().default("GNOMES_ONCHAIN:"),

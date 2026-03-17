@@ -23,11 +23,11 @@ export function getStateStore(): StateStore {
       );
     }
 
-    if (!kvUrl.startsWith("redis://")) {
+    if (!kvUrl.startsWith("redis://") && !kvUrl.startsWith("rediss://")) {
       throw new Error(
-        "KV_URL muss redis:// protocol nutzen. " +
-        "Upstash REST URLs (https://) werden nicht unterstützt. " +
-        `Erhalten: ${maskUrl(kvUrl)}`
+        "KV_URL must use redis:// or rediss:// protocol. " +
+        "Upstash REST URLs (https://) are not supported in Redis TCP mode. " +
+        `Received: ${maskUrl(kvUrl)}`
       );
     }
 
@@ -44,6 +44,15 @@ export function getStateStore(): StateStore {
   }
 
   return cachedStore;
+}
+
+
+export async function initializeStateStore(): Promise<StateStore> {
+  const store = getStateStore();
+  if (store instanceof RedisStateStore) {
+    await store.init();
+  }
+  return store;
 }
 
 export function resetStoreCache(): void {
