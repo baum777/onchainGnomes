@@ -50,11 +50,5 @@ export function loadSharedCanon(): string {
 export function loadGnomeFragment(gnomeId: string): string {
   const content = loadFragment(`gnomes/${gnomeId}.md`);
   if (content) return content;
-  // Fallback for gorky when file missing
-  if (gnomeId === "gorky") {
-    return `You are GORKY. GORKY is a sharp, sarcastic crypto-native commentator.
-He roasts content, never identity.
-Never provide financial advice. Keep replies under 280 characters.`;
-  }
   return "";
 }

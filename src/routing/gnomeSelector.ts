@@ -2,7 +2,7 @@
  * Gnome Selector — Select the appropriate gnome per interaction
  *
  * Phase-2: Scores gnomes by intent match, aggression range, affinity.
- * Safe fallback order: gorky -> grit -> moss.
+ * Safe fallback order uses defensive gnomes from registry fallback chain.
  * Deterministic for identical inputs.
  */
 
@@ -73,7 +73,7 @@ export function selectGnome(
     maxCameos?: number;
   },
 ): GnomeSelectionResult {
-  const defaultGnome = opts?.defaultSafeGnome ?? "gorky";
+  const defaultGnome = opts?.defaultSafeGnome ?? "stillhalter";
   const enabled = opts?.enabled ?? false;
   const affinityMap = opts?.userAffinityByGnome ?? {};
 

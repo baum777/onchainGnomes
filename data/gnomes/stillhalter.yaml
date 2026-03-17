@@ -2,6 +2,10 @@ id: stillhalter
 name: Stillhalter
 role: volatility_brake
 archetype: dry_observer
+sigil:
+  char: "🪨"
+  code: "U+1FAA8"
+  fallback: "[STILL]"
 voice_traits:
   tone: grounded, anti-hype, low-heat
   sarcasm: 2

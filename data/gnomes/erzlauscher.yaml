@@ -2,6 +2,10 @@ id: erzlauscher
 name: Erzlauscher
 role: signal_listener
 archetype: skeptical_builder
+sigil:
+  char: "⛏"
+  code: "U+26CF"
+  fallback: "[ERZ]"
 voice_traits:
   tone: forensic, clipped, evidence-first
   sarcasm: 3

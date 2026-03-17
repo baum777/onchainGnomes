@@ -1,5 +1,5 @@
 /**
- * gorky_on_sol Mention Poller
+ * Gnomes_onchain Mention Poller
  *
  * Fetches mentions, processes via canonical pipeline.
  * Uses StateStore as single source of truth for cursor, processed mentions, and publish state.
@@ -75,7 +75,7 @@ const MENTIONS_SOURCE = (process.env.MENTIONS_SOURCE ?? "mentions").toLowerCase(
   | "mentions"
   | "search";
 
-const BOT_USERNAME = (process.env.BOT_USERNAME ?? "gorky_on_sol").replace(/^@/, "");
+const BOT_USERNAME = (process.env.BOT_USERNAME ?? "Gnomes_onchain").replace(/^@/, "");
 
 // Track consecutive errors per mention for circuit breaker pattern (in-memory, acceptable per plan)
 const mentionErrorCounts = new Map<string, number>();
@@ -340,7 +340,7 @@ export async function processCanonicalMention(
       event_id: mention.id,
       user_id: event.author_id,
       user_handle: mention.authorUsername ?? event.author_handle,
-      selected_gnome_id: result.selectedGnomeId ?? "gorky",
+      selected_gnome_id: result.selectedGnomeId ?? "stillhalter",
       response_mode: result.audit?.response_mode ?? "single_tweet",
       intent: result.intent ?? (result.audit?.classifier_output as { intent?: string } | undefined)?.intent ?? "unknown",
       reply_text: result.reply_text,
@@ -398,7 +398,7 @@ export async function processCanonicalMention(
 export async function runWorkerLoop(): Promise<void> {
   setupGlobalErrorHandlers();
 
-  console.log("[START] gorky_on_sol Mention Poller (canonical pipeline)");
+  console.log("[START] Gnomes_onchain Mention Poller (canonical pipeline)");
   console.log(`[CONFIG] DRY_RUN=${DRY_RUN}`);
   console.log(`[CONFIG] POLL_INTERVAL=${POLL_INTERVAL_MS}ms`);
   console.log(`[CONFIG] Mentions source: ${MENTIONS_SOURCE}`);

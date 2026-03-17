@@ -31,11 +31,13 @@ export function getAllGnomes(): GnomeProfile[] {
 }
 
 /**
- * Get gnome ids for fallback chain (e.g. gorky -> grit -> moss).
+ * Get fallback chain of defensive voices.
  */
 export function getFallbackChain(): string[] {
-  const order = ["gorky", "grit", "moss"] as const;
-  return order.filter((id) => registry.has(id));
+  const order = ["stillhalter", "wurzelwaechter", "muenzhueter"] as const;
+  const dynamic = order.filter((id) => registry.has(id));
+  if (dynamic.length > 0) return dynamic;
+  return Array.from(registry.keys()).sort();
 }
 
 /**

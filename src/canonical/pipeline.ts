@@ -37,6 +37,7 @@ import {
 import { getGnomesConfig } from "../config/gnomesConfig.js";
 import { loadGnomes } from "../gnomes/loadGnomes.js";
 import { getAllGnomes } from "../gnomes/registry.js";
+import { deriveActivatedVoices, renderVoiceSigils } from "../output/renderVoiceSigils.js";
 import { getUserAffinityStore } from "../memory/userAffinityStore.js";
 import { extractSelectorFeatures } from "../routing/selectorFeatures.js";
 import { resolveContinuity } from "../routing/continuityResolver.js";
@@ -352,6 +353,15 @@ export async function handleEvent(
     return { action: "skip", skip_reason: "skip_validation_failure", audit };
   }
 
+  const activatedVoices = deriveActivatedVoices(
+    result.selectedGnomeId ?? gnomesCfg.DEFAULT_SAFE_GNOME,
+    gnomeSelection?.cameoCandidates,
+  );
+  const finalizedReply = renderVoiceSigils(result.reply_text, activatedVoices);
+  if (!finalizedReply) {
+    return makeSkipResult(event, "skip_validation_failure", cls, scores, config);
+  }
+
   const pathType = SOCIAL_INTENTS.includes(cls.intent) ? "social" as const : "audit" as const;
   const audit = buildAuditRecord({
     event,
@@ -364,7 +374,7 @@ export async function handleEvent(
     validation: result.validation,
     final_action: "publish",
     skip_reason: null,
-    reply_text: result.reply_text,
+    reply_text: finalizedReply,
     path: pathType,
     detected_narrative: narrative?.label,
     selected_pattern: pattern.pattern_id,
@@ -388,9 +398,9 @@ export async function handleEvent(
     action: "publish",
     mode: result.final_mode,
     thesis,
-    reply_text: result.reply_text,
+    reply_text: finalizedReply,
     audit,
-    selectedGnomeId: result.selectedGnomeId ?? "gorky",
+    selectedGnomeId: result.selectedGnomeId ?? "stillhalter",
     intent: cls.intent,
     gnomeSelection,
   };

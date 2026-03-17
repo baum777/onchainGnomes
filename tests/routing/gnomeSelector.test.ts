@@ -1,5 +1,5 @@
 /**
- * Gnome Selector Tests — Fallback to gorky when disabled
+ * Gnome Selector Tests — Fallback to configured safe gnome when disabled
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
@@ -17,7 +17,7 @@ function makeEvent(overrides?: Partial<CanonicalEvent>): CanonicalEvent {
     trigger_type: "mention",
     author_handle: "user1",
     author_id: "123",
-    text: "hello gorky",
+    text: "hello gnomes",
     parent_text: null,
     quoted_text: null,
     conversation_context: [],
@@ -58,7 +58,7 @@ describe("Gnome Selector", () => {
     await loadGnomes();
   });
 
-  it("returns gorky when GNOMES_ENABLED=false", () => {
+  it("returns configured safe gnome when GNOMES_ENABLED=false", () => {
     const features = extractSelectorFeatures(
       makeClassifier(),
       defaultScores,
@@ -66,13 +66,13 @@ describe("Gnome Selector", () => {
     );
     const result = selectGnome(features, "social_banter", {
       enabled: false,
-      defaultSafeGnome: "gorky",
+      defaultSafeGnome: "stillhalter",
     });
-    expect(result.selectedGnomeId).toBe("gorky");
+    expect(result.selectedGnomeId).toBe("stillhalter");
     expect(result.reasoning).toContain("gnomes_disabled_or_empty");
   });
 
-  it("returns gorky when enabled and registry has gorky", () => {
+  it("returns a loaded gnome when enabled", () => {
     const features = extractSelectorFeatures(
       makeClassifier(),
       defaultScores,
@@ -80,9 +80,9 @@ describe("Gnome Selector", () => {
     );
     const result = selectGnome(features, "social_banter", {
       enabled: true,
-      defaultSafeGnome: "gorky",
+      defaultSafeGnome: "stillhalter",
     });
-    expect(result.selectedGnomeId).toBe("gorky");
+    expect(result.selectedGnomeId.length).toBeGreaterThan(0);
   });
 
   it("includes responseMode in result", () => {

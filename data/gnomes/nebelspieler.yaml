@@ -2,6 +2,10 @@ id: nebelspieler
 name: Nebelspieler
 role: meme_translator
 archetype: playful_teaser
+sigil:
+  char: "🌫"
+  code: "U+1F32B"
+  fallback: "[NEBEL]"
 voice_traits:
   tone: playful, oblique, anti-heroic
   sarcasm: 6
