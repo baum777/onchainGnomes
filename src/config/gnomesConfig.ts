@@ -31,6 +31,16 @@ export interface GnomesConfig {
   GNOME_ARC_ENGINE_ENABLED: boolean;
   /** Phase-4: Max cameo gnomes per swarm reply */
   GNOME_MAX_CAMEOS: number;
+  /** Phase-5: Enable world-state layer */
+  GNOME_WORLD_ENABLED: boolean;
+  /** Phase-5: Enable factions */
+  GNOME_FACTIONS_ENABLED: boolean;
+  /** Phase-5: Enable world events */
+  GNOME_WORLD_EVENTS_ENABLED: boolean;
+  /** Phase-5: Enable rituals */
+  GNOME_RITUALS_ENABLED: boolean;
+  /** Phase-5: Lore expansion (default: false) */
+  GNOME_LORE_EXPANSION_ENABLED: boolean;
 }
 
 const DEFAULTS: GnomesConfig = {
@@ -47,6 +57,11 @@ const DEFAULTS: GnomesConfig = {
   GNOME_AUTONOMY_ENABLED: false,
   GNOME_ARC_ENGINE_ENABLED: false,
   GNOME_MAX_CAMEOS: 2,
+  GNOME_WORLD_ENABLED: false,
+  GNOME_FACTIONS_ENABLED: false,
+  GNOME_WORLD_EVENTS_ENABLED: false,
+  GNOME_RITUALS_ENABLED: false,
+  GNOME_LORE_EXPANSION_ENABLED: false,
 };
 
 let cached: GnomesConfig | null = null;
@@ -67,6 +82,11 @@ export function getGnomesConfig(): GnomesConfig {
     GNOME_AUTONOMY_ENABLED: process.env.GNOME_AUTONOMY_ENABLED === "true",
     GNOME_ARC_ENGINE_ENABLED: process.env.GNOME_ARC_ENGINE_ENABLED === "true",
     GNOME_MAX_CAMEOS: Number(process.env.GNOME_MAX_CAMEOS) || DEFAULTS.GNOME_MAX_CAMEOS,
+    GNOME_WORLD_ENABLED: process.env.GNOME_WORLD_ENABLED === "true",
+    GNOME_FACTIONS_ENABLED: process.env.GNOME_FACTIONS_ENABLED === "true",
+    GNOME_WORLD_EVENTS_ENABLED: process.env.GNOME_WORLD_EVENTS_ENABLED === "true",
+    GNOME_RITUALS_ENABLED: process.env.GNOME_RITUALS_ENABLED === "true",
+    GNOME_LORE_EXPANSION_ENABLED: process.env.GNOME_LORE_EXPANSION_ENABLED === "true",
   };
   return cached;
 }
