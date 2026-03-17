@@ -10,6 +10,7 @@ import { getGnome, getAllGnomes, getFallbackChain } from "../gnomes/registry.js"
 import type { GnomeProfile } from "../gnomes/types.js";
 import type { SelectorFeatures } from "./selectorFeatures.js";
 import type { CanonicalMode } from "../canonical/types.js";
+import { selectCameos } from "../swarm/cameoSelector.js";
 
 export interface GnomeSelectionCandidate {
   gnomeId: string;
@@ -68,6 +69,8 @@ export function selectGnome(
     defaultSafeGnome?: string;
     enabled?: boolean;
     userAffinityByGnome?: Record<string, number>;
+    swarmEnabled?: boolean;
+    maxCameos?: number;
   },
 ): GnomeSelectionResult {
   const defaultGnome = opts?.defaultSafeGnome ?? "gorky";
@@ -115,8 +118,23 @@ export function selectGnome(
     reasoning.push("fallback_chain");
   }
 
-  const selectedProfile = getGnome(selectedId);
   const alternatives = scored.filter((c) => c.gnomeId !== selectedId).slice(0, 3);
+
+  // Phase-3: Add cameoCandidates when swarm enabled and energy/absurdity thresholds met
+  let cameoCandidates: string[] | undefined;
+  if (opts?.swarmEnabled && opts?.maxCameos && opts.maxCameos > 0) {
+    const conversationEnergy = features.relevanceScore * (features.absurdityScore > 0.5 ? 1.2 : 1);
+    cameoCandidates = selectCameos(
+      {
+        primaryGnomeId: selectedId,
+        conversationEnergy: Math.min(1, conversationEnergy),
+        absurdityScore: features.absurdityScore,
+        availableGnomes: all.map((p) => p.id),
+      },
+      { maxCameos: opts.maxCameos, energyThreshold: 0.65 },
+    );
+    if (cameoCandidates.length > 0) reasoning.push("swarm_cameos");
+  }
 
   return {
     selectedGnomeId: selectedId,
@@ -124,5 +142,6 @@ export function selectGnome(
     reasoning,
     alternativeCandidates: alternatives,
     responseMode,
+    cameoCandidates,
   };
 }

@@ -5,12 +5,24 @@
  * Phase-1: In-memory; Phase-2/3 wire to DB (user_gnome_affinity).
  */
 
+/** Phase-3: Relationship arc signals (0..1) */
+export interface RelationshipArcs {
+  familiarity: number;
+  rivalry?: number;
+  playful_banter?: number;
+  respect?: number;
+  hostility?: number;
+  inside_jokes?: number;
+}
+
 export interface UserGnomeAffinity {
   user_id: string;
   gnome_id: string;
   familiarity: number;
   last_interaction_at: string;
   interaction_count: number;
+  /** Phase-3: Extended relationship arcs */
+  arcs?: RelationshipArcs;
 }
 
 export interface UserAffinityStore {

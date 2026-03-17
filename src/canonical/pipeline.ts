@@ -291,6 +291,8 @@ export async function handleEvent(
         defaultSafeGnome: gnomesCfg.DEFAULT_SAFE_GNOME,
         enabled: true,
         userAffinityByGnome,
+        swarmEnabled: gnomesCfg.GNOME_SWARM_ENABLED,
+        maxCameos: gnomesCfg.GNOME_SWARM_ENABLED ? 2 : 0,
       });
       const continuity = resolveContinuity(
         selection.selectedGnomeId,
