@@ -35,6 +35,7 @@ export interface GnomeRuntimeContext {
   style?: StyleContext;
   pattern_id?: string;
   narrative_label?: string;
+  semanticContext?: { anchors?: string[]; boundaries?: string[]; reasons?: string[] };
 }
 
 export interface ComposedGnomePrompt {
@@ -79,6 +80,14 @@ export function composeGnomePrompt(ctx: GnomeRuntimeContext): ComposedGnomePromp
 
   if (ctx.selectedGnome.safety_boundaries?.length) {
     parts.push("", "Safety (never override):", ...ctx.selectedGnome.safety_boundaries.map((b) => `- ${b}`));
+  }
+
+  if (ctx.semanticContext?.anchors?.length) {
+    parts.push("", "Semantic style anchors:", ...ctx.semanticContext.anchors.map((a) => `• ${a}`));
+  }
+
+  if (ctx.semanticContext?.boundaries?.length) {
+    parts.push("", "Semantic boundaries:", ...ctx.semanticContext.boundaries.map((b) => `• ${b}`));
   }
 
   const modeHint = ctx.responseMode !== "ignore" ? MODE_STYLE_HINTS[ctx.responseMode] : "";

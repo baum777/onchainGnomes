@@ -73,3 +73,28 @@ export function buildPersonaMemoryPrompt(snippets: Snippet[]): string {
   const lines = snippets.map((s) => `• ${s.text}`);
   return `Gorky weiß aus den letzten Tagen und typischen CT-Mustern:\n${lines.join("\n")}\n\n`;
 }
+
+
+export function snippetToPersonaEpisode(params: {
+  snippet: Snippet;
+  voiceId: string;
+  userId?: string;
+  threadId?: string;
+}) {
+  return {
+    id: `snippet:${params.voiceId}:${params.snippet.createdAt}`,
+    voiceId: params.voiceId,
+    userId: params.userId,
+    threadId: params.threadId,
+    topicTags: ["snippet_migration"],
+    interactionText: "historical persona snippet",
+    responseText: params.snippet.text,
+    qualitySignals: {
+      useful: params.snippet.sourceCount > 1,
+      accepted: true,
+      inCharacter: true,
+      driftRisk: 0.2,
+    },
+    createdAt: params.snippet.createdAt,
+  };
+}

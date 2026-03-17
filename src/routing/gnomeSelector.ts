@@ -15,6 +15,10 @@ import { selectCameos } from "../swarm/cameoSelector.js";
 export interface GnomeSelectionCandidate {
   gnomeId: string;
   score: number;
+  ruleBasedScore?: number;
+  semanticFitScore?: number;
+  continuityScore?: number;
+  finalSelectionScore?: number;
 }
 
 export interface GnomeSelectionResult {
@@ -23,6 +27,11 @@ export interface GnomeSelectionResult {
   reasoning: string[];
   alternativeCandidates: GnomeSelectionCandidate[];
   responseMode: CanonicalMode;
+  ruleBasedScore?: number;
+  semanticFitScore?: number;
+  continuityScore?: number;
+  finalSelectionScore?: number;
+  explainability?: { anchors: string[]; boundaries: string[]; reasons: string[] };
   continuitySource?: string;
   /** Phase-2: optional cameo candidates for future swarm */
   cameoCandidates?: string[];
@@ -58,6 +67,18 @@ function scoreGnome(profile: GnomeProfile, features: SelectorFeatures, affinity:
   return Math.min(score, 1);
 }
 
+
+export function computeRuleBasedScores(
+  features: SelectorFeatures,
+  userAffinityByGnome: Record<string, number> = {},
+): Record<string, number> {
+  const scores: Record<string, number> = {};
+  for (const gnome of getAllGnomes()) {
+    scores[gnome.id] = scoreGnome(gnome, features, userAffinityByGnome[gnome.id] ?? 0);
+  }
+  return scores;
+}
+
 /**
  * Select gnome for this interaction.
  * Phase-2: Scoring with affinity; safe fallback when confidence low.
@@ -69,6 +90,9 @@ export function selectGnome(
     defaultSafeGnome?: string;
     enabled?: boolean;
     userAffinityByGnome?: Record<string, number>;
+    semanticFitByGnome?: Record<string, number>;
+    semanticExplainByGnome?: Record<string, { anchors: string[]; boundaries: string[]; reasons: string[] }>;
+    continuityBonusByGnome?: Record<string, number>;
     swarmEnabled?: boolean;
     maxCameos?: number;
   },
@@ -76,6 +100,8 @@ export function selectGnome(
   const defaultGnome = opts?.defaultSafeGnome ?? "stillhalter";
   const enabled = opts?.enabled ?? false;
   const affinityMap = opts?.userAffinityByGnome ?? {};
+  const semanticMap = opts?.semanticFitByGnome ?? {};
+  const continuityMap = opts?.continuityBonusByGnome ?? {};
 
   const all = getAllGnomes();
   if (!enabled || all.length === 0) {
@@ -92,10 +118,20 @@ export function selectGnome(
 
   // Score each gnome (deterministic: stable sort by id then by score)
   const scored: GnomeSelectionCandidate[] = all
-    .map((p) => ({
-      gnomeId: p.id,
-      score: scoreGnome(p, features, affinityMap[p.id] ?? 0),
-    }))
+    .map((p) => {
+      const ruleBasedScore = scoreGnome(p, features, affinityMap[p.id] ?? 0);
+      const semanticFitScore = semanticMap[p.id] ?? 0;
+      const continuityScore = continuityMap[p.id] ?? 0;
+      const finalSelectionScore = Math.min(1, ruleBasedScore * 0.65 + semanticFitScore * 0.3 + continuityScore);
+      return {
+        gnomeId: p.id,
+        score: finalSelectionScore,
+        ruleBasedScore,
+        semanticFitScore,
+        continuityScore,
+        finalSelectionScore,
+      };
+    })
     .sort((a, b) => {
       if (Math.abs(a.score - b.score) < 0.01) return a.gnomeId.localeCompare(b.gnomeId);
       return b.score - a.score;
@@ -144,12 +180,19 @@ export function selectGnome(
     if (cameoCandidates.length > 0) reasoning.push("swarm_cameos");
   }
 
+  const selected = scored.find((c) => c.gnomeId === selectedId);
+
   return {
     selectedGnomeId: selectedId,
-    score: best?.score ?? 1,
+    score: selected?.score ?? best?.score ?? 1,
     reasoning,
     alternativeCandidates: alternatives,
     responseMode,
+    ruleBasedScore: selected?.ruleBasedScore,
+    semanticFitScore: selected?.semanticFitScore,
+    continuityScore: selected?.continuityScore,
+    finalSelectionScore: selected?.finalSelectionScore,
+    explainability: opts?.semanticExplainByGnome?.[selectedId] ?? { anchors: [], boundaries: [], reasons: [] },
     cameoCandidates,
   };
 }

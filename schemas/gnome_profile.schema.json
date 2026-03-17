@@ -61,6 +61,20 @@
         "default_lore_tags": { "type": "array", "items": { "type": "string" } }
       }
     },
+    "semantic_facets": { "type": "array", "items": { "type": "string" } },
+    "style_anchors": { "type": "array", "items": { "type": "string" } },
+    "negative_anchors": { "type": "array", "items": { "type": "string" } },
+    "relation_hints": {
+      "type": "object",
+      "properties": {
+        "complements": { "type": "array", "items": { "type": "string" } },
+        "suppresses": { "type": "array", "items": { "type": "string" } },
+        "escalates_with": { "type": "array", "items": { "type": "string" } },
+        "stabilizes_with": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "retrieval_priority": { "type": "number", "minimum": 0, "maximum": 1 },
+    "canonical_examples": { "type": "array", "items": { "type": "string" } },
     "persona_fragment": { "type": "string" },
     "safety_boundaries": { "type": "array", "items": { "type": "string" } }
   },

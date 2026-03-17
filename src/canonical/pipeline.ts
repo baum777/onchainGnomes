@@ -41,7 +41,8 @@ import { deriveActivatedVoices, renderVoiceSigils } from "../output/renderVoiceS
 import { getUserAffinityStore } from "../memory/userAffinityStore.js";
 import { extractSelectorFeatures } from "../routing/selectorFeatures.js";
 import { resolveContinuity } from "../routing/continuityResolver.js";
-import { selectGnome } from "../routing/gnomeSelector.js";
+import { buildSemanticSelectionInputs } from "../persona/retrieval/runtimeSemantic.js";
+import { selectGnome, computeRuleBasedScores } from "../routing/gnomeSelector.js";
 import type { GnomeSelectionResult } from "../routing/gnomeSelector.js";
 
 export interface PipelineDeps {
@@ -288,10 +289,19 @@ export async function handleEvent(
       const features = extractSelectorFeatures(cls, scores, event, {
         marketEnergy: styleContext?.energyLevel ?? "MEDIUM",
       });
+      const ruleBasedScores = computeRuleBasedScores(features, userAffinityByGnome);
+      const semanticInputs = await buildSemanticSelectionInputs({
+        voices: gnomes,
+        features,
+        ruleBasedScores,
+      });
       const selection = selectGnome(features, mode, {
         defaultSafeGnome: gnomesCfg.DEFAULT_SAFE_GNOME,
         enabled: true,
         userAffinityByGnome,
+        semanticFitByGnome: semanticInputs.semanticFitByGnome,
+        continuityBonusByGnome: semanticInputs.continuityBonusByGnome,
+        semanticExplainByGnome: semanticInputs.semanticExplainByGnome,
         swarmEnabled: gnomesCfg.GNOME_SWARM_ENABLED,
         maxCameos: gnomesCfg.GNOME_SWARM_ENABLED ? 2 : 0,
       });
