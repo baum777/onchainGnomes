@@ -118,6 +118,14 @@ export function selectGnome(
     reasoning.push("fallback_chain");
   }
 
+  if (["hard_caution", "neutral_clarification"].includes(responseMode) && selectedId === "nebelspieler") {
+    const override = getGnome("stillhalter") ?? getGnome("wurzelwaechter");
+    if (override) {
+      selectedId = override.id;
+      reasoning.push("dominance_override_nebelspieler_caution_mode");
+    }
+  }
+
   const alternatives = scored.filter((c) => c.gnomeId !== selectedId).slice(0, 3);
 
   // Phase-3: Add cameoCandidates when swarm enabled and energy/absurdity thresholds met

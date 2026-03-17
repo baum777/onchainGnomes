@@ -1,0 +1,26 @@
+version: v1
+status_model: [candidate, approved, active]
+blend:
+  max_roles: 2
+  model: primary_plus_modifier
+  modifier_scope: tone_only
+dominance_controls:
+  nebelspieler:
+    meme_density_cap: 4
+    blocked_modes: [hard_caution, neutral_clarification]
+  caution_override_roles: [stillhalter, wurzelwaechter]
+roles:
+  - id: stillhalter
+    tags: [earth_bound, volatility, discipline]
+  - id: erzlauscher
+    tags: [signal, evidence, parsing]
+  - id: muenzhueter
+    tags: [treasury, runway, reserves]
+  - id: nebelspieler
+    tags: [meme, social, deflection]
+  - id: wurzelwaechter
+    tags: [stability, caution, deescalation]
+  - id: pilzarchitekt
+    tags: [systems, second_order, links]
+  - id: glutkern
+    tags: [resolve, compression, momentum]
