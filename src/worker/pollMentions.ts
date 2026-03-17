@@ -8,9 +8,9 @@ import "dotenv/config";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { TwitterApi } from "twitter-api-v2";
 import { createXClient } from "../clients/xClient.js";
 import { checkXConfigHealth } from "../clients/xClientConfig.js";
+import { invokeXApiRequest } from "../clients/xApi.js";
 import { createUnifiedLLMClient } from "../clients/llmClient.unified.js";
 import {
   mapMentionsResponse,
@@ -125,8 +125,11 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function getUserId(client: TwitterApi): Promise<string> {
-  const user = await client.v2.me();
+async function getUserId(): Promise<string> {
+  const user = await invokeXApiRequest<{ data: { id: string } }>({
+    method: "GET",
+    uri: "https://api.x.com/2/users/me",
+  });
   return user.data.id;
 }
 
@@ -139,7 +142,6 @@ function adaptForMentionsMapper(response: { tweets?: unknown[]; includes?: unkno
 }
 
 async function fetchMentionsViaMentionsEndpoint(
-  client: TwitterApi,
   userId: string,
   sinceId: string | null
 ): Promise<{ mentions: Mention[]; maxId: string | null }> {
@@ -151,13 +153,21 @@ async function fetchMentionsViaMentionsEndpoint(
   };
   if (sinceId) params.since_id = sinceId;
 
-  const response = await client.v2.userMentionTimeline(userId, params);
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (Array.isArray(v)) query.set(k, v.join(","));
+    else if (v !== undefined && v !== null) query.set(k, String(v));
+  });
+
+  const response = await invokeXApiRequest<{ data?: unknown[]; includes?: unknown; meta?: unknown }>({
+    method: "GET",
+    uri: `https://api.x.com/2/users/${userId}/mentions?${query.toString()}`,
+  });
   const result = mapMentionsResponse(adaptForMentionsMapper(response));
   return { mentions: result.mentions, maxId: result.maxId };
 }
 
 async function fetchMentionsViaSearch(
-  client: TwitterApi,
   username: string,
   sinceId: string | null
 ): Promise<{ mentions: Mention[]; maxId: string | null }> {
@@ -170,28 +180,35 @@ async function fetchMentionsViaSearch(
   if (sinceId) params.since_id = sinceId;
 
   const query = `@${username}`;
-  const response = await client.v2.search(query, params);
+  const searchParams = new URLSearchParams({ query });
+  Object.entries(params).forEach(([k, v]) => {
+    if (Array.isArray(v)) searchParams.set(k, v.join(","));
+    else if (v !== undefined && v !== null) searchParams.set(k, String(v));
+  });
+  const response = await invokeXApiRequest<{ data?: unknown[]; includes?: unknown; meta?: unknown }>({
+    method: "GET",
+    uri: `https://api.x.com/2/tweets/search/recent?${searchParams.toString()}`,
+  });
   const result = mapMentionsResponse(adaptForMentionsMapper(response));
   return { mentions: result.mentions, maxId: result.maxId };
 }
 
 async function fetchMentions(
-  client: TwitterApi,
   userId: string,
   sinceId: string | null
 ): Promise<{ mentions: Mention[]; maxId: string | null }> {
   if (MENTIONS_SOURCE === "search") {
-    return fetchMentionsViaSearch(client, BOT_USERNAME, sinceId);
+    return fetchMentionsViaSearch(BOT_USERNAME, sinceId);
   }
   try {
-    return await fetchMentionsViaMentionsEndpoint(client, userId, sinceId);
+    return await fetchMentionsViaMentionsEndpoint(userId, sinceId);
   } catch (err: unknown) {
     const e = err as { code?: number };
     if (e?.code === 401) {
       console.error(
         `[WARN] Mentions endpoint returned 401; falling back to recent search for @${BOT_USERNAME}`
       );
-      return fetchMentionsViaSearch(client, BOT_USERNAME, sinceId);
+      return fetchMentionsViaSearch(BOT_USERNAME, sinceId);
     }
     throw err;
   }
@@ -407,28 +424,20 @@ export async function runWorkerLoop(): Promise<void> {
     process.exit(1);
   }
 
-  const rawClient = new TwitterApi({
-    appKey: (process.env.X_API_KEY || "").trim(),
-    appSecret: (process.env.X_API_SECRET || "").trim(),
-    accessToken: (process.env.X_ACCESS_TOKEN || "").trim(),
-    accessSecret: (process.env.X_ACCESS_SECRET || "").trim(),
-  });
-
   let userId: string;
   try {
-    console.log("[AUTH] Verifying credentials via v2.me()...");
-    userId = await getUserId(rawClient);
+    console.log("[AUTH] Verifying credentials via /2/users/me...");
+    userId = await getUserId();
     console.log(`[AUTH] Verified. Authenticated as user: ${userId}`);
   } catch (err: unknown) {
     const e = err as { code?: number; data?: unknown };
     if (e?.code === 401) {
       console.error(
-        "[AUTH] 401 Unauthorized from v2.me(). Your X_API_KEY / X_API_SECRET / X_ACCESS_TOKEN / X_ACCESS_SECRET are invalid or revoked."
+        "[AUTH] 401 Unauthorized from /2/users/me. Verify X_CLIENT_ID / X_CLIENT_SECRET / X_REFRESH_TOKEN and OAuth scopes."
       );
-      console.error("[AUTH] Ensure you are using OAuth 1.0a Consumer Keys + Access Tokens (NOT OAuth 2.0 Client ID/Secret).");
     } else if (e?.code === 403) {
       console.error(
-        "[AUTH] 403 Forbidden from v2.me(). App permissions may be insufficient (need Read+Write). Regenerate Access Token after changing permissions."
+        "[AUTH] 403 Forbidden from /2/users/me. App permissions may be insufficient (need read/write/users.read/tweet.read/tweet.write/offline.access)."
       );
     } else {
       console.error("[AUTH] Unexpected error during auth verification:", e?.data ?? err);
@@ -487,7 +496,7 @@ export async function runWorkerLoop(): Promise<void> {
 
       console.log("\n[POLL] Fetching mentions...");
 
-      const { mentions, maxId } = await fetchMentions(rawClient, userId, lastSinceId);
+      const { mentions, maxId } = await fetchMentions(userId, lastSinceId);
 
       consecutiveFailures = 0;
       setGauge(GAUGE_NAMES.RECENT_FAILURE_STREAK, 0);

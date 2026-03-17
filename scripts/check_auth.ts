@@ -1,16 +1,13 @@
 import "dotenv/config";
-import { TwitterApi } from "twitter-api-v2";
+import { invokeXApiRequest } from "../src/clients/xApi.js";
 
 async function checkAuth() {
-  const rawClient = new TwitterApi({
-    appKey: process.env.X_API_KEY || "",
-    appSecret: process.env.X_API_SECRET || "",
-    accessToken: process.env.X_ACCESS_TOKEN || "",
-    accessSecret: process.env.X_ACCESS_SECRET || "",
-  });
-
   try {
-    const user = await rawClient.v2.me();
+    const user = await invokeXApiRequest<{ data: { id: string; username?: string; name?: string } }>({
+      method: "GET",
+      uri: "https://api.x.com/2/users/me",
+    });
+
     console.log("Authenticated as:");
     console.log("ID:", user.data.id);
     console.log("Username:", user.data.username);
