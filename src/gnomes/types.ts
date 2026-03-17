@@ -46,6 +46,13 @@ export interface MemoryRules {
   default_lore_tags?: string[];
 }
 
+export interface RelationHints {
+  complements?: string[];
+  suppresses?: string[];
+  escalates_with?: string[];
+  stabilizes_with?: string[];
+}
+
 export interface GnomeProfile {
   id: string;
   name: string;
@@ -58,10 +65,20 @@ export interface GnomeProfile {
   memory_rules?: MemoryRules;
   persona_fragment?: string;
   safety_boundaries?: string[];
+  semantic_facets?: string[];
+  style_anchors?: string[];
+  negative_anchors?: string[];
+  relation_hints?: RelationHints;
+  retrieval_priority?: number;
+  canonical_examples?: string[];
 }
 
 function isStringArray(v: unknown): v is string[] {
   return Array.isArray(v) && v.every((x) => typeof x === "string");
+}
+
+function isOptionalStringArray(v: unknown): boolean {
+  return v === undefined || isStringArray(v);
 }
 
 export function isGnomeProfile(v: unknown): v is GnomeProfile {
@@ -69,6 +86,7 @@ export function isGnomeProfile(v: unknown): v is GnomeProfile {
   const o = v as Record<string, unknown>;
   const sigil = o.sigil as Record<string, unknown> | undefined;
   const memoryRules = o.memory_rules as Record<string, unknown> | undefined;
+  const relationHints = o.relation_hints as Record<string, unknown> | undefined;
 
   return (
     typeof o.id === "string" &&
@@ -82,6 +100,17 @@ export function isGnomeProfile(v: unknown): v is GnomeProfile {
     (!memoryRules ||
       (typeof memoryRules === "object" &&
         (memoryRules.lore_status_gate === undefined || typeof memoryRules.lore_status_gate === "string") &&
-        (memoryRules.default_lore_tags === undefined || isStringArray(memoryRules.default_lore_tags))))
+        (memoryRules.default_lore_tags === undefined || isStringArray(memoryRules.default_lore_tags)))) &&
+    isOptionalStringArray(o.semantic_facets) &&
+    isOptionalStringArray(o.style_anchors) &&
+    isOptionalStringArray(o.negative_anchors) &&
+    (o.retrieval_priority === undefined || typeof o.retrieval_priority === "number") &&
+    isOptionalStringArray(o.canonical_examples) &&
+    (!relationHints ||
+      (typeof relationHints === "object" &&
+        isOptionalStringArray(relationHints.complements) &&
+        isOptionalStringArray(relationHints.suppresses) &&
+        isOptionalStringArray(relationHints.escalates_with) &&
+        isOptionalStringArray(relationHints.stabilizes_with)))
   );
 }

@@ -169,6 +169,7 @@ async function generateFullSpectrum(
           style: promptContext?.style,
           pattern_id: promptContext?.pattern_id,
           narrative_label: promptContext?.narrative_label,
+          semanticContext: selection.explainability,
         });
         input = { system: composed.system, developer: composed.developer, user: composed.user };
       } else {

@@ -23,7 +23,8 @@
     "test:e2e": "vitest run tests/e2e",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.ts\" \"tests/**/*.ts\"",
-    "ci": "pnpm typecheck && pnpm lint && pnpm test && pnpm build"
+    "ci": "pnpm typecheck && pnpm lint && pnpm test && pnpm build",
+    "persona:build-semantic": "tsx scripts/build-persona-semantic-index.ts --split"
   },
   "dependencies": {
     "@solana/web3.js": "^1.98.4",

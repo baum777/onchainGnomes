@@ -3,12 +3,8 @@
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
-import { join } from "node:path";
-import { mkdir, writeFile, rm } from "node:fs/promises";
 import { clearRegistry, getGnome, getAllGnomes, getFallbackChain } from "../../src/gnomes/registry.js";
 import { loadGnomes } from "../../src/gnomes/loadGnomes.js";
-
-const TEST_DATA_DIR = join(process.cwd(), "data", "gnomes");
 
 describe("Gnome Registry", () => {
   beforeEach(() => {
@@ -17,28 +13,36 @@ describe("Gnome Registry", () => {
 
   it("returns empty when no gnomes loaded", () => {
     expect(getAllGnomes()).toEqual([]);
-    expect(getGnome("gorky")).toBeUndefined();
   });
 
   it("loads gnomes from data/gnomes/*.yaml", async () => {
     const profiles = await loadGnomes();
     expect(profiles.length).toBeGreaterThanOrEqual(1);
-    const gorky = getGnome("gorky");
-    expect(gorky).toBeDefined();
-    expect(gorky?.id).toBe("gorky");
-    expect(gorky?.name).toBe("GORKY");
-    expect(gorky?.role).toBeDefined();
+
+    const firstId = profiles[0]?.id;
+    expect(firstId).toBeDefined();
+    if (!firstId) return;
+
+    const loaded = getGnome(firstId);
+    expect(loaded).toBeDefined();
+    expect(loaded?.id).toBe(firstId);
+    expect(loaded?.name).toBeTruthy();
+    expect(loaded?.role).toBeTruthy();
   });
 
-  it("getFallbackChain returns gorky when present", async () => {
+  it("getFallbackChain returns configured defensive chain when available", async () => {
     await loadGnomes();
     const chain = getFallbackChain();
-    expect(chain).toContain("gorky");
+    expect(chain.slice(0, 3)).toEqual(["stillhalter", "wurzelwaechter", "muenzhueter"]);
   });
 
-  it("getGnome is case-insensitive", async () => {
-    await loadGnomes();
-    expect(getGnome("GORKY")).toBeDefined();
-    expect(getGnome("gorky")).toBeDefined();
+  it("getGnome is case-insensitive for loaded IDs", async () => {
+    const profiles = await loadGnomes();
+    const sampleId = profiles[0]?.id;
+    expect(sampleId).toBeDefined();
+    if (!sampleId) return;
+
+    expect(getGnome(sampleId.toUpperCase())).toBeDefined();
+    expect(getGnome(sampleId.toLowerCase())).toBeDefined();
   });
 });

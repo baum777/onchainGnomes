@@ -12,11 +12,24 @@ The voices are different perspectives from the same Gnomes world. Routing choose
 
 ## Features
 
+- 4-layer persona-memory architecture with reflection gates
+
 - Canonical mention-processing pipeline
 - Multi-voice routing with safe fallback chain
 - Deterministic voice sigil rendering (1/2/3-voice contract)
 - Guardrails for policy, postability, and budget
 - Optional lore/memory/world extensions
+
+
+## Persona Memory Architecture
+
+The runtime uses a 4-layer persona memory stack:
+- **Core Persona** (`data/gnomes/*.yaml`) stays canonical and curated.
+- **Semantic Persona** is compiler-derived for retrieval and routing support.
+- **Episodic Memory** stores interaction episodes with quality signals.
+- **Reflective Curation** gates retention/promotion to prevent drift.
+
+Use `pnpm persona:build-semantic` to compile YAML profiles into semantic records.
 
 ## Project Structure
 

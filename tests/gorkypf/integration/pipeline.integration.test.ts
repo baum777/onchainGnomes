@@ -13,6 +13,7 @@ import { DEFAULT_CANONICAL_CONFIG } from "../../../src/canonical/types.js";
 import * as dedupeGuard from "../../../src/ops/dedupeGuard.js";
 import * as rateLimiter from "../../../src/ops/rateLimiter.js";
 import { resetLaunchEnvCache } from "../../../src/config/env.js";
+import { hasVoiceSigilMarker, stripVoiceSigils } from "../../_helpers/voiceSigils.js";
 
 vi.mock("../../../src/ops/dedupeGuard.js", () => ({
   dedupeCheckAndMark: vi.fn(),
@@ -72,7 +73,8 @@ describe("Gorky pipeline integration", () => {
       return;
     }
     expect(result.action).toBe("publish");
-    expect(result.reply_text).toBe(mockReply);
+    expect(hasVoiceSigilMarker(result.reply_text)).toBe(true);
+    expect(stripVoiceSigils(result.reply_text)).toBe(mockReply);
     expect(result.audit.detected_narrative).toBeDefined();
     expect(result.audit.selected_pattern).toBeDefined();
   });
