@@ -68,6 +68,19 @@ export const envSchema = z.object({
     .optional()
     .default("false")
     .transform((v: string | undefined) => v === "true"),
+
+  TIMELINE_ENGAGEMENT_ENABLED: z.string().optional().default("false"),
+  TIMELINE_ENGAGEMENT_INTERVAL_MS: z.string().optional(),
+  TIMELINE_ENGAGEMENT_MAX_PER_RUN: z.string().optional(),
+  TIMELINE_ENGAGEMENT_MAX_PER_HOUR: z.string().optional(),
+  TIMELINE_ENGAGEMENT_MAX_PER_DAY: z.string().optional(),
+  TIMELINE_MIN_CONTEXT_SCORE: z.string().optional(),
+  TIMELINE_MIN_FINAL_SCORE: z.string().optional(),
+  TIMELINE_REQUIRE_THREAD_STRUCTURE: z.string().optional().default("false"),
+  TIMELINE_SOURCE_ACCOUNTS: z.string().optional().default(""),
+  TIMELINE_KEYWORD_FILTERS: z.string().optional().default(""),
+  TIMELINE_AUTHOR_COOLDOWN_MINUTES: z.string().optional(),
+  TIMELINE_CONVERSATION_COOLDOWN_MINUTES: z.string().optional(),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;
@@ -92,6 +105,18 @@ export function validateEnv(): EnvConfig {
     POLL_INTERVAL_MS: process.env.POLL_INTERVAL_MS,
     LOG_LEVEL: process.env.LOG_LEVEL,
     DRY_RUN: process.env.DRY_RUN,
+    TIMELINE_ENGAGEMENT_ENABLED: process.env.TIMELINE_ENGAGEMENT_ENABLED,
+    TIMELINE_ENGAGEMENT_INTERVAL_MS: process.env.TIMELINE_ENGAGEMENT_INTERVAL_MS,
+    TIMELINE_ENGAGEMENT_MAX_PER_RUN: process.env.TIMELINE_ENGAGEMENT_MAX_PER_RUN,
+    TIMELINE_ENGAGEMENT_MAX_PER_HOUR: process.env.TIMELINE_ENGAGEMENT_MAX_PER_HOUR,
+    TIMELINE_ENGAGEMENT_MAX_PER_DAY: process.env.TIMELINE_ENGAGEMENT_MAX_PER_DAY,
+    TIMELINE_MIN_CONTEXT_SCORE: process.env.TIMELINE_MIN_CONTEXT_SCORE,
+    TIMELINE_MIN_FINAL_SCORE: process.env.TIMELINE_MIN_FINAL_SCORE,
+    TIMELINE_REQUIRE_THREAD_STRUCTURE: process.env.TIMELINE_REQUIRE_THREAD_STRUCTURE,
+    TIMELINE_SOURCE_ACCOUNTS: process.env.TIMELINE_SOURCE_ACCOUNTS,
+    TIMELINE_KEYWORD_FILTERS: process.env.TIMELINE_KEYWORD_FILTERS,
+    TIMELINE_AUTHOR_COOLDOWN_MINUTES: process.env.TIMELINE_AUTHOR_COOLDOWN_MINUTES,
+    TIMELINE_CONVERSATION_COOLDOWN_MINUTES: process.env.TIMELINE_CONVERSATION_COOLDOWN_MINUTES,
   });
 
   if (!result.success) {
