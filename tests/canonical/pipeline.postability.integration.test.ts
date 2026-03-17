@@ -24,6 +24,7 @@ import { resetStoreCache } from "../../src/state/storeFactory.js";
 import { cacheClear } from "../../src/ops/memoryCache.js";
 import fs from "node:fs";
 import path from "node:path";
+import { hasVoiceSigilMarker, stripVoiceSigils } from "../_helpers/voiceSigils.js";
 
 const AUDIT_FILE = path.join(process.cwd(), "data", "audit_log.jsonl");
 const DATA_DIR = path.resolve(process.cwd(), "data");
@@ -93,7 +94,8 @@ describe("pipeline postability integration", () => {
       expect(result).toBeDefined();
       expect(result!.action).toBe("publish");
       if (result!.action === "publish") {
-        expect(result.reply_text).toBe(safeReply);
+        expect(hasVoiceSigilMarker(result.reply_text)).toBe(true);
+        expect(stripVoiceSigils(result.reply_text)).toBe(safeReply);
 
         // Length within canonical hard max
         expect(result.reply_text.length).toBeLessThanOrEqual(getHardMax(result.mode));
@@ -102,6 +104,8 @@ describe("pipeline postability integration", () => {
         expect(replySpy).toHaveBeenCalledTimes(1);
         const [postedText, postedMentionId] = replySpy.mock.calls[0];
         expect(postedText).toBe(result.reply_text);
+        expect(hasVoiceSigilMarker(postedText)).toBe(true);
+        expect(stripVoiceSigils(postedText)).toBe(safeReply);
         expect(postedMentionId).toBe(mention.id);
 
         // Audit record matches

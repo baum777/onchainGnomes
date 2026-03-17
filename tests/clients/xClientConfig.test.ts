@@ -12,78 +12,26 @@ describe("readXConfigFromEnv", () => {
     process.env = originalEnv;
   });
 
-  it("reads valid credentials from environment", () => {
-    process.env.X_API_KEY = "test_key";
-    process.env.X_API_SECRET = "test_secret";
-    process.env.X_ACCESS_TOKEN = "test_token";
-    process.env.X_ACCESS_SECRET = "test_secret";
+  it("reads OAuth2 runtime credentials from environment", () => {
+    process.env.X_CLIENT_ID = "client_id";
+    process.env.X_CLIENT_SECRET = "client_secret";
+    process.env.X_REFRESH_TOKEN = "refresh_token";
+    process.env.X_ACCESS_TOKEN = "access_token";
 
     const config = readXConfigFromEnv();
-    expect(config.appKey).toBe("test_key");
-    expect(config.appSecret).toBe("test_secret");
-    expect(config.accessToken).toBe("test_token");
-    expect(config.accessSecret).toBe("test_secret");
+    expect(config.xClientId).toBe("client_id");
+    expect(config.xClientSecret).toBe("client_secret");
+    expect(config.xRefreshToken).toBe("refresh_token");
+    expect(config.xAccessToken).toBe("access_token");
   });
 
-  it("throws XConfigError when X_API_KEY is missing", () => {
-    process.env.X_API_SECRET = "test_secret";
-    process.env.X_ACCESS_TOKEN = "test_token";
-    process.env.X_ACCESS_SECRET = "test_secret";
+  it("throws XConfigError when required OAuth2 vars are missing", () => {
+    delete process.env.X_CLIENT_ID;
+    delete process.env.X_CLIENT_SECRET;
+    delete process.env.X_REFRESH_TOKEN;
 
     expect(() => readXConfigFromEnv()).toThrow(XConfigError);
-    expect(() => readXConfigFromEnv()).toThrow("X_API_KEY");
-  });
-
-  it("throws XConfigError when all credentials missing", () => {
-    delete process.env.X_API_KEY;
-    delete process.env.X_API_SECRET;
-    delete process.env.X_ACCESS_TOKEN;
-    delete process.env.X_ACCESS_SECRET;
-
-    expect(() => readXConfigFromEnv()).toThrow(XConfigError);
-    expect(() => readXConfigFromEnv()).toThrow("Missing X API credentials");
-  });
-
-  it("throws XConfigError for placeholder values", () => {
-    process.env.X_API_KEY = "your_api_key_here";
-    process.env.X_API_SECRET = "test_secret";
-    process.env.X_ACCESS_TOKEN = "test_token";
-    process.env.X_ACCESS_SECRET = "test_secret";
-
-    expect(() => readXConfigFromEnv()).toThrow(XConfigError);
-    expect(() => readXConfigFromEnv()).toThrow("placeholder");
-  });
-
-  it("trims whitespace from values", () => {
-    process.env.X_API_KEY = "  test_key  ";
-    process.env.X_API_SECRET = "test_secret";
-    process.env.X_ACCESS_TOKEN = "test_token";
-    process.env.X_ACCESS_SECRET = "test_secret";
-
-    const config = readXConfigFromEnv();
-    expect(config.appKey).toBe("test_key");
-  });
-
-  it("sets dryRun true when DRY_RUN env is 'true'", () => {
-    process.env.X_API_KEY = "test_key";
-    process.env.X_API_SECRET = "test_secret";
-    process.env.X_ACCESS_TOKEN = "test_token";
-    process.env.X_ACCESS_SECRET = "test_secret";
-    process.env.DRY_RUN = "true";
-
-    const config = readXConfigFromEnv();
-    expect(config.dryRun).toBe(true);
-  });
-
-  it("sets dryRun false when DRY_RUN env is not 'true'", () => {
-    process.env.X_API_KEY = "test_key";
-    process.env.X_API_SECRET = "test_secret";
-    process.env.X_ACCESS_TOKEN = "test_token";
-    process.env.X_ACCESS_SECRET = "test_secret";
-    process.env.DRY_RUN = "false";
-
-    const config = readXConfigFromEnv();
-    expect(config.dryRun).toBe(false);
+    expect(() => readXConfigFromEnv()).toThrow("X_CLIENT_ID");
   });
 });
 
@@ -98,49 +46,38 @@ describe("checkXConfigHealth", () => {
     process.env = originalEnv;
   });
 
-  it("returns ready=true when all credentials present", () => {
-    process.env.X_API_KEY = "test_key";
-    process.env.X_API_SECRET = "test_secret";
-    process.env.X_ACCESS_TOKEN = "test_token";
-    process.env.X_ACCESS_SECRET = "test_secret";
+  it("returns ready=true when required OAuth2 credentials are present", () => {
+    process.env.X_CLIENT_ID = "client_id";
+    process.env.X_CLIENT_SECRET = "client_secret";
+    process.env.X_REFRESH_TOKEN = "refresh_token";
+    process.env.X_ACCESS_TOKEN = "access_token";
 
     const health = checkXConfigHealth();
     expect(health.ready).toBe(true);
     expect(health.missing).toHaveLength(0);
-    expect(health.present).toHaveLength(4);
+    expect(health.present).toEqual(
+      expect.arrayContaining(["X_CLIENT_ID", "X_CLIENT_SECRET", "X_REFRESH_TOKEN", "X_ACCESS_TOKEN"]),
+    );
   });
 
-  it("returns ready=false when credentials missing", () => {
-    delete process.env.X_API_KEY;
-    process.env.X_API_SECRET = "test_secret";
-    process.env.X_ACCESS_TOKEN = "test_token";
-    process.env.X_ACCESS_SECRET = "test_secret";
+  it("returns ready=false when a required var is missing", () => {
+    delete process.env.X_CLIENT_ID;
+    process.env.X_CLIENT_SECRET = "client_secret";
+    process.env.X_REFRESH_TOKEN = "refresh_token";
 
     const health = checkXConfigHealth();
     expect(health.ready).toBe(false);
-    expect(health.missing).toContain("X_API_KEY");
-    expect(health.present).toContain("X_API_SECRET");
+    expect(health.missing).toContain("X_CLIENT_ID");
   });
 
-  it("detects placeholder warnings", () => {
-    process.env.X_API_KEY = "your_api_key";
-    process.env.X_API_SECRET = "test_secret";
-    process.env.X_ACCESS_TOKEN = "test_token";
-    process.env.X_ACCESS_SECRET = "test_secret";
+  it("adds warning when access token is absent (refresh-at-runtime path)", () => {
+    process.env.X_CLIENT_ID = "client_id";
+    process.env.X_CLIENT_SECRET = "client_secret";
+    process.env.X_REFRESH_TOKEN = "refresh_token";
+    delete process.env.X_ACCESS_TOKEN;
 
     const health = checkXConfigHealth();
-    expect(health.warnings.length).toBeGreaterThan(0);
-    expect(health.warnings[0]).toContain("placeholder");
-  });
-
-  it("detects suspiciously short values", () => {
-    process.env.X_API_KEY = "ab";
-    process.env.X_API_SECRET = "test_secret";
-    process.env.X_ACCESS_TOKEN = "test_token";
-    process.env.X_ACCESS_SECRET = "test_secret";
-
-    const health = checkXConfigHealth();
-    expect(health.warnings.length).toBeGreaterThan(0);
-    expect(health.warnings[0]).toContain("short");
+    expect(health.ready).toBe(true);
+    expect(health.warnings.some((w) => w.includes("X_ACCESS_TOKEN not set"))).toBe(true);
   });
 });

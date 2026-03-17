@@ -228,13 +228,13 @@ describe("hardening integration", () => {
 
   describe("6. RuntimeConfig smoke", () => {
     it("getConfig returns merged structure with core keys when env validated", () => {
-      process.env.X_API_KEY = "test_key";
-      process.env.X_API_SECRET = "test_secret";
-      process.env.X_ACCESS_TOKEN = "test_token";
-      process.env.X_ACCESS_SECRET = "test_access_secret";
+      process.env.X_CLIENT_ID = "test_client_id";
+      process.env.X_CLIENT_SECRET = "test_client_secret";
+      process.env.X_REFRESH_TOKEN = "test_refresh_token";
+      process.env.X_ACCESS_TOKEN = "test_access_token";
 
       const config = getConfig();
-      expect(config.X_API_KEY).toBe("test_key");
+      expect(config.X_CLIENT_ID).toBe("test_client_id");
       expect(config.USE_REDIS).toBeDefined();
       expect(typeof config.USE_REDIS).toBe("boolean");
       expect(config.LAUNCH_MODE).toBeDefined();
