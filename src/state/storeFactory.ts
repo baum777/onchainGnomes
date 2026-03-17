@@ -25,8 +25,8 @@ export function getStateStore(): StateStore {
 
     if (!kvUrl.startsWith("redis://") && !kvUrl.startsWith("rediss://")) {
       throw new Error(
-        "KV_URL must use redis:// or rediss:// protocol. " +
-        "Upstash REST URLs (https://) are not supported in Redis TCP mode. " +
+        "KV_URL muss redis:// protocol nutzen. " +
+        "Erlaubt sind redis:// oder rediss://; Upstash REST URLs (https://) sind im Redis TCP-Modus nicht unterstützt. " +
         `Received: ${maskUrl(kvUrl)}`
       );
     }
