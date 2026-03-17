@@ -26,10 +26,10 @@ const modelListSchema = z
 
 export const envSchema = z.object({
   // Critical: X/Twitter API (required for polling)
-  X_API_KEY: z.string().min(1, "X_API_KEY is required"),
-  X_API_SECRET: z.string().min(1, "X_API_SECRET is required"),
-  X_ACCESS_TOKEN: z.string().min(1, "X_ACCESS_TOKEN is required"),
-  X_ACCESS_SECRET: z.string().min(1, "X_ACCESS_SECRET is required"),
+  X_CLIENT_ID: z.string().min(1, "X_CLIENT_ID is required"),
+  X_CLIENT_SECRET: z.string().min(1, "X_CLIENT_SECRET is required"),
+  X_REFRESH_TOKEN: z.string().min(1, "X_REFRESH_TOKEN is required"),
+  X_ACCESS_TOKEN: z.string().optional().default(""),
 
   // xAI (optional — bot runs in degraded mode without LLM)
   XAI_API_KEY: z.string().optional().default(""),
@@ -78,10 +78,10 @@ export type EnvConfig = z.infer<typeof envSchema>;
  */
 export function validateEnv(): EnvConfig {
   const result = envSchema.safeParse({
-    X_API_KEY: process.env.X_API_KEY ?? "",
-    X_API_SECRET: process.env.X_API_SECRET ?? "",
+    X_CLIENT_ID: process.env.X_CLIENT_ID ?? "",
+    X_CLIENT_SECRET: process.env.X_CLIENT_SECRET ?? "",
+    X_REFRESH_TOKEN: process.env.X_REFRESH_TOKEN ?? "",
     X_ACCESS_TOKEN: process.env.X_ACCESS_TOKEN ?? "",
-    X_ACCESS_SECRET: process.env.X_ACCESS_SECRET ?? "",
     XAI_API_KEY: process.env.XAI_API_KEY ?? "",
     XAI_BASE_URL: process.env.XAI_BASE_URL,
     XAI_MODEL_PRIMARY: process.env.XAI_MODEL_PRIMARY ?? process.env.XAI_MODEL,
