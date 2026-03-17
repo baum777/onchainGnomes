@@ -25,7 +25,7 @@ Implementation package for the Gorky crypto-native X/Twitter reply agent. Aligne
 | `config/gorky.yaml` | Gorky-specific configuration |
 | `config/default.yaml` | Rollout stages, feature flags |
 | `src/gorky/publishDecision.ts` | Publish decision skeleton |
-| `docs/implementation-package/CODE_SKELETONS.md` | Pseudocode → code mapping |
+| [CODE_SKELETONS.md](./CODE_SKELETONS.md) | Pseudocode → code mapping |
 | `tests/gorky/` | Test scaffolding, fixtures, integration, safety |
 
 ## Quick Reference

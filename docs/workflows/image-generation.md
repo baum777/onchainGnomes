@@ -15,7 +15,7 @@ The system builds a structured prompt using the StyleBand system, sends it to Re
 - **Model**: Configurable via `REPLICATE_IMAGE_MODEL` (default: `black-forest-labs/flux-schnell`)
 
 📌 Environment variables are documented exclusively in:
-→ `docs/var.README.md`
+→ `docs/operations/var.README.md`
 
 ---
 

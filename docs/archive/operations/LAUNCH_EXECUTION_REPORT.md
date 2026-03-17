@@ -25,7 +25,7 @@
 
 **Commands (with secrets configured):**
 ```bash
-LAUNCH_MODE=dry_run LOG_LEVEL=debug DEBUG_ARTIFACTS=true pnpm run poll
+LAUNCH_MODE=dry_run LOG_LEVEL=debug DEBUG_ARTIFACTS=true pnpm poll
 ```
 
 **Verification checklist:**

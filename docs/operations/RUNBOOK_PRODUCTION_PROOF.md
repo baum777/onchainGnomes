@@ -52,7 +52,7 @@ Dieses Runbook dokumentiert den sicheren Rollout und Rollback für xAi_Bot-App i
 kill -TERM <pid>
 
 # Oder: LAUNCH_MODE umstellen + Restart
-LAUNCH_MODE=dry_run pnpm run poll
+LAUNCH_MODE=dry_run pnpm poll
 ```
 
 ### Poll-Lock bei Shutdown

@@ -43,12 +43,12 @@ This package extends the existing xAi_Bot-App with a production-ready Gorky impl
 
 | Path | Purpose |
 |------|---------|
-| `docs/implementation-package/REPO_TREE.md` | Repository structure, Gorky package location |
-| `docs/implementation-package/MODULE_RESPONSIBILITIES.md` | Module boundaries, ownership |
-| `docs/implementation-package/INTERFACE_CONTRACTS.md` | Interface definitions, invariants |
-| `docs/implementation-package/CODE_SKELETONS.md` | Pseudocode → code mapping |
-| `docs/implementation-package/ROLLOUT_CHECKLIST.md` | Rollout stages, metrics, abort criteria |
-| `docs/implementation-package/INTEGRATION_NOTES.md` | Pipeline/worker integration points |
+| `docs/archive/implementation-package/REPO_TREE.md` | Repository structure, Gorky package location |
+| `docs/archive/implementation-package/MODULE_RESPONSIBILITIES.md` | Module boundaries, ownership |
+| `docs/archive/implementation-package/INTERFACE_CONTRACTS.md` | Interface definitions, invariants |
+| `docs/archive/implementation-package/CODE_SKELETONS.md` | Pseudocode → code mapping |
+| `docs/archive/implementation-package/ROLLOUT_CHECKLIST.md` | Rollout stages, metrics, abort criteria |
+| `docs/archive/implementation-package/INTEGRATION_NOTES.md` | Pipeline/worker integration points |
 | `schemas/gorky/mention_signal.schema.json` | Raw X mention |
 | `schemas/gorky/normalized_event.schema.json` | CanonicalEvent |
 | `schemas/gorky/safety_result.schema.json` | SafetyResult |
@@ -84,7 +84,7 @@ This package extends the existing xAi_Bot-App with a production-ready Gorky impl
 
 ```
 xAi_Bot-App/
-├── docs/implementation-package/
+├── docs/archive/implementation-package/
 │   ├── GORKY_IMPLEMENTATION_PACKAGE.md   # This document
 │   ├── REPO_TREE.md
 │   ├── MODULE_RESPONSIBILITIES.md
@@ -361,7 +361,7 @@ Dependencies: dedupeGuard, rateLimiter, launchGate. Logging: Caller (worker) log
 ## Appendix A: Proposed Minimal Repo Tree
 
 ```
-docs/implementation-package/
+docs/archive/implementation-package/
   REPO_TREE.md
   MODULE_RESPONSIBILITIES.md
   INTERFACE_CONTRACTS.md
@@ -400,13 +400,13 @@ tests/gorky/
 1. `schemas/gorky/mention_signal.schema.json`
 2. `schemas/gorky/normalized_event.schema.json`
 3. `schemas/gorky/safety_result.schema.json`
-4. `docs/implementation-package/REPO_TREE.md`
-5. `docs/implementation-package/INTERFACE_CONTRACTS.md`
+4. `docs/archive/implementation-package/REPO_TREE.md`
+5. `docs/archive/implementation-package/INTERFACE_CONTRACTS.md`
 6. `config/gorky.yaml`
 7. `src/gorky/publishDecision.ts`
 8. `tests/gorky/fixtures/mentions.ndjson`
 9. `tests/gorky/integration/pipeline.integration.test.ts`
-10. `docs/implementation-package/ROLLOUT_CHECKLIST.md`
+10. `docs/archive/implementation-package/ROLLOUT_CHECKLIST.md`
 
 ---
 

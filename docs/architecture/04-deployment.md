@@ -13,15 +13,20 @@ docker run -e X_API_KEY=... -e XAI_API_KEY=... xai-bot
 
 ## Environment Variables
 
-- `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_SECRET`
-- `XAI_API_KEY`
-- `DRY_RUN` - Set to `true` for safe testing
-- `DEBUG` - Enable debug logging
-- `STATE_DB_PATH` - Path to SQLite database
+Environment variables are documented in one place:
+
+- `docs/operations/var.README.md` (SSOT)
+
+Operationally important variables include:
+- X credentials: `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_SECRET`
+- LLM: `XAI_API_KEY`, `XAI_MODEL_PRIMARY`, `XAI_MODEL_FALLBACKS`
+- Launch control: `LAUNCH_MODE` (`off|dry_run|staging|prod`)
+- State store: `USE_REDIS`, `KV_URL`, `REDIS_KEY_PREFIX` (Redis is required for multi-worker)
 
 ## Health Checks
 
-Run `python scripts/health_check.py` to verify:
-- Database connectivity
-- X API client initialization
-- xAI client initialization
+Use the runtime HTTP endpoints:
+
+- `GET /health`
+- `GET /ready`
+- `GET /metrics`

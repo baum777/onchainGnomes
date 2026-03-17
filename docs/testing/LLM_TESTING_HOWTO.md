@@ -152,5 +152,5 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build
 
 ## Weitere Dokumentation
 
-- `docs/llm_behavior_fingerprinting.md` - Detaillierte Drift-Detection-Doku
+- `docs/testing/llm_behavior_fingerprinting.md` - Detaillierte Drift-Detection-Doku
 - `llm-terminal-test-bundle/README.md` - Harness-Dokumentation

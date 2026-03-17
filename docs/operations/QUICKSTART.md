@@ -2,7 +2,7 @@
 
 Minimal guide to run the system locally and verify it works.
 
-> Environment variables are documented **only** in `docs/var.README.md`.
+> Environment variables are documented **only** in `docs/operations/var.README.md`.
 > Do not duplicate variable documentation anywhere else.
 
 ---
@@ -10,15 +10,15 @@ Minimal guide to run the system locally and verify it works.
 ## 1️⃣ Prerequisites
 
 - Node.js >= 20.0.0
-- npm oder yarn
-- Required API keys (see `docs/var.README.md`)
+- pnpm
+- Required API keys (see `docs/operations/var.README.md`)
 
 ---
 
 ## 2️⃣ Install dependencies
 
 ```bash
-npm install
+pnpm install
 ```
 
 ---
@@ -34,14 +34,14 @@ cp .env.example .env
 2. Open `.env` and configure required variables.
 
 📌 Variable documentation:
-→ `docs/var.README.md` (single source of truth)
+→ [`docs/operations/var.README.md`](../operations/var.README.md) (single source of truth)
 
 ---
 
 ## 4️⃣ Start development
 
 ```bash
-npm run poll
+pnpm poll
 ```
 
 Expected:
@@ -73,17 +73,17 @@ If something fails:
 
 | Topic | File |
 |-------|------|
-| Variables | `docs/var.README.md` |
-| Persona | `docs/PERSONA.md` |
+| Variables | `docs/operations/var.README.md` |
+| Persona | `docs/lore/PERSONA.md` |
 | Architecture | `docs/architecture/` |
 | Workflows | `docs/workflows/` |
-| Adaptive Intelligence | `docs/PHASE2_ADAPTIVE_INTELLIGENCE.md` |
-| Semantic Intelligence | `docs/PHASE3_SEMANTIC_INTELLIGENCE.md` |
+| Adaptive Intelligence | `docs/implementation/PHASE2_ADAPTIVE_INTELLIGENCE.md` |
+| Semantic Intelligence | `docs/implementation/PHASE3_SEMANTIC_INTELLIGENCE.md` |
 
 ---
 
 ## ⚠️ Drift Prevention Rule
 
-* Environment variables → only in `var.README.md`
-* Setup instructions → only in `QUICKSTART.md`
+* Environment variables → only in `docs/operations/var.README.md`
+* Setup instructions → only in `docs/operations/QUICKSTART.md`
 * Workflows → only in `docs/workflows/`

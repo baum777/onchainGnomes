@@ -18,7 +18,9 @@
 
 ## Health Checks
 
-`scripts/health_check.py` verifies:
-- Database connectivity
-- X API client init
-- xAI client init
+Prefer the built-in HTTP endpoints:
+- `GET /health` (full health: store reachable + recent poll success + system signals)
+- `GET /ready` (store ping only)
+- `GET /metrics` (basic metrics)
+
+Note: the production runtime is TypeScript/Node. Any legacy Python health scripts should be treated as reference-only unless explicitly wired into your deployment.

@@ -5,7 +5,7 @@
 ### P0.1 Secret-Sanierung
 - `.env.example`: Alle realen Keys durch Platzhalter ersetzt (`your_x_api_key_here`, `xai-your_api_key_here`, `sk-your_openai_key_here`, `r8_your_replicate_key_here`, `redis://localhost:6379`)
 - `README.md`: Security-Hinweis ergänzt (niemals echte Secrets committen; Keys rotieren falls im Repo)
-- `docs/var.README.md`: Security-Sektion erweitert
+- `docs/operations/var.README.md`: Security-Sektion erweitert
 
 ### P0.2 State-Single-Source-of-Truth
 - StateStore ist einzige Quelle für Cursor, Event-State, Publish-Idempotenz

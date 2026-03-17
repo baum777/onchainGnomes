@@ -15,7 +15,7 @@ Classifies events and routes to appropriate workflow handlers.
 Executes step chains: Normalize → Classify → Decide → Validate → Execute → Persist → Observe.
 
 ### State Manager
-SQLite-based persistence - processed events, cooldowns, conversations.
+StateStore-backed persistence (Redis or filesystem) for cursor, processed/published event state, locks, and worker heartbeat. Multi-worker deployments are Redis-only.
 
 ### X Client
 OAuth 1.0a authenticated X API client for tweets, mentions, media.

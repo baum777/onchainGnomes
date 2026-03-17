@@ -6,7 +6,7 @@
 - [ ] **Secrets set** — X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_SECRET
 - [ ] **LLM key** — XAI_API_KEY or LLM_API_KEY (when LAUNCH_MODE ≠ off)
 - [ ] **Allowlist (staging)** — ALLOWLIST_HANDLES for staging mode
-- [ ] **Dry-run verified** — `LAUNCH_MODE=dry_run pnpm run poll` runs, no posts
+- [ ] **Dry-run verified** — `LAUNCH_MODE=dry_run pnpm poll` runs, no posts
 - [ ] **Smoke tests** — `pnpm run test:smoke` passes
 - [ ] **E2E publish gate** — `pnpm run test:e2e` passes
 

@@ -1,5 +1,7 @@
 # Codebase Audit Summary
 
+> **Hinweis (2026-03-17):** Die Dokumentation wurde kanonisiert. `RUN.md` wurde gelöscht. Pfade: `docs/operations/var.README.md`, `docs/operations/QUICKSTART.md`, `docs/testing/LLM_TESTING_HOWTO.md`. Siehe `docs/audits/docs-canonicalization-report.md`.
+
 - **Theme:** Full Repository Consolidation Audit
 - **Scope:** Root structure, documentation, environment variables, build/deploy paths
 - **Status:** active
@@ -13,8 +15,8 @@
 Das Repository `xAi_Bot-App` ist ein **TypeScript/Node.js-basierter X (Twitter) Bot** mit dem Namen `GORKY_ON_SOL-bot`. Die Architektur ist ein Single-App Monolith mit klarer Schichtentrennung. Die Codebasis ist überwiegend sauber, jedoch gibt es **signifikante Inkonsistenzen zwischen Dokumentation und Code**, veraltete Root-Dateien und eine nicht vollständig synchronisierte `.env.example`.
 
 **Kritische Funde:**
-1. `docs/var.README.md` ist veraltet (referenziert `XAI_MODEL=grok-2`, Code nutzt `XAI_MODEL_PRIMARY=grok-3`)
-2. Root-Level Dokumente `LLM_TESTING_HOWTO.md` und `docs/RUN.md` (deprecated) sind redundant
+1. `docs/operations/var.README.md` ist veraltet (referenziert `XAI_MODEL=grok-2`, Code nutzt `XAI_MODEL_PRIMARY=grok-3`)
+2. Root-Level Dokumente `LLM_TESTING_HOWTO.md` und `docs/RUN.md` (deprecated) sind redundant *(Hinweis 2026-03-17: `docs/RUN.md` wurde entfernt; `LLM_TESTING_HOWTO.md` liegt nun unter `docs/testing/`)*
 3. `.env.example` enthält nicht alle tatsächlich genutzten Variablen (z.B. `SOLANA_RPC_*` fehlt)
 4. Mehrere `.legacy` und `.incoming` Dateien im Root sind tote Artefakte
 5. `README.md` hat inkonsistente Default-Werte (BOT_USERNAME: `serGorky` vs `GORKY_ON_SOL_on_sol`)
@@ -109,7 +111,7 @@ Das Repository `xAi_Bot-App` ist ein **TypeScript/Node.js-basierter X (Twitter) 
 
 **Diskrepanz zwischen Code und `.env.example`:**
 
-| Variable | In Code | In `.env.example` | In `docs/var.README.md` |
+| Variable | In Code | In `.env.example` | In `docs/operations/var.README.md` |
 |----------|---------|-------------------|------------------------|
 | `XAI_MODEL_PRIMARY` | ✅ | ✅ | ❌ (nur `XAI_MODEL`) |
 | `XAI_MODEL_FALLBACKS` | ✅ | ✅ | ❌ |
@@ -131,7 +133,7 @@ Das Repository `xAi_Bot-App` ist ein **TypeScript/Node.js-basierter X (Twitter) 
 | `PUBLISH_LOCK_TTL_MS` | ✅ | ✅ | ❌ |
 | `CURSOR_SYNC_INTERVAL_MS` | ✅ | ✅ | ❌ |
 
-**Veraltete Variablen in `docs/var.README.md`:**
+**Veraltete Variablen in `docs/operations/var.README.md`:**
 - `XAI_MODEL` (ersetzt durch `XAI_MODEL_PRIMARY`)
 - `DEBUG` (nicht mehr verwendet)
 - `STATE_DB_PATH` (nicht mehr verwendet)
@@ -151,10 +153,10 @@ Das Repository `xAi_Bot-App` ist ein **TypeScript/Node.js-basierter X (Twitter) 
 
 | Dokument | Problem |
 |----------|---------|
-| `docs/var.README.md` | Veraltete Variablennamen, fehlende neue Variablen |
-| `docs/QUICKSTART.md` | Verweist auf `npm`, Repo nutzt `pnpm` |
-| `docs/RUN.md` | Markiert als deprecated, aber noch vorhanden |
-| `LLM_TESTING_HOWTO.md` (Root) | Redundant zu `docs/llm_behavior_fingerprinting.md` |
+| `docs/operations/var.README.md` | Veraltete Variablennamen, fehlende neue Variablen |
+| `docs/operations/QUICKSTART.md` | Verweist auf `npm`, Repo nutzt `pnpm` |
+| `docs/RUN.md` | Markiert als deprecated, aber noch vorhanden *(Status 2026-03-17: entfernt)* |
+| `LLM_TESTING_HOWTO.md` (Root; now in `docs/testing/`) | Redundant zu `docs/testing/llm_behavior_fingerprinting.md` |
 
 ---
 ## 5. What Looks Obsolete
@@ -175,8 +177,8 @@ Das Repository `xAi_Bot-App` ist ein **TypeScript/Node.js-basierter X (Twitter) 
 
 | Datei | Aktion | Begründung |
 |-------|--------|------------|
-| `docs/RUN.md` | **Löschen** | Bereits als deprecated markiert, Inhalt redundant zu QUICKSTART |
-| `LLM_TESTING_HOWTO.md` (Root) | **Verschieben** nach `docs/` oder **Löschen** | Redundant zu `docs/llm_behavior_fingerprinting.md` |
+| `docs/RUN.md` | **Löschen** | Bereits als deprecated markiert, Inhalt redundant zu QUICKSTART *(bereits erledigt)* |
+| `LLM_TESTING_HOWTO.md` (Root; now in `docs/testing/`) | **Verschieben** nach `docs/` oder **Löschen** | Redundant zu `docs/testing/llm_behavior_fingerprinting.md` |
 
 ### 5.3 Python-Skripte (Prüfung nötig)
 
@@ -244,15 +246,15 @@ xAi_Bot-App/
 | Gruppe | Zieldatei | Source-Files |
 |--------|-----------|--------------|
 | **Setup & Env** | `docs/SETUP_AND_ENV.md` (neu) | `QUICKSTART.md` + `var.README.md` (aktualisiert) |
-| **Testing** | `docs/testing/LLM_TESTING.md` | `LLM_TESTING_HOWTO.md` (Root) + `llm_behavior_fingerprinting.md` |
+| **Testing** | `docs/testing/LLM_TESTING.md` | `LLM_TESTING_HOWTO.md` (Root; now in `docs/testing/`) + `llm_behavior_fingerprinting.md` |
 
 ### 7.2 Zu aktualisierende Dokumente
 
 | Dokument | Änderung |
 |----------|----------|
-| `docs/var.README.md` | **Aktualisieren** – Alle Variablen auf IST-Stand bringen |
-| `docs/QUICKSTART.md` | **Aktualisieren** – `npm` → `pnpm`, aktuelle Pfade |
-| `docs/RUN.md` | **Löschen** – Bereits deprecated |
+| `docs/operations/var.README.md` | **Aktualisieren** – Alle Variablen auf IST-Stand bringen |
+| `docs/operations/QUICKSTART.md` | **Aktualisieren** – `npm` → `pnpm`, aktuelle Pfade |
+| `docs/RUN.md` | **Löschen** – Bereits deprecated *(bereits erledigt)* |
 
 ---
 
@@ -340,7 +342,7 @@ xAi_Bot-App/
 
 ### 10.1 Hohes Risiko
 
-- **Env-Variablen-Drift:** Neue Teammitglieder verwenden veraltete `docs/var.README.md` und konfigurieren falsche Variablen
+- **Env-Variablen-Drift:** Neue Teammitglieder verwenden veraltete `docs/operations/var.README.md` und konfigurieren falsche Variablen
 - **Python-Skripte:** `scripts/*.py` sind nicht ausführbar ohne venv, führen zu Verwirrung
 
 ### 10.2 Mittleres Risiko
@@ -358,7 +360,7 @@ xAi_Bot-App/
 ## 11. Action Items (Priorisiert)
 
 ### P0 (Kritisch)
-1. [ ] `docs/var.README.md` auf IST-Stand bringen
+1. [ ] `docs/operations/var.README.md` auf IST-Stand bringen
 2. [ ] `.env.example` vervollständigen (SOLANA_RPC_* hinzufügen)
 3. [ ] `README.md` korrigieren (BOT_USERNAME, LAUNCH_MODE)
 
@@ -366,7 +368,7 @@ xAi_Bot-App/
 4. [ ] Root-Dateien löschen: `package.json.incoming`, `package.json.merge-note.md`
 5. [ ] Root-Dateien löschen: `Dockerfile.legacy`, `docker-compose.yml.legacy`
 6. [ ] Root-Dateien löschen: `pyproject.toml.legacy`, `requirements.txt.legacy`
-7. [ ] `docs/RUN.md` löschen (bereits deprecated)
+7. [x] `docs/RUN.md` löschen (bereits deprecated)
 
 ### P2 (Optional)
 8. [ ] `LLM_TESTING_HOWTO.md` nach `docs/testing/` verschieben

@@ -4,8 +4,6 @@ Autonomous X (Twitter) AI Agent — TypeScript/Node worker that polls @mentions,
 
 **Runtime**: TypeScript/Node 20+. Python code in `legacy/python/`; LLM fingerprinting tools in `tools/behavior_fingerprint/` (Python).
 
----
-
 ## Lore & Persona
 
 ### Origin Story (Lore)
@@ -22,7 +20,7 @@ Sharp, sarcastic crypto-native commentator. **Roasts the market** and mocks narr
 | Mocks systems & narratives, not people | No doxxing / harassment |
 | Chaotic but playful, max 280 chars | Never reveal internal logic, scores, trace data |
 
-Vollständig: `docs/LORE.md`, `docs/PERSONA.md`.
+Vollständig: [`docs/lore/LORE.md`](docs/lore/LORE.md), [`docs/lore/PERSONA.md`](docs/lore/PERSONA.md).
 
 ---
 
@@ -39,7 +37,7 @@ Vollständig: `docs/LORE.md`, `docs/PERSONA.md`.
 - **Canonical Pipeline** — Classifier, eligibility, thesis extraction, mode selector, validator, audit log. All publish paths pass `assertPublicTextSafe` and length limits.
 - **Token Audit Engine** — Fail-closed validation for Solana (base58) and EVM (0x+40 hex). Invalid CA → `UNVERIFIED_HIGH_RISK`, `final_risk >= 80`.
 - **Persona Guardrails** — Never claim "verified" without RPC/explorer proof; address spoofing blocked; persona drift detection.
-- **LLM Behavior Fingerprinting** — Detect behavioral drift across model versions. Baseline/compare fingerprints (NDJSON). See `docs/llm_behavior_fingerprinting.md`.
+- **LLM Behavior Fingerprinting** — Detect behavioral drift across model versions. Baseline/compare fingerprints (NDJSON). See `docs/testing/llm_behavior_fingerprinting.md`.
 - **Stress Runner** — Deterministic stress tests (contract spoofing, whale panic, identity, narrative drift, compliance, social manipulation).
 - **Onchain Blueprint** — Solana-first truth layer. See `onchain-blueprint/`.
 - **GNOMES (Multi-Persona)** — Optional multi-gnome ensemble architecture. When `GNOMES_ENABLED=true`, the system supports multiple personas (GORKY, MOSS, SPARK, …), gnome selection per interaction (Phase 2: scoring by intent, affinity, aggression; safe fallback; pipeline-integrated selection before generation), gnome-composed prompts, and routing writeback (`gnomes_routing.jsonl`). GORKY remains the default fallback. See `.env.example` for `GNOMES_ENABLED`, `DEFAULT_SAFE_GNOME`, `GNOME_MEMORY_ENABLED`.
@@ -230,7 +228,7 @@ python tools/behavior_fingerprint/fingerprint_cli.py compare \
   --baseline tests/fingerprint/baseline_profiles/gpt-5.ndjson
 ```
 
-Requires the LLM terminal test harness (`llm-terminal-test-bundle`) or `--results` with pre-run NDJSON. See `docs/llm_behavior_fingerprinting.md`.
+Requires the LLM terminal test harness (`llm-terminal-test-bundle`) or `--results` with pre-run NDJSON. See `docs/testing/llm_behavior_fingerprinting.md`.
 
 ---
 
@@ -257,7 +255,7 @@ Requires the LLM terminal test harness (`llm-terminal-test-bundle`) or `--result
 
 **Note:** When `USE_REDIS=true`, you must provide a valid `KV_URL` with the `redis://` protocol. Get this from your Upstash Console: Connect > Node.js > ioredis. The legacy `UPSTASH_REDIS_REST_URL` (HTTPS) is not compatible with the ioredis library.
 
-Full list: `docs/var.README.md`.
+Full list: [`docs/operations/var.README.md`](docs/operations/var.README.md).
 
 ---
 
@@ -307,7 +305,7 @@ Der Worker schreibt bei jedem erfolgreichen Poll `worker:last_poll_success` in d
 
 - **Build**: `pnpm install --frozen-lockfile && pnpm build`
 - **Start**: `pnpm start`
-- Set env vars from `.env.example` / `docs/var.README.md`.
+- Set env vars from `.env.example` / [`docs/operations/var.README.md`](docs/operations/var.README.md).
 
 ---
 
@@ -355,16 +353,23 @@ docker run --env-file .env xai-bot
 
 ## Documentation
 
+Docs index: [`docs/README.md`](docs/README.md).
+
 | Topic | Path |
 |-------|------|
-| Quick Start | `docs/QUICKSTART.md` |
-| Env Variables | `docs/var.README.md` (SSOT) |
-| Lore | `docs/LORE.md` |
-| Persona | `docs/PERSONA.md` |
-| Architecture | `docs/architecture/` |
-| LLM Fingerprinting | `docs/llm_behavior_fingerprinting.md` |
-| Runbook | `docs/operations/runbook.md` |
-| Onchain Blueprint | `onchain-blueprint/` |
+| Quick Start | [`docs/operations/QUICKSTART.md`](docs/operations/QUICKSTART.md) |
+| Env Variables | [`docs/operations/var.README.md`](docs/operations/var.README.md) (SSOT) |
+| Lore | [`docs/lore/LORE.md`](docs/lore/LORE.md) |
+| Persona | [`docs/lore/PERSONA.md`](docs/lore/PERSONA.md) |
+| Architecture | [`docs/architecture/`](docs/architecture/) |
+| Implementation Prompts | [`docs/implementation/`](docs/implementation/) |
+| Operations | [`docs/operations/`](docs/operations/) |
+| Testing | [`docs/testing/`](docs/testing/) |
+| LLM Fingerprinting | [`docs/testing/llm_behavior_fingerprinting.md`](docs/testing/llm_behavior_fingerprinting.md) |
+| Runbook | [`docs/operations/runbook.md`](docs/operations/runbook.md) |
+| Reference | [`docs/reference/`](docs/reference/) |
+| Archive | [`docs/archive/`](docs/archive/) |
+| Onchain Blueprint | [`onchain-blueprint/`](onchain-blueprint/) |
 
 ---
 

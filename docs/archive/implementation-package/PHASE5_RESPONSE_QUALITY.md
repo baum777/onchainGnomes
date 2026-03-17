@@ -18,8 +18,8 @@ Phase 5 adds the final launch-readiness layer on top of Phases 1–4. It provide
 | `tests/gorky/llm/persona.consistency.test.ts` | enforcePersonaGuardrails, detectPersonaDrift; financial advice, identity attack, meta leak, persona drift |
 | `tests/gorky/llm/goldenCases.json` | Golden fixture: input text, expected (allow/block), block_reason, structure_hint |
 | `tests/gorky/llm/golden.eval.test.ts` | Load goldenCases; block cases → safetyFilter; allow cases → pipeline + persona assertions |
-| `docs/implementation-package/PHASE5_RESPONSE_QUALITY.md` | This document |
-| `docs/implementation-package/LAUNCH_READINESS_CHECKLIST.md` | Quality gates, rollout criteria (dry_run / restricted / full) |
+| `docs/archive/implementation-package/PHASE5_RESPONSE_QUALITY.md` | This document |
+| `docs/archive/implementation-package/LAUNCH_READINESS_CHECKLIST.md` | Quality gates, rollout criteria (dry_run / restricted / full) |
 
 ## 3. Files Updated
 
@@ -62,8 +62,8 @@ Phase 5 adds the final launch-readiness layer on top of Phases 1–4. It provide
 3. `tests/gorky/llm/response.generation.test.ts` (update)
 4. `tests/gorky/llm/persona.consistency.test.ts`
 5. `tests/gorky/llm/golden.eval.test.ts`
-6. `docs/implementation-package/PHASE5_RESPONSE_QUALITY.md`
-7. `docs/implementation-package/LAUNCH_READINESS_CHECKLIST.md`
+6. `docs/archive/implementation-package/PHASE5_RESPONSE_QUALITY.md`
+7. `docs/archive/implementation-package/LAUNCH_READINESS_CHECKLIST.md`
 8. Package docs (README/PACKAGE_SUMMARY) update
 
 ## 8. Test Plan

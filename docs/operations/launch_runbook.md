@@ -25,14 +25,14 @@
 
 3. **Dry-run rehearsal**
    ```bash
-   LAUNCH_MODE=dry_run LOG_LEVEL=debug pnpm run poll
+   LAUNCH_MODE=dry_run LOG_LEVEL=debug pnpm poll
    ```
    - Verify logs show "Would reply" (no actual posts)
    - Check structured logs for run_id, tweet_id
 
 4. **Staging deploy**
    - Deploy with `LAUNCH_MODE=staging` and `ALLOWLIST_HANDLES` set
-   - Start poller: `pnpm run poll` or `node dist/index.js`
+   - Start poller: `pnpm poll` or `node dist/index.js`
    - Only mentions from allowlisted handles will get published replies
 
 5. **Smoke test (5 mentions)**

@@ -1,41 +1,55 @@
-# Runbook
+# Runbook (Operations)
 
-## Starting the Agent
+This runbook covers the **production TypeScript/Node runtime**.
+
+If you are looking at legacy Python material, see `legacy/` (reference only).
+
+## Start (local)
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Initialize database
-python scripts/init_db.py
-
-# Set environment (copy .env.example to .env)
-# Configure X API and xAI credentials
-
-# Run (dry-run for testing)
-DRY_RUN=true python -m src.main
-
-# Run production
-python -m src.main
+pnpm install
+cp .env.example .env
+pnpm build
+pnpm start
 ```
 
-## Stopping
+## Start (development / dry-run)
 
-Graceful shutdown via SIGTERM - scheduler stops after current tick.
+```bash
+pnpm install
+cp .env.example .env
+
+# Dry-run: processes mentions but must not publish
+LAUNCH_MODE=dry_run pnpm poll
+```
+
+## Health / Readiness
+
+- `GET /health` — full health (store reachable + recent poll success + signals)
+- `GET /ready` — store ping only
+- `GET /metrics` — basic metrics
+
+## Stop
+
+Graceful shutdown via SIGTERM; the worker stops after finishing the current tick.
 
 ## Common Tasks
 
-### Run migrations
+### Run CI checks
+
 ```bash
-python scripts/migrate.py
+pnpm run ci
 ```
 
-### Health check
+### Conversation simulation
+
 ```bash
-python scripts/health_check.py
+pnpm simulate
+pnpm simulate:ci
 ```
 
-### Test workflow
-```bash
-python scripts/dry_run.py --event tests/fixtures/sample_events.json
-```
+## Canonical References
+
+- Setup: `docs/operations/QUICKSTART.md`
+- Env vars (SSOT): `docs/operations/var.README.md`
+- Launch controls: `docs/operations/launch_runbook.md`

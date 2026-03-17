@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Superseded
 
 ## Context
 
@@ -14,7 +14,7 @@ Need lightweight persistence for MVP. Requirements:
 
 ## Decision
 
-Use SQLite with aiosqlite for async operations.
+**Historical decision (superseded):** This repo’s production runtime is TypeScript/Node and uses a StateStore abstraction (Redis or filesystem) for persistence. SQLite/aiosqlite references reflect an earlier design and are kept for historical context.
 
 ## Consequences
 

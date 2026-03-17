@@ -2,7 +2,7 @@
 
 ## Kontext
 
-Die Datei `gnomes_master_spec_bundle.zip` ist im Repository nicht vorhanden (Suche: 0 Treffer).
+Die Datei `gnomes_master_spec_bundle.zip` ist im Repository vorhanden und gilt als **aktiver Referenzkontext**.
 Die Implementierung folgt daher **Option B**: Architektur, Schemas und Datenstrukturen werden aus den
 Phase-Prompts ([PHASE1–PHASE5](.)) und dem bestehenden Code abgeleitet.
 
