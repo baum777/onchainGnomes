@@ -70,11 +70,11 @@ async function main(): Promise<void> {
     outputError("skip_invalid_input", "empty input");
   }
 
-  const apiKey = process.env.XAI_API_KEY || process.env.OPENAI_API_KEY;
+  const apiKey = process.env.XAI_API_KEY || process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     outputError(
       "bridge_error",
-      "API Key not set (XAI_API_KEY or OPENAI_API_KEY) — LLM required for canonical pipeline"
+      "API Key not set (XAI_API_KEY, OPENAI_API_KEY or ANTHROPIC_API_KEY) — LLM required for canonical pipeline"
     );
   }
 

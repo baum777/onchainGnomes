@@ -193,9 +193,9 @@ async function runScenario(
 async function main() {
   const { file, strict } = parseArgs();
 
-  const apiKey = process.env.XAI_API_KEY || process.env.OPENAI_API_KEY;
+  const apiKey = process.env.XAI_API_KEY || process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    console.error("XAI_API_KEY oder OPENAI_API_KEY nicht gesetzt. Simulation erfordert LLM-API.");
+    console.error("XAI_API_KEY, OPENAI_API_KEY oder ANTHROPIC_API_KEY nicht gesetzt. Simulation erfordert LLM-API.");
     process.exit(1);
   }
 

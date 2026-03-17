@@ -4,6 +4,7 @@
  */
 
 import type { LLMClient } from "./llmClient.js";
+import { safeExtractJSON } from "./llmJson.js";
 
 type LLMInput = {
   system?: string;
@@ -22,38 +23,8 @@ const CANNED_REPLY =
 /** Models that returned 403; skip until TTL expires */
 const unavailableUntil = new Map<string, number>();
 
-/**
- * Neuer robuster JSON-Extractor – behebt den brittle Parsing-Mangel
- */
-export function safeExtractJSON<T>(raw: string): T {
-  let text = raw.trim()
-    .replace(/```json|```/gi, "")           // Markdown Codeblocks
-    .replace(/<thinking>[\s\S]*?<\/thinking>/gi, "") // Grok Thinking-Tags
-    .trim();
 
-  // 1. Versuch: erstes komplettes JSON-Objekt
-  const match = text.match(/(\{[\s\S]*?\}(?=\s*$|\s*[,}\]]))/);
-  if (match && match[1]) {
-    try {
-      return JSON.parse(match[1]) as T;
-    } catch {
-      // JSON.parse failed on match, continue to fallback
-    }
-  }
-
-  // 2. Fallback: ganzen Text versuchen + kleine Korrekturen
-  text = text.replace(/,\s*}/g, "}").replace(/,\s*]/g, "]");
-  try {
-    return JSON.parse(text) as T;
-  } catch (e) {
-    console.error("[LLM] JSON parse failed → graceful fallback", { error: e, rawLength: raw.length });
-    // Canned Reply statt Crash
-    return {
-      reply_text: "Sorry, ich hatte gerade einen kleinen Denkfehler. Was hast du nochmal gefragt? 🔥",
-      style_label: "degraded"
-    } as any;
-  }
-}
+export { safeExtractJSON };
 
 function extractJSON<T>(text: string): T {
   return safeExtractJSON<T>(text);
