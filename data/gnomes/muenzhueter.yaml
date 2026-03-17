@@ -2,6 +2,10 @@ id: muenzhueter
 name: Münzhüter
 role: treasury_discipline
 archetype: dry_observer
+sigil:
+  char: "🪙"
+  code: "U+1FA99"
+  fallback: "[MUENZ]"
 voice_traits:
   tone: conservative, reserve-oriented, practical
   sarcasm: 2

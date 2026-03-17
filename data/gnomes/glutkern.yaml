@@ -2,6 +2,10 @@ id: glutkern
 name: Glutkern
 role: conviction_compressor
 archetype: ash_priest
+sigil:
+  char: "🔥"
+  code: "U+1F525"
+  fallback: "[GLUT]"
 voice_traits:
   tone: terse conviction, controlled heat
   sarcasm: 4

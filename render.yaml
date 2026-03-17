@@ -1,11 +1,11 @@
-# Render Blueprint — xAi Bot / GORKY_ON_SOL
+# Render Blueprint — Gnomes Bot
 # Background Worker + optional Health Web Service
 # Node.js/TypeScript project — Python files are legacy and ignored
 
 services:
   # Background Worker: 24/7 mention poller
   - type: worker
-    name: xai-bot-worker
+    name: gnomes-worker
     runtime: node
     region: frankfurt
     plan: starter
@@ -34,7 +34,7 @@ services:
       - key: KV_URL
         sync: false  # Set in Render dashboard: redis://default:PASS@HOST.upstash.io:6379
       - key: REDIS_KEY_PREFIX
-        value: "GORKY_ON_SOL:"
+        value: "GNOMES_ONCHAIN:"
 
       # X OAuth2 (sensitive - set in dashboard or Environment Group)
       - key: X_CLIENT_ID
@@ -62,7 +62,7 @@ services:
 
       # Bot Configuration
       - key: BOT_USERNAME
-        value: GORKY_ON_SOL_on_sol
+        value: Gnomes_onchain
       - key: LAUNCH_MODE
         value: prod
       - key: BOT_ACTIVATION_MODE
@@ -90,7 +90,7 @@ services:
 
   # Optional: Health/Metrics Web Service
   - type: web
-    name: xai-bot-health
+    name: gnomes-health
     runtime: node
     region: frankfurt
     plan: free
@@ -110,7 +110,7 @@ services:
 
   # Daily Persona Snippet Extractor — Cron (täglich 3 Uhr UTC)
   - type: cron
-    name: gorky-daily-snippets
+    name: gnomes-daily-snippets
     runtime: node
     region: frankfurt
     plan: free

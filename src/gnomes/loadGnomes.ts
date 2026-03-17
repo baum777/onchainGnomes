@@ -32,16 +32,25 @@ export async function loadGnomes(): Promise<GnomeProfile[]> {
   const yamlFiles = entries.filter((e) => e.endsWith(".yaml") || e.endsWith(".yml"));
   const profiles: GnomeProfile[] = [];
 
+  const errors: string[] = [];
+
   for (const file of yamlFiles) {
     const path = join(dir, file);
     const raw = await readFile(path, "utf-8");
     const parsed = yaml.load(raw) as unknown;
 
-    if (isGnomeProfile(parsed)) {
-      const profile = sanitizeProfile(parsed);
-      registerGnome(profile);
-      profiles.push(profile);
+    if (!isGnomeProfile(parsed)) {
+      errors.push(`${file}: invalid gnome profile schema`);
+      continue;
     }
+
+    const profile = sanitizeProfile(parsed);
+    registerGnome(profile);
+    profiles.push(profile);
+  }
+
+  if (errors.length > 0) {
+    throw new Error(`Invalid gnome profiles: ${errors.join("; ")}`);
   }
 
   return profiles;

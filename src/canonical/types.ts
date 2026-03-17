@@ -292,7 +292,7 @@ export type PipelineResult =
       thesis: ThesisBundle;
       reply_text: string;
       audit: AuditRecord;
-      /** Selected gnome id (when GNOMES enabled); default gorky */
+      /** Selected gnome id (when GNOMES enabled); default stillhalter */
       selectedGnomeId?: string;
       /** Intent from classifier (for writeback) */
       intent?: string;
@@ -360,7 +360,7 @@ export interface CanonicalConfig {
 }
 
 export const DEFAULT_CANONICAL_CONFIG: CanonicalConfig = {
-  persona_name: "GORKY_ON_SOL",
+  persona_name: "Gnomes",
   platform: "twitter",
   thresholds: {
     min_relevance: 0.45,

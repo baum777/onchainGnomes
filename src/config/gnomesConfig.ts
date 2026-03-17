@@ -45,7 +45,7 @@ export interface GnomesConfig {
 
 const DEFAULTS: GnomesConfig = {
   GNOMES_ENABLED: false,
-  DEFAULT_SAFE_GNOME: "gorky",
+  DEFAULT_SAFE_GNOME: "stillhalter",
   GNOME_MEMORY_ENABLED: false,
   GNOME_ROUTING_DEBUG: false,
   GNOME_CONTINUITY_ENABLED: true,
