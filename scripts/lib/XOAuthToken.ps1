@@ -90,6 +90,15 @@ function Test-TokenNeedsRefresh {
 }
 
 function Request-XTokenRefresh {
+    <#
+    .SYNOPSIS
+    Refresh-only OAuth2 helper.
+
+    .DESCRIPTION
+    Uses grant_type=refresh_token with an already valid refresh token.
+    This function does not run full browser PKCE authorization and cannot mint a new refresh token if
+    the current refresh token is invalid/revoked. For that recovery case use scripts/Generate-XOAuthTokens.ps1.
+    #>
     param([pscustomobject]$Config)
 
     $pair = "{0}:{1}" -f $Config.X_CLIENT_ID, $Config.X_CLIENT_SECRET
@@ -101,7 +110,15 @@ function Request-XTokenRefresh {
         client_id     = $Config.X_CLIENT_ID
     }
 
-    $resp = Invoke-RestMethod -Method Post -Uri $Config.X_OAUTH_TOKEN_URL -Headers @{ Authorization = "Basic $basic" } -ContentType "application/x-www-form-urlencoded" -Body $body
+    try {
+        $resp = Invoke-RestMethod -Method Post -Uri $Config.X_OAUTH_TOKEN_URL -Headers @{ Authorization = "Basic $basic" } -ContentType "application/x-www-form-urlencoded" -Body $body
+    } catch {
+        $message = $_.Exception.Message
+        if ($message -match "400" -or $message -match "invalid") {
+            throw "[XAuth] Refresh-Only Flow fehlgeschlagen: gespeicherter X_REFRESH_TOKEN scheint ungültig. Führe scripts/Generate-XOAuthTokens.ps1 für vollständige PKCE Re-Authorisierung aus."
+        }
+        throw
+    }
 
     $rotated = -not [string]::IsNullOrWhiteSpace($resp.refresh_token) -and ($resp.refresh_token -ne $Config.X_REFRESH_TOKEN)
     if ($rotated) {
