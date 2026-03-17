@@ -13,12 +13,13 @@ config({ path: path.resolve(__dirname, "..", ".env") });
 import { validateEnv } from "./config/envSchema.js";
 import { validateLaunchEnvOrExit } from "./config/env.js";
 import { runWorkerLoop } from "./worker/pollMentions.js";
+import { runTimelineEngagementLoop } from "./worker/pollTimelineEngagement.js";
 
 if (process.env.SKIP_ENV_VALIDATION !== "true") {
   validateEnv();
   validateLaunchEnvOrExit();
 }
-runWorkerLoop().catch((e) => {
+Promise.all([runWorkerLoop(), runTimelineEngagementLoop()]).catch((e) => {
   console.error("[FATAL] Worker crashed:", e);
   process.exit(1);
 });
