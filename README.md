@@ -145,7 +145,25 @@ pnpm run ci
 
 ## X OAuth / Runtime Notes
 
-Use OAuth2 refresh flow (`X_REFRESH_TOKEN`) for runtime token renewal. `X_ACCESS_TOKEN` is optional and treated as transient fallback.
+- Runtime uses OAuth2 refresh flow with an existing valid `X_REFRESH_TOKEN`.
+- `offline.access` must be part of scopes during authorization, otherwise X will not issue a `refresh_token`.
+- `X_ACCESS_TOKEN` is optional and treated as transient fallback.
+- Token endpoint for confidential clients uses `Authorization: Basic base64(client_id:client_secret)`.
+
+### Token Tooling
+
+1. **Refresh only (normal runtime path):**
+   - `pwsh ./Refresh-XAccessToken.ps1`
+   - Refreshes an access token with the currently stored `X_REFRESH_TOKEN`.
+   - Does **not** recover from an invalid/revoked refresh token by itself.
+
+2. **Full OAuth2 PKCE re-authorization (recovery path):**
+   - `pwsh ./scripts/Generate-XOAuthTokens.ps1 -ClientId "$env:X_CLIENT_ID" -ClientSecret "$env:X_CLIENT_SECRET"`
+   - Starts browser login + local callback listener.
+   - Use BOT account login (not management account).
+   - Mints a new `refresh_token` (requires `offline.access`) and writes token response to local JSON.
+
+If runtime refresh fails with `invalid token`, `invalid_request`, or `invalid_grant` style errors, run the full PKCE script and update `X_REFRESH_TOKEN` in your runtime secret store.
 
 ## Render Notes
 
