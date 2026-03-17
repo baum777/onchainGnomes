@@ -37,6 +37,24 @@ export const envSchema = z.object({
   XAI_MODEL_PRIMARY: z.string().optional().default("grok-3"),
   XAI_MODEL_FALLBACKS: modelListSchema,
 
+  // LLM provider routing
+  LLM_PROVIDER: z.enum(["xai", "openai", "anthropic"]).optional().default("xai"),
+  LLM_FALLBACK_PROVIDER: z.enum(["xai", "openai", "anthropic"]).optional(),
+  LLM_TIMEOUT_MS: z.string().optional(),
+  LLM_RETRY_MAX: z.string().optional(),
+  LLM_MAX_TOKENS: z.string().optional(),
+  LLM_TEMPERATURE: z.string().optional(),
+
+  // OpenAI
+  OPENAI_API_KEY: z.string().optional().default(""),
+  OPENAI_MODEL: z.string().optional().default("gpt-4o-mini"),
+  OPENAI_BASE_URL: z.string().url().optional().default("https://api.openai.com/v1"),
+
+  // Anthropic
+  ANTHROPIC_API_KEY: z.string().optional().default(""),
+  ANTHROPIC_MODEL: z.string().optional().default("claude-3-5-sonnet-latest"),
+  ANTHROPIC_BASE_URL: z.string().url().optional().default("https://api.anthropic.com/v1"),
+
   // Redis configuration
   USE_REDIS: z
     .string()
@@ -99,6 +117,18 @@ export function validateEnv(): EnvConfig {
     XAI_BASE_URL: process.env.XAI_BASE_URL,
     XAI_MODEL_PRIMARY: process.env.XAI_MODEL_PRIMARY ?? process.env.XAI_MODEL,
     XAI_MODEL_FALLBACKS: process.env.XAI_MODEL_FALLBACKS,
+    LLM_PROVIDER: process.env.LLM_PROVIDER?.toLowerCase(),
+    LLM_FALLBACK_PROVIDER: process.env.LLM_FALLBACK_PROVIDER?.toLowerCase() || undefined,
+    LLM_TIMEOUT_MS: process.env.LLM_TIMEOUT_MS,
+    LLM_RETRY_MAX: process.env.LLM_RETRY_MAX,
+    LLM_MAX_TOKENS: process.env.LLM_MAX_TOKENS,
+    LLM_TEMPERATURE: process.env.LLM_TEMPERATURE,
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY ?? process.env.LLM_API_KEY ?? "",
+    OPENAI_MODEL: process.env.OPENAI_MODEL,
+    OPENAI_BASE_URL: process.env.OPENAI_BASE_URL,
+    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ?? "",
+    ANTHROPIC_MODEL: process.env.ANTHROPIC_MODEL,
+    ANTHROPIC_BASE_URL: process.env.ANTHROPIC_BASE_URL,
     USE_REDIS: process.env.USE_REDIS,
     KV_URL: process.env.KV_URL,
     REDIS_KEY_PREFIX: process.env.REDIS_KEY_PREFIX,

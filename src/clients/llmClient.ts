@@ -1,16 +1,48 @@
 /**
- * LLM Client interface — Abstraction for JSON-capable LLM calls
+ * LLM client contract (provider-agnostic port for business pipelines)
  */
 
+export type LLMProvider = "xai" | "openai" | "anthropic";
+
+export interface LLMRequest {
+  system: string;
+  developer: string;
+  user: string;
+  schemaHint?: string;
+  /** Override temperature. */
+  temperature?: number;
+  /** Override max tokens. */
+  max_tokens?: number;
+}
+
+export interface LLMUsage {
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+}
+
+export interface LLMResponse<T> {
+  data: T;
+  provider: LLMProvider;
+  model: string;
+  usage?: LLMUsage;
+}
+
+export type LLMErrorKind =
+  | "transient"
+  | "auth"
+  | "policy"
+  | "rate_limit"
+  | "invalid_response"
+  | "unknown";
+
+export interface LLMError extends Error {
+  kind: LLMErrorKind;
+  provider: LLMProvider;
+  statusCode?: number;
+  retryable: boolean;
+}
+
 export interface LLMClient {
-  generateJSON<T>(input: {
-    system: string;
-    developer: string;
-    user: string;
-    schemaHint?: string;
-    /** Override temperature (xAI). Default 0.7; use 0.9 for refine/aggressive replies. */
-    temperature?: number;
-    /** Override max_tokens (xAI). Default 350; use 400 for refine pass. */
-    max_tokens?: number;
-  }): Promise<T>;
+  generateJSON<T>(input: LLMRequest): Promise<T>;
 }
