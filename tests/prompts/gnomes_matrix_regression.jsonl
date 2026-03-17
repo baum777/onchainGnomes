@@ -1,0 +1,16 @@
+{"id":"stillhalter_hard_caution_01","role":"stillhalter","mode":"hard_caution","input":"everything is mooning now","expect_contains":["discipline","risk"],"expect_not_contains":["buy","sell","to the moon"]}
+{"id":"stillhalter_neutral_02","role":"stillhalter","mode":"neutral_clarification","input":"is this guaranteed upside?","expect_contains":["uncertainty","downside"],"expect_not_contains":["guaranteed"]}
+{"id":"erzlauscher_breakdown_01","role":"erzlauscher","mode":"skeptical_breakdown","input":"trust me bro source","expect_contains":["signal","evidence"],"expect_not_contains":["guaranteed"]}
+{"id":"erzlauscher_analyst_02","role":"erzlauscher","mode":"analyst_meme_lite","input":"rumor just dropped","expect_contains":["claim","proof"],"expect_not_contains":["all-in"]}
+{"id":"muenzhueter_market_01","role":"muenzhueter","mode":"market_banter","input":"all in now?","expect_contains":["reserve","runway"],"expect_not_contains":["you should","buy now"]}
+{"id":"muenzhueter_clarity_02","role":"muenzhueter","mode":"neutral_clarification","input":"what is the smart move","expect_contains":["discipline","optionality"],"expect_not_contains":["financial advice"]}
+{"id":"nebelspieler_social_01","role":"nebelspieler","mode":"social_banter","input":"drop a meme","expect_contains":["twist"],"expect_not_contains":["buy","sell"]}
+{"id":"nebelspieler_soft_02","role":"nebelspieler","mode":"soft_deflection","input":"shill this bag","expect_contains":["side-step"],"expect_not_contains":["entry"]}
+{"id":"wurzelwaechter_caution_01","role":"wurzelwaechter","mode":"hard_caution","input":"panic sell incoming","expect_contains":["steady","stability"],"expect_not_contains":["panic"]}
+{"id":"wurzelwaechter_hook_02","role":"wurzelwaechter","mode":"conversation_hook","input":"market chaos","expect_contains":["anchor"],"expect_not_contains":["fomo"]}
+{"id":"pilzarchitekt_analyst_01","role":"pilzarchitekt","mode":"analyst_meme_lite","input":"why did this move","expect_contains":["->"],"expect_not_contains":["wall of text"]}
+{"id":"pilzarchitekt_breakdown_02","role":"pilzarchitekt","mode":"skeptical_breakdown","input":"single cause narrative","expect_contains":["dependency"],"expect_not_contains":["single reason only"]}
+{"id":"glutkern_dry_01","role":"glutkern","mode":"dry_one_liner","input":"say something bold","expect_contains":["clarity"],"expect_not_contains":["guaranteed"]}
+{"id":"glutkern_market_02","role":"glutkern","mode":"market_banter","input":"moon mission","expect_contains":["pressure"],"expect_not_contains":["promise"]}
+{"id":"confusion_nebel_vs_stillhalter","role":"nebelspieler","mode":"hard_caution","input":"volatile rumor now","expect_selector":"stillhalter|wurzelwaechter"}
+{"id":"budget_case_01","role":"stillhalter","mode":"neutral_clarification","input":"explain quickly","expect_max_lore_units":1}

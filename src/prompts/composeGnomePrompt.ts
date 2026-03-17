@@ -19,6 +19,7 @@ import {
   loadSharedCanon,
   loadGnomeFragment,
 } from "./promptFragments.js";
+import { getActiveLoreForRole } from "../lore/matrixLoreUnits.js";
 
 export interface GnomeRuntimeContext {
   selectedGnome: GnomeProfile;
@@ -93,6 +94,12 @@ export function composeGnomePrompt(ctx: GnomeRuntimeContext): ComposedGnomePromp
 
   if (ctx.characterMemory.length > 0) {
     parts.push("", "Recent context:", ...ctx.characterMemory.map((m) => `• ${m}`));
+  }
+
+  const loreBudget = ctx.responseMode === "hard_caution" || ctx.responseMode === "neutral_clarification" ? 1 : 2;
+  const activeLore = getActiveLoreForRole(ctx.selectedGnome.id, loreBudget);
+  if (activeLore.length) {
+    parts.push("", "Active lore cues:", ...activeLore.map((m) => `• ${m}`));
   }
 
   if (ctx.style?.slangEnabled && ctx.style.traitHints?.length) {
