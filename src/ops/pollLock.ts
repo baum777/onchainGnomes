@@ -9,13 +9,16 @@ import { getStateStore } from "../state/storeFactory.js";
 import { getStoreType } from "../state/storeFactory.js";
 import { incrementCounter } from "../observability/metrics.js";
 import { COUNTER_NAMES } from "../observability/metricTypes.js";
-import { logInfo, logWarn } from "../ops/logger.js";
+import { logInfo, logWarn, logError } from "../ops/logger.js";
+import { serializeError } from "../utils/errorSerialization.js";
 
 const POLL_LOCK_KEY = "worker:poll_lock";
 const POLL_LOCK_TTL_SECONDS = 120; // 2 minutes — long enough for poll + process cycle
 const POLL_LOCK_RETRY_MS = 15_000; // 15s between acquire attempts when not leader
 
 let cachedHolderId: string | null = null;
+
+export type PollLockAcquireResult = "acquired" | "denied" | "error";
 
 /** Stable holder ID for this process (reused for extend/release). */
 export function getHolderId(): string {
@@ -27,16 +30,18 @@ export function getHolderId(): string {
 }
 
 /**
- * Try to acquire the poll lock. Returns true if this process is now the leader.
- * When Redis: uses distributed SET NX. When FileSystem: process-local (always succeeds if no race).
+ * Try to acquire the poll lock.
+ * - acquired: we are leader
+ * - denied: someone else holds the lock
+ * - error: infrastructure failure (must not be treated as "just follower")
  */
-export async function tryAcquirePollLock(holderId?: string): Promise<boolean> {
+export async function tryAcquirePollLock(holderId?: string): Promise<PollLockAcquireResult> {
   const store = getStateStore();
   const id = holderId ?? getHolderId();
   const useLock = process.env.POLL_LOCK_ENABLED !== "false" && getStoreType() === "redis";
 
   if (!useLock) {
-    return true; // No distributed lock — single worker mode
+    return "acquired";
   }
 
   try {
@@ -44,14 +49,17 @@ export async function tryAcquirePollLock(holderId?: string): Promise<boolean> {
     if (acquired) {
       incrementCounter(COUNTER_NAMES.POLL_LOCK_ACQUIRED_TOTAL);
       logInfo("[POLL_LOCK] Acquired leader lock", { holderId: id });
-      return true;
+      return "acquired";
     }
     incrementCounter(COUNTER_NAMES.POLL_LOCK_FAILED_TOTAL);
-    return false;
+    return "denied";
   } catch (error) {
     incrementCounter(COUNTER_NAMES.POLL_LOCK_FAILED_TOTAL);
-    logWarn("[POLL_LOCK] Failed to acquire lock", { error: (error as Error).message });
-    return false;
+    logError("[POLL_LOCK] Infrastructure error while acquiring lock", {
+      holderId: id,
+      error: serializeError(error),
+    });
+    return "error";
   }
 }
 
@@ -70,7 +78,6 @@ export async function extendPollLock(holderId: string): Promise<boolean> {
     if (!ok) logWarn("[POLL_LOCK] Failed to extend lock");
     return ok;
   }
-  // Fallback: re-acquire (will fail if someone else has it)
   return store.tryAcquireLeaderLock(POLL_LOCK_KEY, holderId, POLL_LOCK_TTL_SECONDS);
 }
 
