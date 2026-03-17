@@ -32,6 +32,7 @@ import { trimToLimit } from "../utils/textTrim.js";
 import { getGnomesConfig } from "../config/gnomesConfig.js";
 import { loadGnomes } from "../gnomes/loadGnomes.js";
 import { getGnome } from "../gnomes/registry.js";
+import type { GnomeSelectionResult } from "../routing/gnomeSelector.js";
 import { extractSelectorFeatures } from "../routing/selectorFeatures.js";
 import { resolveContinuity } from "../routing/continuityResolver.js";
 import { selectGnome } from "../routing/gnomeSelector.js";
@@ -129,13 +130,16 @@ async function generateFullSpectrum(
   if (gnomesCfg.GNOMES_ENABLED) {
     try {
       await loadGnomes();
-      const features = extractSelectorFeatures(cls, scores, event, {
-        marketEnergy: promptContext?.style?.energyLevel ?? "MEDIUM",
-      });
-      const selection = selectGnome(features, initialMode, {
-        defaultSafeGnome: gnomesCfg.DEFAULT_SAFE_GNOME,
-        enabled: true,
-      });
+      // Use pre-selection from pipeline when available (Phase-2: single selection point)
+      const selection = promptContext?.gnomeSelection ?? (() => {
+        const features = extractSelectorFeatures(cls, scores, event, {
+          marketEnergy: promptContext?.style?.energyLevel ?? "MEDIUM",
+        });
+        return selectGnome(features, initialMode, {
+          defaultSafeGnome: gnomesCfg.DEFAULT_SAFE_GNOME,
+          enabled: true,
+        });
+      })();
       const continuity = resolveContinuity(
         selection.selectedGnomeId,
         { threadId: event.event_id },
@@ -305,6 +309,8 @@ export interface FallbackCascadeContext {
   style?: StyleContext;
   /** Pre-LLM estimated bissigkeit for prompt hint */
   estimatedBissigkeit?: number;
+  /** Phase-2: Pre-selected gnome (from pipeline); skips internal selection */
+  gnomeSelection?: GnomeSelectionResult;
 }
 
 export async function fallbackCascade(

@@ -42,7 +42,7 @@ Vollständig: `docs/LORE.md`, `docs/PERSONA.md`.
 - **LLM Behavior Fingerprinting** — Detect behavioral drift across model versions. Baseline/compare fingerprints (NDJSON). See `docs/llm_behavior_fingerprinting.md`.
 - **Stress Runner** — Deterministic stress tests (contract spoofing, whale panic, identity, narrative drift, compliance, social manipulation).
 - **Onchain Blueprint** — Solana-first truth layer. See `onchain-blueprint/`.
-- **GNOMES (Multi-Persona)** — Optional multi-gnome ensemble architecture. When `GNOMES_ENABLED=true`, the system supports multiple personas (GORKY, MOSS, SPARK, …), gnome selection per interaction, and gnome-composed prompts. GORKY remains the default fallback. See `.env.example` for `GNOMES_ENABLED`, `DEFAULT_SAFE_GNOME`, `GNOME_MEMORY_ENABLED`.
+- **GNOMES (Multi-Persona)** — Optional multi-gnome ensemble architecture. When `GNOMES_ENABLED=true`, the system supports multiple personas (GORKY, MOSS, SPARK, …), gnome selection per interaction (Phase 2: scoring by intent, affinity, aggression; safe fallback; pipeline-integrated selection before generation), gnome-composed prompts, and routing writeback (`gnomes_routing.jsonl`). GORKY remains the default fallback. See `.env.example` for `GNOMES_ENABLED`, `DEFAULT_SAFE_GNOME`, `GNOME_MEMORY_ENABLED`.
 
 ---
 

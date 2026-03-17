@@ -277,6 +277,14 @@ export interface AuditRecord {
   bissigkeit_score?: number;
 }
 
+/** Phase-2: Gnome selection result for routing writeback (avoids routing→canonical import) */
+export interface GnomeSelectionForWriteback {
+  selectedGnomeId: string;
+  alternativeCandidates: Array<{ gnomeId: string; score: number }>;
+  reasoning: string[];
+  responseMode: string;
+}
+
 export type PipelineResult =
   | {
       action: "publish";
@@ -288,6 +296,8 @@ export type PipelineResult =
       selectedGnomeId?: string;
       /** Intent from classifier (for writeback) */
       intent?: string;
+      /** Phase-2: Full gnome selection for routing writeback */
+      gnomeSelection?: GnomeSelectionForWriteback;
     }
   | {
       action: "skip";

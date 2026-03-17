@@ -57,6 +57,11 @@ import {
 } from "../ops/pollLock.js";
 import { logInfo, logWarn } from "../ops/logger.js";
 import { writeInteractionWriteback } from "../memory/writeback/interactionWriteback.js";
+import {
+  writeRoutingDecision,
+  writeInteractionEvent,
+  writeReplyOutcome,
+} from "../memory/writeback/routingWriteback.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -325,6 +330,35 @@ export async function processCanonicalMention(
       safety_passed: true,
       published,
     }).catch(() => {});
+
+    // Phase-2: Routing writeback when gnomeSelection available
+    if (result.gnomeSelection) {
+      writeRoutingDecision({
+        event_id: mention.id,
+        user_id: event.author_id,
+        user_handle: mention.authorUsername ?? event.author_handle,
+        selected_gnome_id: result.gnomeSelection.selectedGnomeId,
+        alternative_candidates: result.gnomeSelection.alternativeCandidates.map((c) => ({
+          gnomeId: c.gnomeId,
+          score: c.score,
+        })),
+        response_mode: result.gnomeSelection.responseMode,
+        reasoning: result.gnomeSelection.reasoning,
+      });
+      writeInteractionEvent({
+        event_id: mention.id,
+        user_id: event.author_id,
+        user_handle: mention.authorUsername ?? event.author_handle,
+        gnome_id: result.gnomeSelection.selectedGnomeId,
+        intent: result.intent ?? (result.audit?.classifier_output as { intent?: string } | undefined)?.intent,
+      });
+      writeReplyOutcome({
+        event_id: mention.id,
+        reply_text: result.reply_text,
+        safety_passed: true,
+        published,
+      });
+    }
 
     return result;
   } catch (error) {

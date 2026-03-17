@@ -34,6 +34,14 @@ import {
   estimateBissigkeitProxy,
   resolveStyle,
 } from "../style/styleResolver.js";
+import { getGnomesConfig } from "../config/gnomesConfig.js";
+import { loadGnomes } from "../gnomes/loadGnomes.js";
+import { getAllGnomes } from "../gnomes/registry.js";
+import { getUserAffinityStore } from "../memory/userAffinityStore.js";
+import { extractSelectorFeatures } from "../routing/selectorFeatures.js";
+import { resolveContinuity } from "../routing/continuityResolver.js";
+import { selectGnome } from "../routing/gnomeSelector.js";
+import type { GnomeSelectionResult } from "../routing/gnomeSelector.js";
 
 export interface PipelineDeps {
   llm: LLMClient;
@@ -264,6 +272,40 @@ export async function handleEvent(
     return makeSkipResult(event, "skip_format_decision", cls, scores, config);
   }
 
+  let gnomeSelection: GnomeSelectionResult | undefined;
+  const gnomesCfg = getGnomesConfig();
+  if (gnomesCfg.GNOMES_ENABLED) {
+    try {
+      await loadGnomes();
+      const affinityStore = getUserAffinityStore();
+      const gnomes = getAllGnomes();
+      const userAffinityByGnome: Record<string, number> = {};
+      for (const g of gnomes) {
+        const a = await affinityStore.getAffinity(event.author_id, g.id);
+        userAffinityByGnome[g.id] = a?.familiarity ?? 0;
+      }
+      const features = extractSelectorFeatures(cls, scores, event, {
+        marketEnergy: styleContext?.energyLevel ?? "MEDIUM",
+      });
+      const selection = selectGnome(features, mode, {
+        defaultSafeGnome: gnomesCfg.DEFAULT_SAFE_GNOME,
+        enabled: true,
+        userAffinityByGnome,
+      });
+      const continuity = resolveContinuity(
+        selection.selectedGnomeId,
+        { threadId: event.event_id },
+        { continuityEnabled: gnomesCfg.GNOME_CONTINUITY_ENABLED },
+      );
+      gnomeSelection = {
+        ...selection,
+        selectedGnomeId: continuity.gnomeId,
+      };
+    } catch {
+      // Keep gnomeSelection undefined; fallbackCascade will select internally
+    }
+  }
+
   const promptContext = {
     pattern_id: pattern.pattern_id,
     narrative_label: narrative?.label ?? undefined,
@@ -271,6 +313,7 @@ export async function handleEvent(
     style: styleContext,
     relevanceResult,
     estimatedBissigkeit: bissigkeit,
+    gnomeSelection,
   };
 
   const result = await fallbackCascade(
@@ -347,6 +390,7 @@ export async function handleEvent(
     audit,
     selectedGnomeId: result.selectedGnomeId ?? "gorky",
     intent: cls.intent,
+    gnomeSelection,
   };
 }
 
