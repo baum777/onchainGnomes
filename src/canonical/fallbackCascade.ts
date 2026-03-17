@@ -29,6 +29,16 @@ import {
 } from "./fullSpectrumPromptBuilder.js";
 import { loadPersonaSnippets } from "../persona/memorySnippets.js";
 import { trimToLimit } from "../utils/textTrim.js";
+import { getGnomesConfig } from "../config/gnomesConfig.js";
+import { loadGnomes } from "../gnomes/loadGnomes.js";
+import { getGnome } from "../gnomes/registry.js";
+import { extractSelectorFeatures } from "../routing/selectorFeatures.js";
+import { resolveContinuity } from "../routing/continuityResolver.js";
+import { selectGnome } from "../routing/gnomeSelector.js";
+import { composeGnomePrompt } from "../prompts/composeGnomePrompt.js";
+import { getCharacterMemoryStore } from "../memory/characterMemory.js";
+import { createSharedLoreStore } from "../memory/sharedLoreStore.js";
+import { createLoreStore } from "../memory/loreStore.js";
 
 interface GenerateResult {
   reply_text: string;
@@ -100,8 +110,10 @@ async function generateFullSpectrum(
   thesis: ThesisBundle,
   scores: ScoreBundle,
   config: CanonicalConfig,
+  cls: ClassifierOutput,
+  initialMode: CanonicalMode,
   promptContext?: FallbackCascadeContext,
-): Promise<{ reply_text: string; model_id: string; prompt_hash: string; finalBissigkeit?: number } | null> {
+): Promise<{ reply_text: string; model_id: string; prompt_hash: string; finalBissigkeit?: number; selectedGnomeId: string } | null> {
   const budgetCheck = await checkLLMBudget(false);
   if (!budgetCheck.allowed) {
     console.warn(`[BUDGET_GATE] Blocking Full Spectrum LLM for event ${event.event_id}: ${budgetCheck.skipReason}`);
@@ -109,28 +121,101 @@ async function generateFullSpectrum(
   }
   await recordLLMCall(false);
 
-  let personaSnippets: string[] | undefined;
-  const isStandalone = !event.parent_text && (event.conversation_context?.length ?? 0) === 0;
-  if (isStandalone) {
+  const gnomesCfg = getGnomesConfig();
+  let selectedGnomeId = gnomesCfg.DEFAULT_SAFE_GNOME;
+
+  let input: { system: string; developer: string; user: string };
+
+  if (gnomesCfg.GNOMES_ENABLED) {
     try {
-      const snippets = await loadPersonaSnippets();
-      if (snippets.length > 0) {
-        personaSnippets = snippets.map((s) => s.text);
+      await loadGnomes();
+      const features = extractSelectorFeatures(cls, scores, event, {
+        marketEnergy: promptContext?.style?.energyLevel ?? "MEDIUM",
+      });
+      const selection = selectGnome(features, initialMode, {
+        defaultSafeGnome: gnomesCfg.DEFAULT_SAFE_GNOME,
+        enabled: true,
+      });
+      const continuity = resolveContinuity(
+        selection.selectedGnomeId,
+        { threadId: event.event_id },
+        { continuityEnabled: gnomesCfg.GNOME_CONTINUITY_ENABLED },
+      );
+      selectedGnomeId = continuity.gnomeId;
+      const profile = getGnome(selectedGnomeId);
+
+      if (profile) {
+        const sharedLoreStore = createSharedLoreStore(createLoreStore());
+        const sharedLore = await sharedLoreStore.getFragments({ limit: 3 });
+        const charMem = getCharacterMemoryStore();
+        const memoryItems = await charMem.getItems({
+          gnomeId: selectedGnomeId,
+          userId: event.author_id,
+          limit: 5,
+        });
+        const composed = composeGnomePrompt({
+          selectedGnome: profile,
+          sharedLore: sharedLore.map((f) => f.content),
+          characterMemory: memoryItems.map((m) => m.content),
+          threadContext: event.parent_text ?? undefined,
+          responseMode: initialMode,
+          event,
+          thesis,
+          scores,
+          style: promptContext?.style,
+          pattern_id: promptContext?.pattern_id,
+          narrative_label: promptContext?.narrative_label,
+        });
+        input = { system: composed.system, developer: composed.developer, user: composed.user };
+      } else {
+        input = buildMasterPrompt(
+          event,
+          thesis,
+          scores,
+          promptContext?.relevanceResult,
+          undefined,
+          promptContext?.style,
+          promptContext?.estimatedBissigkeit,
+        );
       }
-    } catch {
-      // Snippets optional, continue without
+    } catch (err) {
+      if (gnomesCfg.GNOME_ROUTING_DEBUG) {
+        console.warn("[GNOMES] Fallback to legacy prompt after error:", err);
+      }
+      input = buildMasterPrompt(
+        event,
+        thesis,
+        scores,
+        promptContext?.relevanceResult,
+        undefined,
+        promptContext?.style,
+        promptContext?.estimatedBissigkeit,
+      );
     }
+  } else {
+    let personaSnippets: string[] | undefined;
+    const isStandalone = !event.parent_text && (event.conversation_context?.length ?? 0) === 0;
+    if (isStandalone) {
+      try {
+        const snippets = await loadPersonaSnippets();
+        if (snippets.length > 0) {
+          personaSnippets = snippets.map((s) => s.text);
+        }
+      } catch {
+        // Snippets optional, continue without
+      }
+    }
+    input = buildMasterPrompt(
+      event,
+      thesis,
+      scores,
+      promptContext?.relevanceResult,
+      personaSnippets,
+      promptContext?.style,
+      promptContext?.estimatedBissigkeit,
+    );
   }
 
-  const input = buildMasterPrompt(
-    event,
-    thesis,
-    scores,
-    promptContext?.relevanceResult,
-    personaSnippets,
-    promptContext?.style,
-    promptContext?.estimatedBissigkeit,
-  );
   const raw = await llm.generateJSON<unknown>({
     system: input.system,
     developer: input.developer,
@@ -192,6 +277,7 @@ async function generateFullSpectrum(
     model_id: config.model_id,
     prompt_hash,
     finalBissigkeit,
+    selectedGnomeId,
   };
 }
 
@@ -205,6 +291,8 @@ export interface FallbackResult {
   attempts: number;
   /** Post-LLM hybrid bissigkeit (Full Spectrum only) */
   finalBissigkeit?: number;
+  /** Selected gnome id (when GNOMES_ENABLED) */
+  selectedGnomeId?: string;
 }
 
 export interface FallbackCascadeContext {
@@ -234,7 +322,7 @@ export async function fallbackCascade(
   const maxAttempts = config.retries.generation_attempts;
 
   if ((config as { full_spectrum_prompt?: boolean }).full_spectrum_prompt) {
-    const gen = await generateFullSpectrum(llm, event, thesis, scores, config, promptContext);
+    const gen = await generateFullSpectrum(llm, event, thesis, scores, config, cls, currentMode, promptContext);
     if (gen === null) {
       return {
         success: false,
@@ -263,6 +351,7 @@ export async function fallbackCascade(
         validation: val,
         attempts,
         finalBissigkeit: gen.finalBissigkeit,
+        selectedGnomeId: gen.selectedGnomeId,
       };
     }
     const repairEnabled = (config as { repair_enabled?: boolean }).repair_enabled ?? true;
@@ -284,6 +373,7 @@ export async function fallbackCascade(
           validation: repairOut.validation_after,
           attempts,
           finalBissigkeit: gen.finalBissigkeit,
+          selectedGnomeId: gen.selectedGnomeId,
         };
       }
     }
@@ -296,6 +386,7 @@ export async function fallbackCascade(
       validation: val,
       attempts,
       finalBissigkeit: gen.finalBissigkeit,
+      selectedGnomeId: gen.selectedGnomeId,
     };
   }
 

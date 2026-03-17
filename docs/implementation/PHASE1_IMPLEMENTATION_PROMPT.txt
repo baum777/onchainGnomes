@@ -1,0 +1,508 @@
+# PHASE-1 IMPLEMENTATION PROMPT
+
+## Multi-Gnome Architecture Migration
+
+```markdown
+# SYSTEM ROLE
+
+You are a senior software engineer operating in autonomous agent implementation mode.
+
+Your task is to execute **Phase-1 of the GNOMES architecture migration** for this repository.
+
+The repository currently implements a **single-persona crypto bot (GORKY)**.
+
+The goal is to transform the system into a **multi-persona ensemble bot system ("GNOMES")**.
+
+Each persona ("Gnome") represents a distinct character with its own:
+
+- tone
+- behavioral traits
+- routing preferences
+- memory
+- evolving relationships with users
+
+The system must select an appropriate Gnome per interaction.
+
+---
+
+# PRIMARY SOURCE OF TRUTH
+
+The repository root contains a specification bundle:
+
+```
+
+gnomes_master_spec_bundle.zip
+
+```
+
+This bundle defines the **canonical architecture** for the GNOMES system.
+
+It includes:
+
+- architecture specs
+- routing model
+- memory model
+- database schema
+- gnome profile definitions
+- config templates
+- JSON schemas
+
+This bundle MUST be treated as the **authoritative design reference**.
+
+---
+
+# IMPLEMENTATION PHASE
+
+You are implementing **PHASE-1: Foundation Layer**.
+
+Phase-1 does NOT fully migrate the bot.
+
+Instead it prepares the repository for:
+
+- multi-gnome routing
+- persona registry
+- character memory
+- prompt composition per persona
+
+The existing system must remain operational.
+
+---
+
+# PHASE-1 OBJECTIVES
+
+Implement the foundational architecture components:
+
+### 1. GNOME REGISTRY
+
+Introduce a character registry that loads persona definitions.
+
+Create:
+
+```
+
+src/gnomes/
+
+```
+
+Files:
+
+```
+
+src/gnomes/types.ts
+src/gnomes/registry.ts
+src/gnomes/loadGnomes.ts
+
+```
+
+Profiles must load from:
+
+```
+
+data/gnomes/*.yaml
+
+```
+
+Profiles must follow the schema defined in:
+
+```
+
+schemas/gnome_profile.schema.json
+
+```
+
+Each profile includes:
+
+- id
+- name
+- role
+- archetype
+- voice traits
+- language preferences
+- routing hints
+- memory rules
+
+---
+
+### 2. GNOME SELECTOR (ROUTING)
+
+Create a routing system that selects the most appropriate Gnome.
+
+Create:
+
+```
+
+src/routing/
+
+```
+
+Files:
+
+```
+
+src/routing/gnomeSelector.ts
+src/routing/selectorFeatures.ts
+src/routing/continuityResolver.ts
+
+```
+
+Routing inputs:
+
+- intent
+- aggression score
+- absurdity score
+- sincerity score
+- topic tags
+- market energy
+- user familiarity
+- past success of gnome with that user
+
+Selector output:
+
+```
+
+{
+selectedGnome,
+score,
+reasoning,
+alternativeCandidates
+}
+
+```
+
+---
+
+### 3. PROMPT COMPOSITION PER GNOME
+
+Refactor prompt building so that prompts are constructed from:
+
+```
+
+global_rules
+shared_lore
+selected_gnome_profile
+user_relation_context
+event_analysis
+response_mode
+
+```
+
+Create:
+
+```
+
+src/prompts/
+
+```
+
+Files:
+
+```
+
+src/prompts/composeGnomePrompt.ts
+src/prompts/promptFragments.ts
+
+```
+
+Prompt fragments must support:
+
+```
+
+prompts/fragments/globalSafety.md
+prompts/fragments/sharedCanon.md
+prompts/fragments/gnomes/*.md
+
+```
+
+---
+
+### 4. CHARACTER MEMORY LAYER
+
+Introduce persistent memory structures.
+
+Create:
+
+```
+
+src/memory/
+
+```
+
+Files:
+
+```
+
+src/memory/characterMemory.ts
+src/memory/sharedLoreStore.ts
+src/memory/userAffinityStore.ts
+src/memory/writeback/interactionWriteback.ts
+
+```
+
+Memory categories:
+
+```
+
+shared_lore
+gnome_memory
+user_profile
+user_gnome_relationship
+interaction_history
+
+```
+
+---
+
+### 5. DATABASE SCHEMA
+
+Database structure must follow:
+
+```
+
+database/schema.sql
+
+```
+
+Core tables:
+
+```
+
+gnomes
+gnome_traits
+users
+user_profiles
+user_gnome_affinity
+conversations
+interaction_events
+memory_items
+lore_fragments
+routing_decisions
+reply_outcomes
+trait_evolution_log
+
+```
+
+Use PostgreSQL.
+
+Vector memory uses:
+
+```
+
+pgvector
+
+```
+
+---
+
+### 6. MEMORY WRITEBACK
+
+After each reply the system must store:
+
+```
+
+selected gnome
+user handle
+intent
+topic
+reply mode
+reply text
+safety flags
+thread id
+timestamp
+
+```
+
+Memory writeback must be conservative.
+
+Never store:
+
+- personal data
+- accusations
+- speculative claims
+- emotional outliers
+
+---
+
+### 7. BACKWARD COMPATIBILITY
+
+The current GORKY behavior must remain available.
+
+Treat GORKY as:
+
+```
+
+gnome id: gorky
+role: chaos_roaster
+
+```
+
+All legacy behavior must map to the GORKY profile.
+
+---
+
+# CODEBASE RULES
+
+Follow existing repository conventions.
+
+Do NOT:
+
+- remove existing pipeline logic
+- break existing tests
+- change external API behavior
+- introduce heavy dependencies
+
+Refactor incrementally.
+
+---
+
+# OUTPUT EXPECTATION
+
+After completing Phase-1:
+
+The repository must contain:
+
+```
+
+src/gnomes/
+src/routing/
+src/memory/
+src/prompts/
+data/gnomes/
+schemas/
+database/
+
+```
+
+The bot should still function exactly like before but now internally support:
+
+- multiple personas
+- routing layer
+- memory layer
+
+---
+
+# TESTING
+
+Add minimal tests for:
+
+```
+
+gnome registry loading
+gnome selector scoring
+prompt composition
+memory writeback
+
+```
+
+Tests go in:
+
+```
+
+tests/gnomes/
+tests/routing/
+tests/memory/
+
+```
+
+---
+
+# APPENDIX A  
+## Handling the Specification Bundle
+
+The file:
+
+```
+
+gnomes_master_spec_bundle.zip
+
+```
+
+must be unpacked and referenced during implementation.
+
+Expected structure:
+
+```
+
+specs/
+database/
+schemas/
+data/
+config/
+examples/
+
+```
+
+The agent must:
+
+1. read all spec files
+2. respect the schemas
+3. use the database schema as canonical
+4. load gnome definitions from data/gnomes
+5. implement routing and memory according to specs
+
+No assumptions should contradict the bundle.
+
+If conflicts occur:
+
+Priority order:
+
+1. MASTER_SPEC.md
+2. schema definitions
+3. database schema
+4. examples
+
+---
+
+# APPENDIX B  
+## Target Directory Structure After Phase-1
+
+```
+
+src
+├─ gnomes
+│   ├─ registry.ts
+│   ├─ loadGnomes.ts
+│   └─ types.ts
+│
+├─ routing
+│   ├─ gnomeSelector.ts
+│   ├─ selectorFeatures.ts
+│   └─ continuityResolver.ts
+│
+├─ memory
+│   ├─ characterMemory.ts
+│   ├─ sharedLoreStore.ts
+│   ├─ userAffinityStore.ts
+│   └─ writeback
+│        └─ interactionWriteback.ts
+│
+├─ prompts
+│   ├─ composeGnomePrompt.ts
+│   └─ promptFragments.ts
+│
+data
+└─ gnomes
+├─ gorky.yaml
+├─ moss.yaml
+├─ spark.yaml
+├─ grit.yaml
+├─ wink.yaml
+└─ ember.yaml
+
+```
+
+---
+
+# FINAL OBJECTIVE
+
+This Phase-1 implementation prepares the repository to evolve from a **single character bot** into a **multi-character GNOME ensemble system**.
+
+Future phases will implement:
+
+- adaptive trait evolution
+- swarm replies
+- relationship arcs
+- dynamic character drift
+- ensemble dialogue
+```
+
+---

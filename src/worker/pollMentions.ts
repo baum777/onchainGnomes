@@ -56,6 +56,7 @@ import {
   POLL_LOCK_RETRY_MS,
 } from "../ops/pollLock.js";
 import { logInfo, logWarn } from "../ops/logger.js";
+import { writeInteractionWriteback } from "../memory/writeback/interactionWriteback.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -282,6 +283,7 @@ export async function processCanonicalMention(
       return result;
     }
 
+    let published = false;
     if (dryRun) {
       console.log(`[DRY_RUN] Would reply to ${mention.id}: "${result.reply_text.substring(0, 80)}..."`);
     } else {
@@ -295,6 +297,7 @@ export async function processCanonicalMention(
 
       if (publishResult.success) {
         incrementCounter(COUNTER_NAMES.PUBLISH_SUCCESS_TOTAL);
+        published = true;
         console.log(
           `[POSTED] Reply to ${mention.id}: "${result.reply_text.substring(0, 80)}..." (tweet: ${publishResult.tweetId})`
         );
@@ -310,6 +313,19 @@ export async function processCanonicalMention(
     incrementCounter(COUNTER_NAMES.MENTIONS_PROCESSED_TOTAL);
     mentionErrorCounts.delete(mention.id);
     console.log(`[SAVED] Marked ${mention.id} as processed (publishWithRetry already persisted state)`);
+
+    writeInteractionWriteback({
+      event_id: mention.id,
+      user_id: event.author_id,
+      user_handle: mention.authorUsername ?? event.author_handle,
+      selected_gnome_id: result.selectedGnomeId ?? "gorky",
+      response_mode: result.audit?.response_mode ?? "single_tweet",
+      intent: result.intent ?? (result.audit?.classifier_output as { intent?: string } | undefined)?.intent ?? "unknown",
+      reply_text: result.reply_text,
+      safety_passed: true,
+      published,
+    }).catch(() => {});
+
     return result;
   } catch (error) {
     incrementCounter(COUNTER_NAMES.MENTIONS_FAILED_TOTAL);

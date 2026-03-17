@@ -1,0 +1,686 @@
+# PHASE-2 IMPLEMENTATION PROMPT
+
+## Live Multi-Gnome Routing Integration
+
+````markdown
+# SYSTEM ROLE
+
+You are a senior software engineer operating in autonomous implementation mode inside an existing production-oriented repository.
+
+You are continuing the GNOMES migration.
+
+PHASE-1 introduced the foundational architecture for:
+
+- gnome registry
+- routing scaffolding
+- prompt composition layer
+- character memory primitives
+- database structures
+
+Your task in PHASE-2 is to connect these new components into the active runtime pipeline so that the bot no longer behaves as a hardcoded single-persona system, but as a **runtime-selected multi-gnome ensemble bot**.
+
+The system must remain safe, deterministic, testable, and backward compatible.
+
+---
+
+# PRIMARY SOURCE OF TRUTH
+
+The repository root contains:
+
+```text
+gnomes_master_spec_bundle.zip
+````
+
+This bundle remains the authoritative source for:
+
+* gnome architecture
+* routing behavior
+* memory rules
+* schema constraints
+* target operating model
+
+PHASE-2 implementation must follow the bundle and all Phase-1 outputs.
+
+If any conflict exists, apply the following priority:
+
+1. `specs/MASTER_SPEC.md`
+2. JSON schemas
+3. `database/schema.sql`
+4. config files
+5. examples
+
+---
+
+# PHASE-2 GOAL
+
+Activate the GNOMES architecture inside the live reply pipeline.
+
+After PHASE-2, the runtime must:
+
+* select a gnome per interaction
+* build prompts from the selected gnome profile
+* load user/relationship/shared lore context
+* generate replies in the selected gnome voice
+* persist routing + interaction results
+* keep GORKY available as one gnome among many
+* remain externally compatible with the current bot behavior
+
+This is the first phase where the system should genuinely behave like a multi-character bot.
+
+---
+
+# PHASE-2 SCOPE
+
+Implement the following integration layers.
+
+---
+
+## 1. REPLACE SINGLE-PERSONA ASSUMPTIONS IN THE LIVE PIPELINE
+
+Identify all runtime paths that currently assume:
+
+* one fixed persona
+* one fixed lore center
+* one fixed prompt stack
+* one fixed roast mode stack
+
+Refactor those runtime paths so they instead consume:
+
+* selected gnome
+* selected response mode
+* shared canon
+* user-gnome memory context
+* situational overlay
+
+Key outcome:
+
+The pipeline must no longer assume that "GORKY" is always the speaker.
+
+GORKY remains supported, but only as one selectable profile.
+
+---
+
+## 2. INTEGRATE GNOME SELECTION INTO MENTION / CONVERSATION FLOW
+
+Add gnome selection into the live mention-processing pipeline.
+
+At runtime, before final prompt composition, the system must compute:
+
+```ts
+type GnomeSelectionResult = {
+  selectedGnomeId: string;
+  score: number;
+  reasoning: string[];
+  alternativeCandidates: Array<{
+    gnomeId: string;
+    score: number;
+  }>;
+  responseMode: string;
+  continuitySource?: string;
+};
+```
+
+Selection factors must include:
+
+* detected intent
+* aggression
+* absurdity
+* sincerity
+* topic tags
+* market energy
+* relationship continuity
+* prior gnome-user affinity
+* repetition avoidance
+* safe fallback behavior
+
+Selection must be deterministic for identical inputs wherever feasible.
+
+---
+
+## 3. INTEGRATE USER / THREAD / RELATIONSHIP CONTEXT
+
+Before prompt generation, fetch context from:
+
+* user profile
+* prior interactions
+* user-gnome affinity
+* shared lore fragments
+* gnome-specific memory snippets
+* thread continuity context
+
+Compose a bounded context object.
+
+Example shape:
+
+```ts
+type GnomeRuntimeContext = {
+  selectedGnome: GnomeProfile;
+  userProfile: UserProfile | null;
+  relationshipContext: UserGnomeAffinity | null;
+  sharedLore: LoreFragment[];
+  characterMemory: MemoryItem[];
+  threadContext: ThreadContext | null;
+  responseMode: string;
+  eventAnalysis: EventAnalysis;
+};
+```
+
+Use conservative truncation rules.
+Do not create bloated prompts.
+
+---
+
+## 4. SWITCH PROMPT BUILDING TO GNOME-COMPOSED PROMPTS
+
+The prompt builder must now assemble the active prompt from:
+
+* global safety fragment
+* shared canon fragment
+* selected gnome fragment
+* selected gnome structured traits
+* relationship memory fragment
+* event analysis
+* response mode instructions
+* current platform constraints
+
+The active generator path must no longer use a monolithic GORKY-only prompt as the sole canonical prompt source.
+
+Legacy GORKY prompt fragments may still exist, but must be wrapped into the new gnome-composition model.
+
+---
+
+## 5. RESPONSE MODE RESOLUTION
+
+Implement a resolver that chooses the correct reply mode per interaction.
+
+Allowed initial modes:
+
+* roast
+* playful
+* deescalation
+* funeral
+* skeptic
+* lore
+* banter
+* detached_observer
+* swarm_tease
+
+Mode selection must be influenced by:
+
+* selected gnome
+* user intent
+* user hostility
+* thread tone
+* confidence level
+* safety posture
+
+The response mode must be stored alongside routing results.
+
+---
+
+## 6. WRITE ROUTING + INTERACTION DECISIONS TO STORAGE
+
+Every live reply attempt must store a structured record containing:
+
+* source mention id
+* user handle / user id
+* selected gnome id
+* alternative candidate ids + scores
+* response mode
+* event tags
+* generated reply
+* safety result
+* publish decision
+* timestamp
+
+Target tables:
+
+* `routing_decisions`
+* `interaction_events`
+* `reply_outcomes`
+
+Writebacks must be resilient and fail-closed where required.
+
+Do not let storage failure silently corrupt active reply behavior.
+
+---
+
+## 7. USER-GNOME AFFINITY UPDATES
+
+After each completed reply, update relationship signals conservatively.
+
+Possible tracked updates:
+
+* familiarity increment
+* inside-joke emergence
+* rivalry marker
+* successful banter signal
+* repeated topic affinity
+* preferred gnome correlation
+
+Do NOT allow automatic updates to core identity traits.
+
+Only adaptive surface traits and relationship-layer metadata may evolve.
+
+---
+
+## 8. SAFE FALLBACK RULES
+
+When routing confidence is low:
+
+* choose a safe fallback gnome
+* choose a lower-volatility response mode
+* reduce aggression
+* reduce experimental tone
+
+Default safe fallback order:
+
+1. GORKY (controlled roast)
+2. GRIT (skeptical factual dryness)
+3. MOSS (dry detached melancholy)
+
+If the system cannot confidently compose a safe multi-gnome contextual reply, it must fall back to the most conservative single-gnome response path.
+
+---
+
+## 9. OPTIONAL CAMEO / SWARM PREPARATION
+
+Do NOT fully implement multi-speaker replies yet unless trivial and safe.
+
+But prepare the pipeline so the selector may optionally emit:
+
+```ts
+cameoCandidates?: string[]
+```
+
+This should not change final user-visible behavior unless already straightforward to support.
+
+PHASE-2 focuses on single-selected-gnome replies with optional future cameo readiness.
+
+---
+
+## 10. BACKWARD COMPATIBILITY CONTRACT
+
+All current external bot workflows must still work.
+
+Preserve:
+
+* mention polling
+* publish gate behavior
+* safety layers
+* dry-run / no-post modes
+* existing API / CLI entrypoints
+* current env semantics unless explicitly extended
+
+GORKY must still be fully usable.
+Legacy behavior should degrade gracefully into:
+
+```text
+selected gnome = gorky
+```
+
+where appropriate.
+
+---
+
+# REQUIRED CODE CHANGES
+
+Integrate the new architecture into the active runtime.
+
+Target or refactor the relevant runtime modules, including any existing equivalents of:
+
+```text
+src/canonical/pipeline.ts
+src/canonical/promptBuilder.ts
+src/canonical/fullSpectrumPromptBuilder.ts
+src/canonical/specialResponseBuilder.ts
+src/canonical/modeSelector.ts
+src/intent/detectIntent.ts
+src/style/styleResolver.ts
+src/worker/pollMentions.ts
+src/gorky/publishDecision.ts
+src/memory/*
+src/routing/*
+src/gnomes/*
+src/prompts/*
+```
+
+Do not assume these exact files are sufficient.
+Trace the actual runtime execution path and refactor the active path, not just dead utilities.
+
+---
+
+# NEW / UPDATED MODULE RESPONSIBILITIES
+
+## `src/routing/gnomeSelector.ts`
+
+Must export the live selector used in production flow.
+
+Responsibilities:
+
+* feature aggregation
+* gnome scoring
+* candidate ranking
+* safe fallback selection
+* alternative candidate production
+
+---
+
+## `src/routing/continuityResolver.ts`
+
+Responsibilities:
+
+* detect prior gnome continuity within thread
+* preserve character continuity when appropriate
+* avoid unnecessary persona flipping within short conversations
+* allow overrides when the thread tone strongly shifts
+
+---
+
+## `src/prompts/composeGnomePrompt.ts`
+
+Responsibilities:
+
+* build final prompt input from structured runtime context
+* merge fragment text + structured traits
+* enforce prompt size limits
+* support deterministic fragment ordering
+
+---
+
+## `src/memory/characterMemory.ts`
+
+Responsibilities:
+
+* retrieve gnome-specific memory snippets
+* rank by relevance + recency
+* filter unsafe or low-value memory items
+
+---
+
+## `src/memory/userAffinityStore.ts`
+
+Responsibilities:
+
+* read and update user-gnome relationship state
+* provide lightweight signals to the selector
+* prevent noisy overfitting from sparse interactions
+
+---
+
+## `src/memory/writeback/interactionWriteback.ts`
+
+Responsibilities:
+
+* persist interaction result
+* update relationship state
+* write routing decision record
+* store bounded memory candidates
+
+---
+
+# DATABASE INTEGRATION RULES
+
+Use the schema defined in:
+
+```text
+database/schema.sql
+```
+
+If the repository already has database migration infrastructure:
+
+* use it
+* do not invent a parallel migration system
+
+If the full schema cannot be activated immediately, implement the minimal required subset for PHASE-2 and document the gap.
+
+Minimal required tables for PHASE-2 live integration:
+
+* `gnomes`
+* `users`
+* `user_profiles`
+* `user_gnome_affinity`
+* `interaction_events`
+* `routing_decisions`
+* `reply_outcomes`
+* `memory_items`
+* `lore_fragments`
+
+Use JSONB where the existing codebase already uses structured JSON fields.
+
+---
+
+# ENV / CONFIG EXTENSIONS
+
+Introduce only necessary configuration.
+
+Likely additions:
+
+```text
+GNOMES_ENABLED=true
+DEFAULT_SAFE_GNOME=gorky
+GNOME_CONTINUITY_ENABLED=true
+GNOME_MEMORY_ENABLED=true
+GNOME_ROUTING_DEBUG=false
+```
+
+Config changes must remain backward compatible.
+
+Document all additions in:
+
+```text
+.env.example
+README.md
+docs/
+```
+
+---
+
+# TESTING REQUIREMENTS
+
+Add or update tests for the live integrated behavior.
+
+Minimum required coverage:
+
+## Unit
+
+* registry loading
+* selector scoring
+* continuity preservation
+* prompt composition ordering
+* relationship update rules
+
+## Integration
+
+* mention → selector → prompt → reply pipeline
+* fallback to gorky when routing uncertain
+* continuity across same-thread replies
+* memory writeback after successful response
+* safe behavior under empty memory / empty lore conditions
+
+## Regression
+
+* existing GORKY-only flows still pass
+* safety guardrails still pass
+* prompt length limits still pass
+* financial-advice restrictions still pass
+
+Suggested test locations:
+
+```text
+tests/gnomes/
+tests/routing/
+tests/memory/
+tests/integration/
+tests/regression/
+```
+
+---
+
+# IMPLEMENTATION RULES
+
+* Refactor incrementally
+* Keep code readable
+* Prefer small composable functions
+* Avoid giant god-objects
+* Avoid hidden magic
+* Keep deterministic behavior where practical
+* Favor explicit structured types
+* Document non-obvious routing decisions
+
+Do NOT:
+
+* silently remove old logic without migration mapping
+* introduce uncontrolled persona drift
+* let memory mutate core persona identity
+* break production behavior
+* overbuild swarm replies in this phase
+
+---
+
+# REQUIRED DELIVERABLES
+
+By the end of PHASE-2, the repository should have:
+
+1. live gnome selection integrated in the active pipeline
+2. selected gnome-driven prompt composition
+3. routing + interaction persistence
+4. conservative user-gnome affinity updates
+5. working fallback behavior
+6. updated tests
+7. updated docs and env documentation
+
+---
+
+# APPENDIX A
+
+## Mandatory Handling of `gnomes_master_spec_bundle.zip`
+
+The file:
+
+```text
+gnomes_master_spec_bundle.zip
+```
+
+is located in the repository root and must be actively used during implementation.
+
+Mandatory procedure:
+
+1. unpack the bundle
+2. inspect:
+
+   * `specs/`
+   * `database/`
+   * `schemas/`
+   * `data/`
+   * `config/`
+   * `examples/`
+3. treat the bundle as implementation context, not as passive reference
+4. validate all gnome profiles against the schema definitions
+5. use the included database schema as canonical unless existing migrations require staged adoption
+6. preserve naming and semantic consistency with the bundle
+
+If implementation differs from the bundle, document the reason in code comments and implementation notes.
+
+Do not ignore the bundle.
+Do not partially use it.
+Do not replace it with guessed structure.
+
+---
+
+# APPENDIX B
+
+## Target Runtime Flow After PHASE-2
+
+The active runtime flow should conceptually become:
+
+```text
+Mention Ingest
+  -> Event Analysis
+  -> User/Thread Context Fetch
+  -> Gnome Selection
+  -> Continuity Resolution
+  -> Memory Retrieval
+  -> Response Mode Resolution
+  -> Gnome Prompt Composition
+  -> Candidate Generation
+  -> Safety Validation
+  -> Final Reply Selection
+  -> Publish Decision
+  -> Interaction + Routing Writeback
+```
+
+This flow must be reflected in code structure as clearly as possible.
+
+---
+
+# APPENDIX C
+
+## Target Directory Structure After PHASE-2
+
+```text
+src
+ ├─ gnomes
+ │   ├─ types.ts
+ │   ├─ registry.ts
+ │   └─ loadGnomes.ts
+ │
+ ├─ routing
+ │   ├─ gnomeSelector.ts
+ │   ├─ selectorFeatures.ts
+ │   └─ continuityResolver.ts
+ │
+ ├─ prompts
+ │   ├─ composeGnomePrompt.ts
+ │   └─ promptFragments.ts
+ │
+ ├─ memory
+ │   ├─ characterMemory.ts
+ │   ├─ sharedLoreStore.ts
+ │   ├─ userAffinityStore.ts
+ │   └─ writeback
+ │        └─ interactionWriteback.ts
+ │
+ ├─ canonical
+ │   ├─ pipeline.ts
+ │   ├─ promptBuilder.ts
+ │   ├─ fullSpectrumPromptBuilder.ts
+ │   └─ specialResponseBuilder.ts
+ │
+data
+ └─ gnomes
+      ├─ gorky.yaml
+      ├─ moss.yaml
+      ├─ spark.yaml
+      ├─ grit.yaml
+      ├─ wink.yaml
+      └─ ember.yaml
+```
+
+This exact structure may be adapted to existing repository conventions, but the module responsibilities must exist.
+
+---
+
+# APPENDIX D
+
+## Definition of Success
+
+PHASE-2 is successful when:
+
+* the bot can respond as different gnomes depending on context
+* the same user may receive different gnome voices depending on situation
+* the same thread can preserve continuity with a selected gnome
+* GORKY remains supported as one persona
+* the codebase is now structurally a multi-gnome bot, not a single-persona bot with renamed files
+
+Future phases will handle:
+
+* adaptive trait evolution
+* cameo replies
+* ensemble response composition
+* deeper memory ranking
+* persona analytics
+
+```
+
+---

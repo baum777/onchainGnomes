@@ -1,0 +1,480 @@
+# PHASE‑3 IMPLEMENTATION PROMPT
+
+## Adaptive Character Evolution & Ensemble Dynamics
+
+---
+
+# SYSTEM ROLE
+
+You are a senior software engineer operating in autonomous implementation mode inside an existing production‑oriented repository.
+
+You are continuing the **GNOMES migration**.
+
+PHASE‑1 introduced:
+
+* gnome registry
+* routing scaffolding
+* prompt composition layer
+* character memory primitives
+
+PHASE‑2 integrated these components into the live runtime pipeline so that:
+
+* a gnome is selected per interaction
+* prompts are composed dynamically
+* routing and interaction events are stored
+
+PHASE‑3 introduces **controlled adaptive character evolution and ensemble behavior**.
+
+The goal is to allow gnomes to develop personality nuances, relationships, and running jokes over time **without allowing uncontrolled LLM drift or identity corruption**.
+
+---
+
+# PRIMARY SOURCE OF TRUTH
+
+The repository root contains:
+
+```
+gnomes_master_spec_bundle.zip
+```
+
+This bundle remains the canonical specification for:
+
+* architecture
+* routing model
+* database schema
+* character definitions
+* memory structures
+
+PHASE‑3 implementation must extend these specifications while preserving compatibility.
+
+If conflicts occur, priority order:
+
+1. MASTER_SPEC.md
+2. schema definitions
+3. database/schema.sql
+4. config definitions
+5. example files
+
+---
+
+# PHASE‑3 GOAL
+
+Enable **long‑term character development** while keeping the core persona stable.
+
+After PHASE‑3 the system must support:
+
+* evolving gnome traits within bounded limits
+* persistent running jokes and motifs
+* user‑gnome relationship arcs
+* character‑specific memory reinforcement
+* cameo / swarm replies
+* adaptive stylistic tendencies
+
+Core identities must remain stable.
+
+Evolution only occurs in **allowed adaptive layers**.
+
+---
+
+# CORE PRINCIPLE
+
+Character identity consists of two layers:
+
+## Stable Core
+
+Never changes automatically:
+
+* gnome name
+* archetype
+* core role
+* safety boundaries
+* baseline personality traits
+* allowed behavior domains
+
+These are defined in gnome profile files.
+
+## Adaptive Surface
+
+May evolve gradually:
+
+* preferred phrasing
+* running jokes
+* relationship tone
+* topic affinity
+* stylistic tendencies
+
+All changes must remain inside configured trait bounds.
+
+---
+
+# PHASE‑3 FEATURES
+
+Implement the following modules.
+
+---
+
+# 1. TRAIT EVOLUTION ENGINE
+
+Create:
+
+```
+src/evolution/
+```
+
+Files:
+
+```
+src/evolution/traitEvolutionEngine.ts
+src/evolution/traitBoundsValidator.ts
+src/evolution/evolutionSignals.ts
+```
+
+Responsibilities:
+
+* observe interaction outcomes
+* detect patterns in successful responses
+* propose small trait adjustments
+* enforce trait bounds
+
+Example traits that may evolve:
+
+* sarcasm
+* meme density
+* warmth
+* theatricality
+* dryness
+
+Adjustments must be small incremental changes.
+
+Example:
+
+```
+old sarcasm = 8.6
+new sarcasm = 8.7
+```
+
+Never allow changes beyond configured bounds.
+
+---
+
+# 2. RUNNING JOKE DETECTION
+
+Create:
+
+```
+src/memory/jokes/
+```
+
+Files:
+
+```
+src/memory/jokes/jokeExtractor.ts
+src/memory/jokes/jokeStore.ts
+src/memory/jokes/jokeScorer.ts
+```
+
+Purpose:
+
+Detect recurring humor patterns such as:
+
+* repeated phrase usage
+* recurring metaphors
+* interaction callbacks
+
+Example categories:
+
+```
+chart_funeral
+bagholder_therapy
+liquidity_thirst
+fake_linkedin_dev
+```
+
+Jokes should be stored as reusable fragments.
+
+---
+
+# 3. USER‑GNOME RELATIONSHIP ARCS
+
+Enhance:
+
+```
+src/memory/userAffinityStore.ts
+```
+
+Track long‑term relationship signals.
+
+New attributes:
+
+```
+familiarity
+rivalry
+playful_banter
+respect
+hostility
+inside_jokes
+```
+
+Relationship arcs influence routing.
+
+Example behavior:
+
+* a user who frequently banters with WINK should trigger WINK more often
+* a hostile troll may trigger THORN or GRIT
+
+---
+
+# 4. CHARACTER‑SPECIFIC MEMORY RANKING
+
+Enhance:
+
+```
+src/memory/characterMemory.ts
+```
+
+Memory ranking must consider:
+
+* relevance to current topic
+* recency
+* gnome personality affinity
+* relationship context
+
+Ranking score example:
+
+```
+score = (relevance * 0.5) + (recency * 0.3) + (persona_affinity * 0.2)
+```
+
+Only the top memory fragments should be injected into prompts.
+
+---
+
+# 5. CAMEO / SWARM REPLIES
+
+Introduce optional multi‑gnome replies.
+
+Create:
+
+```
+src/swarm/
+```
+
+Files:
+
+```
+src/swarm/swarmComposer.ts
+src/swarm/cameoSelector.ts
+```
+
+Swarm replies must remain short.
+
+Example structure:
+
+```
+GORKY: roast observation
+SPARK: chaotic reaction
+MOSS: dry closing line
+```
+
+Swarm replies should only activate when:
+
+* conversation energy is high
+* humor density threshold is met
+
+Otherwise use single gnome.
+
+---
+
+# 6. PERSONALITY CONSISTENCY VALIDATION
+
+Create:
+
+```
+src/evolution/personaIntegrityGuard.ts
+```
+
+Responsibilities:
+
+* detect excessive personality drift
+* prevent identity mutation
+* enforce trait boundaries
+* reject unsafe evolution signals
+
+Example rejection cases:
+
+* sudden aggression spikes
+* new taboo phrases
+* unexpected moral stance changes
+
+---
+
+# 7. EVOLUTION WRITEBACK
+
+Create:
+
+```
+src/memory/writeback/evolutionWriteback.ts
+```
+
+Store:
+
+```
+trait adjustments
+joke additions
+relationship updates
+successful phrase signals
+```
+
+Log all changes in:
+
+```
+trait_evolution_log
+```
+
+---
+
+# 8. SWARM‑AWARE ROUTING
+
+Enhance selector logic.
+
+Add detection for:
+
+```
+conversation_energy
+absurdity_score
+thread_virality
+meme_density
+```
+
+If thresholds exceed limits:
+
+```
+allow cameoCandidates
+```
+
+Selector result may include:
+
+```
+cameoCandidates: ["spark","moss"]
+```
+
+---
+
+# DATABASE EXTENSIONS
+
+Add support tables if not already present.
+
+Required tables:
+
+```
+trait_evolution_log
+running_jokes
+joke_usage_events
+relationship_arc_events
+```
+
+These tables must reference:
+
+```
+gnome_id
+user_id
+interaction_event_id
+```
+
+---
+
+# CONFIGURATION ADDITIONS
+
+Add configuration flags:
+
+```
+GNOME_EVOLUTION_ENABLED=true
+GNOME_RUNNING_JOKES_ENABLED=true
+GNOME_SWARM_ENABLED=true
+GNOME_TRAIT_DRIFT_LIMIT=0.25
+```
+
+All features must be disableable.
+
+---
+
+# TESTING REQUIREMENTS
+
+Add new test suites.
+
+## Evolution Tests
+
+Verify:
+
+* trait drift stays within bounds
+* identity remains stable
+
+## Memory Tests
+
+Verify:
+
+* joke extraction works
+* memory ranking behaves correctly
+
+## Swarm Tests
+
+Verify:
+
+* swarm replies remain under character limits
+* cameo gnomes appear only when allowed
+
+## Regression
+
+Ensure:
+
+* GORKY behavior remains valid
+* single‑gnome mode still works
+
+---
+
+# REQUIRED DELIVERABLES
+
+By the end of PHASE‑3:
+
+* characters develop stable stylistic evolution
+* relationship arcs influence routing
+* running jokes persist
+* cameo replies exist
+* safety guardrails remain intact
+
+The bot must feel like a **living ensemble of gnomes rather than static scripted personas**.
+
+---
+
+# APPENDIX
+
+## Evolution Constraints
+
+Maximum trait drift per 100 interactions:
+
+```
+±0.25
+```
+
+Traits must never exceed profile limits.
+
+## Memory Safety
+
+Never store:
+
+* personal data
+* accusations
+* sensitive claims
+
+All memory must be summarized fragments.
+
+---
+
+# DEFINITION OF SUCCESS
+
+PHASE‑3 is complete when:
+
+* gnomes evolve stylistically
+* long‑term character continuity emerges
+* ensemble behavior appears natural
+* the system remains deterministic and safe

@@ -1,0 +1,72 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GnomeProfile",
+  "description": "Profile definition for a GNOME ensemble character",
+  "type": "object",
+  "required": ["id", "name", "role", "archetype"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "description": "Unique identifier (lowercase, snake_case)"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Display name"
+    },
+    "role": {
+      "type": "string",
+      "description": "Primary role (e.g. chaos_roaster, detached_witness)"
+    },
+    "archetype": {
+      "type": "string",
+      "enum": ["roaster", "melancholic", "chaotic", "skeptic", "builder", "defender"],
+      "description": "Character archetype"
+    },
+    "voice": {
+      "type": "object",
+      "properties": {
+        "tone": { "type": "string" },
+        "sarcasm_level": { "type": "number", "minimum": 0, "maximum": 10 },
+        "dryness": { "type": "number", "minimum": 0, "maximum": 10 },
+        "warmth": { "type": "number", "minimum": 0, "maximum": 10 },
+        "theatricality": { "type": "number", "minimum": 0, "maximum": 10 },
+        "meme_density": { "type": "number", "minimum": 0, "maximum": 10 }
+      }
+    },
+    "language": {
+      "type": "object",
+      "properties": {
+        "primary": { "type": "string" },
+        "slang_ok": { "type": "boolean" },
+        "crypto_native": { "type": "boolean" }
+      }
+    },
+    "routing_hints": {
+      "type": "object",
+      "properties": {
+        "preferred_intents": { "type": "array", "items": { "type": "string" } },
+        "avoid_intents": { "type": "array", "items": { "type": "string" } },
+        "aggression_range": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
+        "absurdity_range": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 }
+      }
+    },
+    "memory_rules": {
+      "type": "object",
+      "properties": {
+        "max_snippets_per_reply": { "type": "number" },
+        "store_lore": { "type": "boolean" },
+        "store_relationship_signals": { "type": "boolean" }
+      }
+    },
+    "safety": {
+      "type": "object",
+      "properties": {
+        "no_financial_advice": { "type": "boolean" },
+        "roast_content_only": { "type": "boolean" },
+        "max_characters": { "type": "number" }
+      }
+    }
+  }
+}

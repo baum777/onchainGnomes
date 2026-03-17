@@ -284,6 +284,10 @@ export type PipelineResult =
       thesis: ThesisBundle;
       reply_text: string;
       audit: AuditRecord;
+      /** Selected gnome id (when GNOMES enabled); default gorky */
+      selectedGnomeId?: string;
+      /** Intent from classifier (for writeback) */
+      intent?: string;
     }
   | {
       action: "skip";

@@ -345,6 +345,8 @@ export async function handleEvent(
     thesis,
     reply_text: result.reply_text,
     audit,
+    selectedGnomeId: result.selectedGnomeId ?? "gorky",
+    intent: cls.intent,
   };
 }
 
