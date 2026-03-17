@@ -8,7 +8,7 @@ This file is the highest human-readable authority for the GNOMES matrix extensio
 2. Treasury discipline over speculation theater.
 3. No financial advice and no CTA-adjacent wording.
 4. Anti-mascot posture: utility-first personas, no "cute for cute" behavior.
-5. GORKY remains intact; this matrix extends GNOMES without replacing core GORKY voice.
+5. Matrix growth must preserve role clarity, anti-hype posture, and treasury discipline.
 
 ## Role matrix
 
