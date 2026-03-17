@@ -75,6 +75,11 @@ function readConfigValue(key: string, fallback: Record<string, string>): string 
   return (fallback[key] ?? "").trim();
 }
 
+function readPayloadString(payload: Record<string, unknown>, key: string): string | undefined {
+  const value = payload[key];
+  return typeof value === "string" ? value : undefined;
+}
+
 function normalizeCreatedAt(raw?: string): number | undefined {
   if (!raw) return undefined;
   const asNumber = Number(raw);
@@ -169,39 +174,78 @@ export async function requestXTokenRefresh(config = getXRuntimeConfig()): Promis
   });
 
   const rawText = await response.text();
-  const payload = rawText ? JSON.parse(rawText) : {};
-
-  if (!response.ok) {
-    throw new Error(
-      `[XAuth] Token refresh fehlgeschlagen (${response.status}): ${
-        payload?.error_description || payload?.error || rawText || "unknown"
-      }`
-    );
+  let payload: Record<string, unknown> = {};
+  if (rawText) {
+    try {
+      payload = JSON.parse(rawText) as Record<string, unknown>;
+    } catch {
+      payload = {};
+    }
   }
 
-  const createdAt = Math.floor(Date.now() / 1000);
-  const refreshTokenRotated = Boolean(payload.refresh_token && payload.refresh_token !== (tokenCache.refreshToken ?? config.xRefreshToken));
+  const payloadAccessToken = readPayloadString(payload, "access_token");
+  const payloadRefreshToken = readPayloadString(payload, "refresh_token");
+  const payloadTokenType = readPayloadString(payload, "token_type");
 
-  if (refreshTokenRotated) {
-    console.warn(
-      `[XAuth] Provider hat einen neuen refresh_token zurückgegeben; persistente Rotation ist nicht automatisch aktiviert (${maskSecret(
-        payload.refresh_token
+  if (!response.ok) {
+    const errCode = String(readPayloadString(payload, "error") ?? "").toLowerCase();
+    const errDescription = String(readPayloadString(payload, "error_description") ?? readPayloadString(payload, "detail") ?? "");
+    const combined = `${errCode} ${errDescription}`.toLowerCase();
+    const isRefreshTokenInvalid =
+      response.status === 400 &&
+      (combined.includes("invalid_grant") ||
+        combined.includes("invalid_request") ||
+        combined.includes("invalid token") ||
+        combined.includes("token was invalid"));
+
+    if (isRefreshTokenInvalid) {
+      throw new Error(
+        `[XAuth] Token refresh fehlgeschlagen (400: ${errCode || "invalid_request"}). ` +
+          `Der gespeicherte X_REFRESH_TOKEN scheint ungültig/abgelaufen zu sein. ` +
+          `Bitte vollständige OAuth2 PKCE Re-Authorisierung ausführen: pwsh ./scripts/Generate-XOAuthTokens.ps1 ` +
+          `und den neuen refresh_token als Runtime-Secret hinterlegen. ` +
+          `(diagnostics: token_url=${config.xOauthTokenUrl}, refresh_token=${maskSecret(
+            tokenCache.refreshToken ?? config.xRefreshToken
+          )})`
+      );
+    }
+
+    throw new Error(
+      `[XAuth] Token refresh fehlgeschlagen (${response.status}): ${
+        errDescription || errCode || "unknown"
+      } (diagnostics: token_url=${config.xOauthTokenUrl}, refresh_token=${maskSecret(
+        tokenCache.refreshToken ?? config.xRefreshToken
       )})`
     );
   }
 
-  if (payload.refresh_token && tokenStateStore) {
-    await tokenStateStore.saveRefreshToken(payload.refresh_token);
+  const createdAt = Math.floor(Date.now() / 1000);
+  const refreshTokenRotated = Boolean(payloadRefreshToken && payloadRefreshToken !== (tokenCache.refreshToken ?? config.xRefreshToken));
+
+  if (refreshTokenRotated) {
+    console.warn(
+      `[XAuth] Provider hat einen neuen refresh_token zurückgegeben; persistente Rotation ist nicht automatisch aktiviert (${maskSecret(
+        payloadRefreshToken
+      )})`
+    );
+  }
+
+  if (payloadRefreshToken && tokenStateStore) {
+    await tokenStateStore.saveRefreshToken(payloadRefreshToken);
+  }
+
+  if (!payloadAccessToken) {
+    throw new Error("[XAuth] Token refresh Antwort enthält kein access_token.");
   }
 
   return {
-    access_token: payload.access_token,
-    token_type: payload.token_type ?? "bearer",
+    access_token: payloadAccessToken,
+    token_type: payloadTokenType ?? "bearer",
     expires_in: Number(payload.expires_in ?? 7200),
     created_at: createdAt,
-    refresh_token: payload.refresh_token,
+    refresh_token: payloadRefreshToken,
     refresh_token_rotated: refreshTokenRotated,
-    nextRefreshToken: payload.refresh_token,
+    nextRefreshToken: payloadRefreshToken,
   };
 }
 
