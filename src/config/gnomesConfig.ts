@@ -23,6 +23,14 @@ export interface GnomesConfig {
   GNOME_SWARM_ENABLED: boolean;
   /** Phase-3: Max trait drift per 100 interactions */
   GNOME_TRAIT_DRIFT_LIMIT: number;
+  /** Phase-4: Enable ensemble orchestration */
+  GNOME_ENSEMBLE_ENABLED: boolean;
+  /** Phase-4: Enable autonomy triggers */
+  GNOME_AUTONOMY_ENABLED: boolean;
+  /** Phase-4: Enable narrative arc engine */
+  GNOME_ARC_ENGINE_ENABLED: boolean;
+  /** Phase-4: Max cameo gnomes per swarm reply */
+  GNOME_MAX_CAMEOS: number;
 }
 
 const DEFAULTS: GnomesConfig = {
@@ -35,6 +43,10 @@ const DEFAULTS: GnomesConfig = {
   GNOME_RUNNING_JOKES_ENABLED: false,
   GNOME_SWARM_ENABLED: false,
   GNOME_TRAIT_DRIFT_LIMIT: 0.25,
+  GNOME_ENSEMBLE_ENABLED: false,
+  GNOME_AUTONOMY_ENABLED: false,
+  GNOME_ARC_ENGINE_ENABLED: false,
+  GNOME_MAX_CAMEOS: 2,
 };
 
 let cached: GnomesConfig | null = null;
@@ -51,6 +63,10 @@ export function getGnomesConfig(): GnomesConfig {
     GNOME_RUNNING_JOKES_ENABLED: process.env.GNOME_RUNNING_JOKES_ENABLED === "true",
     GNOME_SWARM_ENABLED: process.env.GNOME_SWARM_ENABLED === "true",
     GNOME_TRAIT_DRIFT_LIMIT: Number(process.env.GNOME_TRAIT_DRIFT_LIMIT) || DEFAULTS.GNOME_TRAIT_DRIFT_LIMIT,
+    GNOME_ENSEMBLE_ENABLED: process.env.GNOME_ENSEMBLE_ENABLED === "true",
+    GNOME_AUTONOMY_ENABLED: process.env.GNOME_AUTONOMY_ENABLED === "true",
+    GNOME_ARC_ENGINE_ENABLED: process.env.GNOME_ARC_ENGINE_ENABLED === "true",
+    GNOME_MAX_CAMEOS: Number(process.env.GNOME_MAX_CAMEOS) || DEFAULTS.GNOME_MAX_CAMEOS,
   };
   return cached;
 }
