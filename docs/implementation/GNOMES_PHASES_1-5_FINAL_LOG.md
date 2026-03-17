@@ -211,7 +211,7 @@ All five phases of the GNOMES migration have been implemented and committed. The
 
 ### Commit
 
-(Pending)
+`f4ef00e` — feat(gnomes): Phase 5 - world state, factions, events, rituals, lore, governance, control
 
 ---
 
