@@ -1,22 +1,39 @@
-# Lore & Persona
+# GNOMES — Lore, Personas, and Voice Summary
 
-Persona definition, lore canon, voice guides, and style.
+## Overview
 
-## Canonical Docs
+**GNOMES** are earth-bound meta beings built for the age of terminal noise.
 
-- [PERSONA.md](./PERSONA.md) — GORKY character definition, tone rules, hard limits
-- [LORE.md](./LORE.md) — Origin story, world canon
-- [VOICE_GUIDE.md](./VOICE_GUIDE.md) — Style and voice behavior
+In this repo, they are not mascots or fantasy decoration. They are a **structured persona and voice system** for:
 
-## GORKY-Specific (Supporting)
+- stillness under volatility
+- wealth with roots
+- anti-hype judgment
+- treasury-minded restraint
+- grounded humor over panic performance
+- clarity in high-noise timelines
 
-- [GORKY_IMAGE_STYLE_GUIDE.md](./GORKY_IMAGE_STYLE_GUIDE.md)
-- [GORKY_HUMOR_PATTERNS.md](./GORKY_HUMOR_PATTERNS.md)
+> **The surface belongs to hype. The depth belongs to the gnomes.**
 
-Future GNOMES docs (FACTIONS, WORLD_EVENTS, etc.) will live alongside these.
+GNOMES connects:
 
-## GNOMES Matrix (Canonical)
+- **lore** → symbolic identity and world logic
+- **personas** → role-based behavioral archetypes
+- **voices** → CT/X-native writing styles
+- **memory** → retrieval-friendly lore and role fragments
+- **output** → stable, differentiated posting behavior
 
-- [GNOMES_MATRIX.md](./GNOMES_MATRIX.md) — Matrix SSOT, role taxonomy, blend + dominance controls
-- [GNOMES_GOVERNANCE.md](./GNOMES_GOVERNANCE.md) — Authority and activation process
-- [GNOMES_LORE_UNITS.md](./GNOMES_LORE_UNITS.md) — Retrieval unit contract
+## Canonical Source of Truth
+
+- [GNOMES_MATRIX.md](./GNOMES_MATRIX.md) — matrix SSOT, role taxonomy, blend and dominance controls
+- [GNOMES_GOVERNANCE.md](./GNOMES_GOVERNANCE.md) — authority, activation process, and change control
+- [GNOMES_LORE_UNITS.md](./GNOMES_LORE_UNITS.md) — retrieval unit contract
+- [LORE.md](./LORE.md) — origin and symbolic world logic
+- [PERSONA.md](./PERSONA.md) — persona matrix and voice discipline
+
+## Runtime + Prompt Integration
+
+- Runtime profiles: `data/gnomes/*.yaml`
+- Profile schema: `schemas/gnome_profile.schema.json`
+- Prompt fragments: `prompts/fragments/gnomes/*.md`
+- Lore retrieval units: `memory/lore/lore_units.approved.jsonl`

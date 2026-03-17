@@ -1,14 +1,30 @@
 # Gnomes
 
-Gnomes is an autonomous X bot runtime that replies to mentions with a deterministic canonical pipeline, gnome voice routing, and strict safety/guardrail checks.
+**GNOMES** is a repo-native lore, persona, and voice system for grounded, anti-hype, treasury-minded CT/X posting behavior.
 
-## Lore Summary
+It uses earth-bound gnome mythology as an operational framework for differentiated output modes under noise and volatility.
 
-Gnomes is onchain-native, anti-hype, and practical: mythic framing, grounded claims, wealth-aware language, and no performative certainty.
+## GNOMES at a Glance
 
-## Voices
+- **Lore-backed:** canonized symbolic world logic, not decorative fantasy
+- **Persona-driven:** seven role archetypes with clear anti-drift boundaries
+- **Voice-disciplined:** role-separable writing styles with explicit forbidden patterns
+- **Runtime-addressable:** profile-driven role selection via `data/gnomes/*.yaml`
+- **Retrieval-friendly:** lore and persona units designed for controlled injection
 
-The voices are different perspectives from the same Gnomes world. Routing chooses a primary voice and optional cameo voices for composition; public replies are finalized with deterministic sigils.
+> **GNOMES = earth-bound personas for signal, stability, and disciplined voice under chaotic conditions.**
+
+## Practical framing
+
+GNOMES turns earth-bound folklore into an operational CT/X persona matrix built around stillness, reserves, signal-reading, discipline, systems-building, memetic camouflage, and controlled force.
+
+It is designed to be:
+
+- canonically documented
+- runtime-addressable
+- prompt-composable
+- retrieval-friendly
+- safe against tone drift
 
 ## Features
 
